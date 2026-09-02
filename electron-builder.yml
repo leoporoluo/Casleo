@@ -16,8 +16,8 @@ files:
 asar: false
 
 extraResources:
-  - from: build/icon.png
-    to: icon.png
+  - from: build/icon.ico
+    to: icon.ico
 
 mac:
   icon: build/icon.png
@@ -38,16 +38,20 @@ linux:
       arch: [x64]
 
 win:
-  # macOS icons are drawn with ~10% padding, Windows ones fill the canvas; reusing the padded
-  # art here made the taskbar icon look a size smaller than its neighbours.
-  icon: build/icon-win.png
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
 
 nsis:
-  oneClick: true
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
   shortcutName: Casleo
   artifactName: ${productName}-Setup-${version}.exe
+
+compression: normal
 
 publish: null

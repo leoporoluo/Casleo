@@ -192,8 +192,8 @@ async function saveAppPreferences(next: AppPreferences): Promise<void> {
 
 function appIconPath(): string {
   return app.isPackaged
-    ? path.join(process.resourcesPath, "icon.png")
-    : path.join(currentDirectory, "../../build/icon.png");
+    ? path.join(process.resourcesPath, "icon.ico")
+    : path.join(currentDirectory, "../../build/icon.ico");
 }
 
 function applyDockIcon(): void {

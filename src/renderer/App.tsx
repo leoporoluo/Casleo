@@ -65,7 +65,6 @@ import {
   TurnNav,
   UserTurn,
 } from "./ui";
-import logo from "./logo.svg";
 import { useI18n } from "./i18n";
 import type { MessageKey } from "../shared/i18n";
 
@@ -243,12 +242,8 @@ function rememberUnsandboxed(cwd: string): void {
 }
 
 function AccountMenu({
-  model,
-  configured,
   onOpenSettings,
 }: {
-  model: string;
-  configured: boolean;
   onOpenSettings(): void;
 }) {
   const { t } = useI18n();
@@ -287,8 +282,7 @@ function AccountMenu({
           <Icon path="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15H2.8a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.2 8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4V3.8a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z" size={15} />
         </div>
         <div className="account-meta">
-          <strong>{configured ? model : t("nav.modelUnset")}</strong>
-          <small>{configured ? t("nav.manageKeys") : t("nav.configureKeys")}</small>
+          <strong>{t("menu.settings")}</strong>
         </div>
       </button>
       {menu && createPortal(
@@ -451,20 +445,6 @@ export function App() {
   const darwin = window.harness.platform === "darwin";
   const connected = providers.find((item) => item.id === "deepseek");
   const waiting = running && (groups.length === 0 || groups.at(-1)?.type === "user");
-  const suggestions = workspace
-    ? [
-        { label: t("suggest.explainRepo"), hint: t("suggest.hintStructure") },
-        { label: t("suggest.findRiskiest"), hint: t("suggest.hintRiskFirst") },
-        { label: t("suggest.addTests"), hint: t("suggest.hintCoverage") },
-        { label: t("suggest.taskList"), hint: t("suggest.hintFeatures") },
-      ]
-    : [
-        { label: t("suggest.openProject"), icon: "M3 7h6l2 2h10v10H3z", action: "open" as const },
-        { label: t("suggest.explainArch"), hint: t("suggest.hintStructure") },
-        { label: t("suggest.findBugs"), hint: t("suggest.hintRisk") },
-        { label: t("suggest.writeTests"), hint: t("suggest.hintCoverage") },
-      ];
-
   const projects = useMemo(() => {
     const byPath = new Map<string, { item: WorkspaceItem; sessions: SessionSummary[] }>();
     for (const item of workspaces) byPath.set(item.path, { item, sessions: [] });
@@ -1237,8 +1217,6 @@ export function App() {
         onOpen={() => void openFolder()}
         account={(
           <AccountMenu
-            model={model}
-            configured={Boolean(connected?.configured)}
             onOpenSettings={() => setLoginOpen(true)}
           />
         )}
@@ -1401,28 +1379,9 @@ export function App() {
           {home && (
             <div className="empty">
               <div className="empty-hero">
-                <img className="empty-logo" src={logo} alt="" width={30} height={17} />
                 <h1>{workspace ? baseName(workspace) : t("home.greeting")}</h1>
               </div>
               {composer}
-              <div className="suggestions">
-                {suggestions.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => {
-                      if ("action" in item && item.action === "open") {
-                        void openFolder();
-                      } else {
-                        void sendMessage(item.label);
-                      }
-                    }}
-                  >
-                    {"icon" in item && item.icon && <Icon path={item.icon} size={13} />}
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
               {homeRecents.length > 0 && (
                 <div className="home-recents">
                   <div className="home-recents-head">

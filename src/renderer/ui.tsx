@@ -2072,7 +2072,7 @@ export function PromptBar({
       <div className="prompt-shell">
         <div className="prompt-topbar">
           <div className="prompt-topbar-row">
-            <button
+            {!hero && <button
               type="button"
               className={folder ? "prompt-folder on" : "prompt-folder"}
               onClick={onPickWorkspace}
@@ -2080,7 +2080,7 @@ export function PromptBar({
             >
               <Icon path="M3 7h6l2 2h10v10H3z" size={13} />
               <span>{folder ?? t("composer.selectProject")}</span>
-            </button>
+            </button>}
             {steering && steering.length > 0 && (
               <div className="prompt-queue-meta">
                 <span className="prompt-steer-count">{t("composer.steering", { n: steering.length })}</span>
@@ -2206,11 +2206,11 @@ export function PromptBar({
           </div>
         )}
         <div className="prompt-bar">
-          <Combo value={model} options={models} searchable placeholder={t("composer.filterModels")} down={hero} onChange={onModel} />
-          {reasoningLevelsAvailable(effortLevels) && (
+          <PermissionPicker value={permission} down={hero} onChange={onPermission} />
+          {model.trim() && models.length > 0 && <Combo value={model} options={models} searchable placeholder={t("composer.filterModels")} down={hero} onChange={onModel} />}
+          {model.trim() && reasoningLevelsAvailable(effortLevels) && (
             <EffortPicker value={effort} levels={effortLevels} down={hero} onChange={onEffort} />
           )}
-          <PermissionPicker value={permission} down={hero} onChange={onPermission} />
           {!hero && (
             <ContextStats
               stats={stats}
@@ -3241,7 +3241,7 @@ export function Login({
                     <div className="skills-path-block">
                       <div className="skills-path-label">{t("settings.pluginsPathProject")}</div>
                       <ul className="skills-path-list">
-                        {['.casleo/plugins', '.agents/plugins', '.pi/plugins'].map((root) => (
+                        {['.casleo/plugins', '.agents/plugins'].map((root) => (
                           <li key={root}><code>{root}/&lt;name&gt;/plugin.json</code></li>
                         ))}
                       </ul>
@@ -3249,7 +3249,7 @@ export function Login({
                     <div className="skills-path-block">
                       <div className="skills-path-label">{t("settings.pluginsPathUser")}</div>
                       <ul className="skills-path-list">
-                        {['~/.casleo/plugins', '~/.agents/plugins', '~/.pi/plugins'].map((root) => (
+                        {['~/.casleo/plugins'].map((root) => (
                           <li key={root}><code>{root}/&lt;name&gt;/plugin.json</code></li>
                         ))}
                       </ul>

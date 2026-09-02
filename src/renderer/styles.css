@@ -47,29 +47,6 @@
   accent-color: var(--ink);
 }
 
-[data-theme="white"] {
-  --page: #f4f4f5;
-  --canvas: #ececee;
-  --surface: #ffffff;
-  --inset: #f3f3f4;
-  --hover: #ececee;
-  --hover-2: #e4e4e7;
-  --ink: #171717;
-  --ink-2: #52525b;
-  --ink-3: #a1a1aa;
-  --line: #e4e4e7;
-  --line-strong: #d4d4d8;
-  --field: #f4f4f5;
-  --accent: #171717;
-  --accent-ink: #09090b;
-  --accent-tint: #f4f4f5;
-  --brand: #52525b;
-  --green: #2f7d4a;
-  --green-tint: #e7f3eb;
-  --red: #c4473a;
-  --red-tint: #f8ecea;
-}
-
 [data-theme="dark"] {
   --page: #171717;
   --canvas: #1f1f1f;
@@ -1125,10 +1102,6 @@ textarea::selection,
   gap: 10px;
   margin: 0 0 28px;
 }
-.empty-hero .empty-logo {
-  display: block;
-  flex: none;
-}
 .empty-hero h1 {
   margin: 0;
   color: var(--ink);
@@ -1137,39 +1110,6 @@ textarea::selection,
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.25;
-}
-.suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 18px;
-}
-.suggestions button {
-  height: 32px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: var(--surface);
-  box-shadow: var(--shadow-btn);
-  color: var(--ink-2);
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease;
-}
-.suggestions button:hover {
-  color: var(--ink);
-  background: var(--hover);
-}
-.suggestions button svg {
-  color: var(--ink-3);
-  flex: none;
-}
-.suggestions button:hover svg {
-  color: var(--ink);
 }
 .home-recents {
   margin-top: 36px;
@@ -3469,11 +3409,9 @@ textarea::selection,
   flex: none;
   color: var(--ink-2);
 }
-.permission-trigger.danger {
-  color: var(--red);
-}
+.permission-trigger.danger,
 .permission-trigger.danger .permission-trigger-icon {
-  color: var(--red);
+  color: var(--ink-2);
 }
 .permission-menu {
   position: absolute;
@@ -3550,22 +3488,15 @@ textarea::selection,
   color: var(--ink);
   margin-left: 2px;
 }
-.permission-item.danger .permission-icon {
-  color: var(--red);
-}
-.permission-item.danger .permission-title {
-  color: var(--red);
-}
-.permission-item.danger .permission-desc {
-  color: var(--red);
-  opacity: 0.85;
+.permission-item.danger .permission-icon,
+.permission-item.danger .permission-title,
+.permission-item.danger .permission-desc,
+.permission-item.danger .permission-check {
+  color: inherit;
 }
 .permission-item.danger:hover,
 .permission-item.danger.selected {
-  background: var(--red-tint);
-}
-.permission-item.danger .permission-check {
-  color: var(--red);
+  background: var(--hover);
 }
 
 .modal {
@@ -3947,8 +3878,8 @@ textarea::selection,
   background: var(--hover);
 }
 .custom-api-card.active {
-  border-color: var(--brand);
-  background: color-mix(in srgb, var(--brand) 5%, var(--surface));
+  border-color: var(--line);
+  background: var(--surface);
 }
 .custom-api-card-head {
   display: flex;
@@ -3965,13 +3896,13 @@ textarea::selection,
   flex: none;
 }
 .custom-api-card.active .custom-api-card-radio {
-  border-color: var(--brand);
+  border-color: var(--line-strong);
 }
 .custom-api-card-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--brand);
+  background: var(--ink-2);
 }
 .custom-api-card-title {
   flex: 1;
@@ -4106,7 +4037,7 @@ textarea::selection,
 }
 .theme-picks {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   padding: 1px;
 }
@@ -4189,15 +4120,6 @@ textarea::selection,
 .theme-pick-meta small {
   font-size: 11.5px;
   color: var(--ink-3);
-}
-.theme-pick-white .theme-pick-preview { background: #f4f4f5; }
-.theme-pick-white .theme-pick-side { background: #ececee; }
-.theme-pick-white .theme-pick-main { background: #fff; }
-.theme-pick-white .theme-pick-bar,
-.theme-pick-white .theme-pick-bubble { background: #e4e4e7; }
-.theme-pick-white .theme-pick-bubble.user {
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #e4e4e7;
 }
 .theme-pick-paper .theme-pick-preview { background: #f6f4f0; }
 .theme-pick-paper .theme-pick-side { background: #efece7; }

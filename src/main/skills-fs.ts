@@ -64,7 +64,6 @@ export async function listLocalSkills(projectRoot?: string): Promise<LocalSkillE
 const PLUGIN_ROOTS = [
   ".casleo/plugins",
   ".agents/plugins",
-  ".pi/plugins",
 ] as const;
 
 export async function listLocalPlugins(projectRoot?: string): Promise<LocalPluginEntry[]> {
