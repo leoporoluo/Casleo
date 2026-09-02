@@ -2104,34 +2104,36 @@ export function PromptBar({
   return (
     <div ref={rootRef} className={hero ? "prompt-wrap hero" : "prompt-wrap"}>
       <div className="prompt-shell">
-        <div className="prompt-topbar">
-          <div className="prompt-topbar-row">
-            {!hero && <button
-              type="button"
-              className={folder ? "prompt-folder on" : "prompt-folder"}
-              onClick={onPickWorkspace}
-              title={workspace ?? t("composer.selectOrOpen")}
-            >
-              <Icon path="M3 7h6l2 2h10v10H3z" size={13} />
-              <span>{folder ?? t("composer.selectProject")}</span>
-            </button>}
+        {((!hero && Boolean(folder)) || Boolean(steering && steering.length > 0)) && (
+          <div className="prompt-topbar">
+            <div className="prompt-topbar-row">
+              {!hero && folder && <button
+                type="button"
+                className="prompt-folder on"
+                onClick={() => void onPickWorkspace()}
+                title={workspace ?? t("composer.selectOrOpen")}
+              >
+                <Icon path="M3 7h6l2 2h10v10H3z" size={13} />
+                <span>{folder}</span>
+              </button>}
+              {steering && steering.length > 0 && (
+                <div className="prompt-queue-meta">
+                  <span className="prompt-steer-count">{t("composer.steering", { n: steering.length })}</span>
+                </div>
+              )}
+            </div>
             {steering && steering.length > 0 && (
-              <div className="prompt-queue-meta">
-                <span className="prompt-steer-count">{t("composer.steering", { n: steering.length })}</span>
+              <div className="prompt-steer">
+                {steering.map((item, index) => (
+                  <div key={`${index}-${item}`} className="prompt-steer-row">
+                    <Icon path="M12 19V5M5 12l7-7 7 7" size={12} />
+                    <p className="prompt-steer-text">{item}</p>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-          {steering && steering.length > 0 && (
-            <div className="prompt-steer">
-              {steering.map((item, index) => (
-                <div key={`${index}-${item}`} className="prompt-steer-row">
-                  <Icon path="M12 19V5M5 12l7-7 7 7" size={12} />
-                  <p className="prompt-steer-text">{item}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
         {reference && referenceMatches.length > 0 && (
           <div className="prompt-references" role="listbox" aria-label={reference.trigger === "/" ? "Skills" : "Plugins"}>
             {referenceMatches.map((item, index) => (
@@ -3160,12 +3162,14 @@ export function Login({
             {pane === "appearance" && (
               <div className="theme-page">
                 <p className="settings-hint">{t("settings.themeHint")}</p>
-                <div className="theme-picks">
+                <div className="theme-picks" role="radiogroup" aria-label={t("settings.appearance")}>
                   {THEMES.map((id) => (
                     <button
                       key={id}
                       type="button"
                       className={`theme-pick theme-pick-${id}${theme === id ? " on" : ""}`}
+                      role="radio"
+                      aria-checked={theme === id}
                       onClick={() => setTheme(applyTheme(id))}
                     >
                       <span className="theme-swatch" aria-hidden />
@@ -3173,6 +3177,7 @@ export function Login({
                         <b>{t(THEME_LABEL[id])}</b>
                         <small>{t(THEME_DESC[id])}</small>
                       </span>
+                      {theme === id && <Icon className="theme-pick-check" path="M20 6 9 17l-5-5" size={16} />}
                     </button>
                   ))}
                 </div>
