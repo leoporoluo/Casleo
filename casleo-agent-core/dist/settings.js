@@ -7,7 +7,10 @@ import { getTetherHome } from "./home.js";
 import { tetherEnv } from "./env.js";
 export const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 export const DEEPSEEK_MAX_TOKENS = 384_000;
-export const DEEPSEEK_CONTEXT_WINDOW = 512_000;
+const configuredContextWindow = Number.parseInt(process.env.CASLEO_CONTEXT_WINDOW ?? "", 10);
+export const DEEPSEEK_CONTEXT_WINDOW = Number.isFinite(configuredContextWindow) && configuredContextWindow > 0
+    ? configuredContextWindow
+    : 272_000;
 export function parseMaxTokens(value) {
     const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value.trim()) : Number.NaN;
     if (!Number.isFinite(n) || n < 1)

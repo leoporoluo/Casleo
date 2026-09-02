@@ -387,17 +387,22 @@ export function ContextStats({
     ? Math.round(stats.contextUsage.percent * 10) / 10
     : undefined;
   const contextTokens = stats?.contextUsage?.tokens ?? (stats?.tokens?.total ? stats.tokens.total : undefined);
-  const effectiveContextWindow = stats?.contextUsage?.contextWindow ?? contextWindow;
+  // The active profile is authoritative. A restored session can carry the old model limit.
+  const effectiveContextWindow = contextWindow;
+  const measuredPercent = contextTokens !== undefined && effectiveContextWindow > 0
+    ? Math.min(100, (contextTokens / effectiveContextWindow) * 100)
+    : undefined;
+  const displayPercent = measuredPercent ?? percent;
   const rate = cacheHitRate(stats?.tokens);
   const canCompact = Boolean(onCompact) && !running && !busy;
-  const showCompact = Boolean(onCompact) && percent !== undefined;
+  const showCompact = Boolean(onCompact) && displayPercent !== undefined;
 
   return (
     <div ref={box} className={`context-stats-wrap${open ? " open" : ""}${up ? " up" : ""}`}>
       <button
         type="button"
         className={`stats-toggle${open ? " on" : ""}${
-          percent !== undefined && percent >= 90 ? " hot" : percent !== undefined && percent >= 80 ? " warm" : ""
+          displayPercent !== undefined && displayPercent >= 90 ? " hot" : displayPercent !== undefined && displayPercent >= 80 ? " warm" : ""
         }`}
         aria-label={t("context.monitor")}
         title={t("context.monitor")}
@@ -405,7 +410,7 @@ export function ContextStats({
       >
         <svg width="14" height="14" viewBox="0 0 14 14" className="stats-dial" aria-hidden="true">
           <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth="2" />
-          {percent !== undefined && (
+          {displayPercent !== undefined && (
             <circle
               cx="7"
               cy="7"
@@ -414,13 +419,13 @@ export function ContextStats({
               stroke="currentColor"
               strokeWidth="2"
               strokeDasharray={34.56}
-              strokeDashoffset={34.56 - (Math.min(100, Math.max(0, percent)) / 100) * 34.56}
+              strokeDashoffset={34.56 - (Math.min(100, Math.max(0, displayPercent)) / 100) * 34.56}
               strokeLinecap="round"
               transform="rotate(-90 7 7)"
             />
           )}
         </svg>
-        <span>{percent !== undefined ? `${percent}%` : t("context.label")}</span>
+        <span>{displayPercent !== undefined ? `${Math.round(displayPercent * 10) / 10}%` : t("context.label")}</span>
       </button>
 
       {open && (
@@ -438,24 +443,24 @@ export function ContextStats({
             <div className="context-ring-wrap">
               <svg width="48" height="48" viewBox="0 0 48 48" className="context-ring-svg" aria-hidden="true">
                 <circle cx="24" cy="24" r="20" fill="none" stroke="var(--line)" strokeWidth="3" />
-                {percent !== undefined && (
+                {displayPercent !== undefined && (
                   <circle
                     cx="24"
                     cy="24"
                     r="20"
                     fill="none"
-                    stroke={percent >= 90 ? "var(--red)" : percent >= 80 ? "var(--accent)" : "var(--green)"}
+                    stroke={displayPercent >= 90 ? "var(--red)" : displayPercent >= 80 ? "var(--accent)" : "var(--green)"}
                     strokeWidth="3"
                     strokeDasharray={125.66}
-                    strokeDashoffset={125.66 - (Math.min(100, Math.max(0, percent)) / 100) * 125.66}
+                    strokeDashoffset={125.66 - (Math.min(100, Math.max(0, displayPercent)) / 100) * 125.66}
                     strokeLinecap="round"
                     transform="rotate(-90 24 24)"
                   />
                 )}
               </svg>
               <div className="context-ring-label">
-                <strong>{percent !== undefined ? `${percent}%` : "—"}</strong>
-                <small>{percent !== undefined ? t("context.used") : t("context.untracked")}</small>
+                <strong>{displayPercent !== undefined ? `${Math.round(displayPercent * 10) / 10}%` : "—"}</strong>
+                <small>{displayPercent !== undefined ? t("context.used") : t("context.untracked")}</small>
               </div>
             </div>
             <div className="context-capacity-info">
@@ -463,12 +468,12 @@ export function ContextStats({
               <span className="context-ratio">
                 {contextTokens !== undefined ? formatCompactNumber(contextTokens) : "—"} / {formatCompactNumber(effectiveContextWindow)}
               </span>
-              <small className={`context-hint ${percent && percent >= 80 ? "warn" : ""}`}>
-                {percent === undefined
+              <small className={`context-hint ${displayPercent && displayPercent >= 80 ? "warn" : ""}`}>
+                {displayPercent === undefined
                   ? t("context.waitFirst")
-                  : percent >= 90
+                  : displayPercent >= 90
                     ? t("context.critical")
-                    : percent >= 75
+                    : displayPercent >= 75
                       ? t("context.high")
                       : t("context.ok")}
               </small>
@@ -1686,8 +1691,13 @@ function placeCaret(root: HTMLElement, offset: number): void {
 }
 
 function droppedAbsPath(file: File): string {
-  const path = (file as File & { path?: string }).path;
-  return typeof path === "string" ? path : "";
+  try {
+    return window.harness.workspace.pathForFile(file);
+  } catch {
+    // Older Electron builds exposed the native path directly on File.
+    const path = (file as File & { path?: string }).path;
+    return typeof path === "string" ? path : "";
+  }
 }
 
 function hydratePrompt(root: HTMLElement, text: string): void {
@@ -1746,7 +1756,7 @@ export function PromptBar({
   running: boolean;
   disabled?: boolean;
   workspace?: string;
-  onPickWorkspace(): void;
+  onPickWorkspace(): string | null | Promise<string | null>;
   model: string;
   models: { value: string; label: string }[];
   onModel(value: string): void;
@@ -1772,6 +1782,7 @@ export function PromptBar({
   const [dropOver, setDropOver] = useState(false);
   const [blank, setBlank] = useState(true);
   const skipHydrate = useRef(false);
+  const choosingWorkspace = useRef(false);
   const area = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const mention = workspace ? mentionAt(value, cursor) : undefined;
@@ -1935,6 +1946,17 @@ export function PromptBar({
     onSubmit(text);
   };
 
+  const focusOrChooseWorkspace = async () => {
+    if (workspace || choosingWorkspace.current) return;
+    choosingWorkspace.current = true;
+    try {
+      const selected = await onPickWorkspace();
+      if (selected) requestAnimationFrame(() => area.current?.focus());
+    } finally {
+      choosingWorkspace.current = false;
+    }
+  };
+
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
     const root = area.current;
     if (!root) return;
@@ -2034,14 +2056,26 @@ export function PromptBar({
     if (!root) return;
     const paths: string[] = [];
     const treePath = treeDragPath || event.dataTransfer.getData(PATH_MIME);
-    const dropped = [...event.dataTransfer.files];
+    const dropped = [...event.dataTransfer.items]
+      .filter((item) => item.kind === "file")
+      .map((item) => {
+        const file = item.getAsFile();
+        if (!file) return undefined;
+        const entry = (item as DataTransferItem & { webkitGetAsEntry?: () => FileSystemEntry | null }).webkitGetAsEntry?.();
+        return { file, directory: entry?.isDirectory === true };
+      })
+      .filter((item): item is { file: File; directory: boolean } => Boolean(item));
+    if (dropped.length === 0) {
+      dropped.push(...[...event.dataTransfer.files].map((file) => ({ file, directory: false })));
+    }
     if (treePath) {
       paths.push(treePath);
     } else if (workspace) {
-      for (const file of dropped) {
-        const rel = workspaceRelative(droppedAbsPath(file), workspace);
+      for (const item of dropped) {
+        const rel = workspaceRelative(droppedAbsPath(item.file), workspace);
         if (!rel) continue;
-        paths.push(files.includes(`${rel}/`) ? `${rel}/` : rel);
+        const directory = item.directory || files.includes(`${rel}/`);
+        paths.push(directory ? `${rel.replace(/\/$/, "")}/` : rel);
       }
     }
     if (paths.length === 0) {
@@ -2155,6 +2189,10 @@ export function PromptBar({
           }}
           onMouseDown={(event) => {
             if ((event.target as HTMLElement).closest(".prompt-upload")) event.preventDefault();
+            if (!workspace) {
+              event.preventDefault();
+              void focusOrChooseWorkspace();
+            }
           }}
           onInput={emit}
           onKeyUp={() => area.current && setCursor(caretOffset(area.current))}
@@ -2254,7 +2292,7 @@ function permissionOptions(t: ReturnType<typeof useI18n>["t"]): PermissionOption
     value: "plan",
     label: t("perm.plan"),
     desc: t("perm.planDesc"),
-    icon: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+    icon: "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M7 8h10M7 12h7M7 16h5",
   },
   {
     value: "ask",
@@ -2827,7 +2865,6 @@ function ApiProfilesEditor({
                     }}
                     placeholder={String(DEFAULT_CONTEXT_WINDOW)}
                   />
-                  <small className="settings-field-hint">{t("settings.contextWindowHint")}</small>
                 </label>
                 <label>
                   {t("settings.maxTokens")}

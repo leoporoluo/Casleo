@@ -252,7 +252,7 @@ function AccountMenu({
     <div className="account-wrap">
       <button type="button" className="account" title={t("nav.settingsTitle")} onClick={onOpenSettings}>
         <div className="account-icon">
-          <Icon path="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15H2.8a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.2 8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4V3.8a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z" size={15} />
+          <Icon path="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4.5 12H3 M21 12h-1.5 M12 4.5V3 M12 21v-1.5 M6.7 6.7 5.6 5.6 M18.4 18.4l-1.1-1.1 M17.3 6.7l1.1-1.1 M5.6 18.4l1.1-1.1" size={15} />
         </div>
         <div className="account-meta">
           <strong>{t("menu.settings")}</strong>
@@ -295,6 +295,7 @@ export function App() {
   }, [toast]);
   const [uiRequest, setUiRequest] = useState<ExtensionUiRequest>();
   const [fullscreen, setFullscreen] = useState(false);
+  const [maximized, setMaximized] = useState(false);
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [projectMenu, setProjectMenu] = useState<{ path: string; x: number; y: number }>();
   const [editingProjectPath, setEditingProjectPath] = useState<string>();
@@ -664,9 +665,9 @@ export function App() {
     if (!running) await window.harness.agent.stop().catch(() => undefined);
     return true;
   }, [fillPrompt, running, t]);
-  const openFolder = useCallback(async () => {
+  const openFolder = useCallback(async (): Promise<string | null> => {
     const selected = await window.harness.workspace.choose();
-    if (!selected) return;
+    if (!selected) return null;
     if (!(await bindProject(selected))) return null;
     setWorkspaces(await window.harness.workspace.recent());
     return selected;
@@ -1051,6 +1052,8 @@ export function App() {
       if (command === "open-folder") void openFolder();
       if (command === "fullscreen-on") setFullscreen(true);
       if (command === "fullscreen-off") setFullscreen(false);
+      if (command === "maximized-on") setMaximized(true);
+      if (command === "maximized-off") setMaximized(false);
     });
     return () => {
       offEvent();
@@ -1124,7 +1127,7 @@ export function App() {
       running={running}
       disabled={loading}
       workspace={workspace}
-      onPickWorkspace={() => void openFolder()}
+      onPickWorkspace={openFolder}
       model={model}
       models={[...new Set([model, ...chatModels].filter(Boolean))].map((id) => ({ value: id, label: id }))}
       onModel={switchModel}
@@ -1165,7 +1168,7 @@ export function App() {
   );
 
   return (
-    <div className={["app", darwin && "darwin", fullscreen && "fullscreen"].filter(Boolean).join(" ")}>
+    <div className={["app", darwin && "darwin", fullscreen && "fullscreen", maximized && "maximized"].filter(Boolean).join(" ")}>
       <SidebarNav
         onNew={() => void newThread()}
         onOpen={() => void openFolder()}
@@ -1175,8 +1178,7 @@ export function App() {
           />
         )}
       >
-        <div className="section-label">{t("nav.sectionProjects")}</div>
-        {projects.length === 0 && <p className="sidebar-empty">{t("nav.noProjects")}</p>}
+        {projects.length > 0 && <div className="section-label">{t("nav.sectionProjects")}</div>}
         {projects.map(({ item, sessions: threads }) => {
           const open = openProjects[item.path] === true;
           return (

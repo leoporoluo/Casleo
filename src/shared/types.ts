@@ -167,6 +167,7 @@ export interface DesktopApi {
     reveal(path: string, cwd?: string): Promise<void>;
     list(cwd?: string): Promise<string[]>;
     restore(files: Array<{ path: string; content: string | null; mode?: number }>, cwd?: string): Promise<{ restored: string[] }>;
+    pathForFile(file: File): string;
     onChanged(listener: (root: string) => void): () => void;
   };
   vision: {

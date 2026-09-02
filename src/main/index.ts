@@ -268,7 +268,9 @@ function createWindow(): void {
     minWidth: 880,
     minHeight: 600,
     show: false,
-    backgroundColor: "#fafafb",
+    transparent: process.platform === "win32",
+    // A transparent frameless shell lets the renderer expose soft desktop corners.
+    backgroundColor: process.platform === "win32" ? "#00000000" : "#fafafb",
     icon: appIconPath(),
     // The Windows controls overlay always paints above page content, so dialogs could never
     // cover it. Going frameless lets the renderer draw its own buttons in normal stacking order.
@@ -279,9 +281,7 @@ function createWindow(): void {
         }
       : {
           frame: false,
-          // Transparent frameless windows lose the Windows resize border, and DWM rounding punches
-          // the desktop through the corners, so the shell stays square with a CSS hairline instead.
-          roundedCorners: false,
+          roundedCorners: true,
           hasShadow: true,
         }),
     webPreferences: {
@@ -308,7 +308,12 @@ function createWindow(): void {
     );
   mainWindow.on("enter-full-screen", reportFullscreen);
   mainWindow.on("leave-full-screen", reportFullscreen);
+  const reportMaximized = () =>
+    sendAppCommand(mainWindow?.isMaximized() ? "maximized-on" : "maximized-off");
+  mainWindow.on("maximize", reportMaximized);
+  mainWindow.on("unmaximize", reportMaximized);
   mainWindow.webContents.on("did-finish-load", reportFullscreen);
+  mainWindow.webContents.on("did-finish-load", reportMaximized);
   mainWindow.on("close", (event) => {
     if (quitting || !appPreferences.minimizeToTray) return;
     event.preventDefault();

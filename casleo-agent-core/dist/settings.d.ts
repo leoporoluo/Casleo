@@ -1,6 +1,6 @@
 export declare const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 export declare const DEEPSEEK_MAX_TOKENS = 384000;
-export declare const DEEPSEEK_CONTEXT_WINDOW = 512000;
+export declare const DEEPSEEK_CONTEXT_WINDOW: number;
 export declare function parseMaxTokens(value: unknown): number | undefined;
 export declare function isOfficialDeepSeekBaseUrl(baseUrl: string): boolean;
 export declare function resolveMaxTokens(baseUrl: string, configured?: number): number;

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { Locale } from "../shared/i18n";
 import type { AgentEvent, DesktopApi } from "../shared/types";
 
@@ -37,6 +37,7 @@ const api: DesktopApi = {
     reveal: (filePath, cwd) => ipcRenderer.invoke("workspace:reveal", filePath, cwd),
     list: (cwd) => ipcRenderer.invoke("workspace:list", cwd),
     restore: (files, cwd) => ipcRenderer.invoke("workspace:restore", files, cwd),
+    pathForFile: (file) => webUtils.getPathForFile(file),
     onChanged: (listener) => subscribe<string>("workspace:changed", listener),
   },
   vision: {

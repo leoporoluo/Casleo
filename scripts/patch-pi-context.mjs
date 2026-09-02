@@ -14,7 +14,7 @@ try {
 }
 
 const source = await fs.readFile(settingsPath, "utf8");
-const target = 'export const DEEPSEEK_CONTEXT_WINDOW = Number.parseInt(process.env.CASLEO_CONTEXT_WINDOW ?? "272000", 10) || 272000;';
+const target = 'const configuredContextWindow = Number.parseInt(process.env.CASLEO_CONTEXT_WINDOW ?? "", 10);\nexport const DEEPSEEK_CONTEXT_WINDOW = Number.isFinite(configuredContextWindow) && configuredContextWindow > 0\n    ? configuredContextWindow\n    : 272_000;';
 const updated = source.replace(
   /export const DEEPSEEK_CONTEXT_WINDOW = [^;]+;/,
   target,
