@@ -12,7 +12,7 @@ import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThin
 import { tokenizeCode } from "./highlight";
 import type { AgentSkillCommand } from "../shared/skills";
 import type { LocalPluginEntry } from "../shared/types";
-import { PROJECT_SKILL_ROOTS, USER_SKILL_ROOTS, skillSlashCommand } from "../shared/skills";
+import { PROJECT_PLUGIN_ROOTS, PROJECT_SKILL_ROOTS, USER_PLUGIN_ROOTS, USER_SKILL_ROOTS, skillSlashCommand } from "../shared/skills";
 import { useI18n } from "./i18n";
 import type { MessageKey } from "../shared/i18n";
 import logo from "./logo.svg";
@@ -2926,7 +2926,7 @@ function settingsNav(t: ReturnType<typeof useI18n>["t"]): Array<{ label: string;
   {
     label: t("settings.groupModels"),
     items: [
-      { id: "chat", label: t("settings.chat"), icon: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" },
+      { id: "chat", label: t("settings.chat"), icon: "M12 3 21 8 12 13 3 8z M3 12l9 5 9-5 M3 16l9 5 9-5" },
     ],
   },
   {
@@ -3283,7 +3283,7 @@ export function Login({
                     <div className="skills-path-block">
                       <div className="skills-path-label">{t("settings.pluginsPathProject")}</div>
                       <ul className="skills-path-list">
-                        {['.casleo/plugins', '.agents/plugins'].map((root) => (
+                        {PROJECT_PLUGIN_ROOTS.map((root) => (
                           <li key={root}><code>{root}/&lt;name&gt;/plugin.json</code></li>
                         ))}
                       </ul>
@@ -3291,7 +3291,7 @@ export function Login({
                     <div className="skills-path-block">
                       <div className="skills-path-label">{t("settings.pluginsPathUser")}</div>
                       <ul className="skills-path-list">
-                        {['~/.casleo/plugins'].map((root) => (
+                        {USER_PLUGIN_ROOTS.map((root) => (
                           <li key={root}><code>{root}/&lt;name&gt;/plugin.json</code></li>
                         ))}
                       </ul>
@@ -3389,8 +3389,6 @@ export function Login({
                   <p className="about-tagline">{t("about.subtitle")}</p>
                 </div>
                 <p className="about-intro">{t("about.intro")}</p>
-                <p className="about-origin-name">{t("about.originName")}</p>
-                <p className="about-origin">{t("about.origin")}</p>
               </div>
             )}
           </div>

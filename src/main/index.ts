@@ -263,14 +263,14 @@ async function checkForUpdates(manual = false): Promise<void> {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 860,
-    minWidth: 880,
-    minHeight: 600,
+    width: 1440,
+    height: 900,
+    minWidth: 960,
+    minHeight: 640,
     show: false,
-    transparent: process.platform === "win32",
-    // A transparent frameless shell lets the renderer expose soft desktop corners.
-    backgroundColor: process.platform === "win32" ? "#00000000" : "#fafafb",
+    // An opaque surface avoids the first-paint composition flash on Windows.
+    transparent: false,
+    backgroundColor: "#f6f4f0",
     icon: appIconPath(),
     // The Windows controls overlay always paints above page content, so dialogs could never
     // cover it. Going frameless lets the renderer draw its own buttons in normal stacking order.

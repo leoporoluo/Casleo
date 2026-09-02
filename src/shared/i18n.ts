@@ -394,9 +394,6 @@ const zh = {
   "about.subtitle": "本地优先的 AI 编程工作台",
   "about.intro":
     "基于 Pi Agent 生态构建，把 DeepSeek 与兼容模型的推理变成可见、可控、可撤销的代码改动。会话与工作区数据留在本机，模型请求直达你配置的端点。",
-  "about.originName": "Casleo · Pi 驱动的本地 Agent",
-  "about.origin":
-    "Casleo 将 Pi Agent 运行时固定在本地仓库中，让改动看得见、权限收得住，上一轮可以用 /undo 撤回。",
   "about.checkUpdate": "检查更新",
   "settings.back": "返回应用",
 
@@ -843,9 +840,6 @@ const en: Record<MessageKey, string> = {
   "about.subtitle": "Local-first AI coding workbench",
   "about.intro":
     "Built on the Pi Agent ecosystem. Turns DeepSeek and compatible-model inference into visible, controllable, undoable code changes. Sessions and workspace data stay on your machine; model requests go straight to the endpoint you configure.",
-  "about.originName": "Casleo · a Pi-powered local agent",
-  "about.origin":
-    "Casleo keeps the Pi Agent runtime attached to your local repository so changes remain visible, permissions stay controlled, and the last turn can be undone.",
   "about.checkUpdate": "Check for updates",
   "settings.back": "Back to app",
 

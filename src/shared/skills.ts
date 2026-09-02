@@ -4,6 +4,10 @@ export const PROJECT_SKILL_ROOTS = [".agents/skills", ".pi/skills"] as const;
 /** User-global dirs (always available; not listed in workspace @ picker). */
 export const USER_SKILL_ROOTS = ["~/.casleo/skills", "~/.agents/skills"] as const;
 
+/** Plugin roots mirror Pi's project/user layout and the Casleo compatibility home. */
+export const PROJECT_PLUGIN_ROOTS = [".agents/plugins", ".pi/plugins"] as const;
+export const USER_PLUGIN_ROOTS = ["~/.casleo/plugins", "~/.agents/plugins"] as const;
+
 export interface AgentSkillCommand {
   name: string;
   description?: string;

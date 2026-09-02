@@ -2,6 +2,7 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { shell } from "electron";
+import { PROJECT_PLUGIN_ROOTS, USER_PLUGIN_ROOTS } from "../shared/skills";
 
 const SKILL_ROOTS = [
   ".casleo/skills",
@@ -61,16 +62,11 @@ export async function listLocalSkills(projectRoot?: string): Promise<LocalSkillE
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-const PLUGIN_ROOTS = [
-  ".casleo/plugins",
-  ".agents/plugins",
-] as const;
-
 export async function listLocalPlugins(projectRoot?: string): Promise<LocalPluginEntry[]> {
   const home = process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir();
-  const roots = PLUGIN_ROOTS.map((root) => path.join(home, root));
+  const roots = USER_PLUGIN_ROOTS.map((root) => path.join(expandHome(root)));
   if (projectRoot) {
-    for (const root of PLUGIN_ROOTS) roots.push(path.join(projectRoot, root));
+    for (const root of PROJECT_PLUGIN_ROOTS) roots.push(path.join(projectRoot, root));
   }
   const plugins = new Map<string, LocalPluginEntry>();
   for (const root of roots) {
