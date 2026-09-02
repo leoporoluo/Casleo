@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
-import { getTetherRpcEntryPath } from "tether-agent-core";
+import { getTetherRpcEntryPath } from "casleo-agent-core";
 import type { AgentEvent, AgentSessionStats, AgentSnapshot, AgentStartOptions } from "../shared/types";
 import { parseSkillCommands } from "../shared/skills";
 import { killProcessTree } from "./process-tree";

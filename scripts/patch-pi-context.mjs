@@ -8,7 +8,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 let settingsPath;
 try {
-  settingsPath = path.join(path.dirname(require.resolve("tether-agent-core")), "settings.js");
+  settingsPath = path.join(path.dirname(require.resolve("casleo-agent-core")), "settings.js");
 } catch {
   process.exit(0);
 }

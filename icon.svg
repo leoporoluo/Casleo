@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <rect width="256" height="256" rx="72" fill="#000000"/>
-  <path d="M72 160 128 64l56 96-56 32-56-32Z" fill="none" stroke="#fbf7ef" stroke-width="19" stroke-linejoin="round"/>
+  <path d="M128 54 195 166 128 207 61 166Z M128 88 162 159 128 180 94 159Z"
+    fill="#fbf7ef" fill-rule="evenodd" clip-rule="evenodd"/>
 </svg>

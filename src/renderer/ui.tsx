@@ -3241,7 +3241,7 @@ export function Login({
                     <div className="skills-path-block">
                       <div className="skills-path-label">{t("settings.pluginsPathProject")}</div>
                       <ul className="skills-path-list">
-                        {['.casleo/plugins', '.agents/plugins', '.pi/plugins', '.cursor/plugins'].map((root) => (
+                        {['.casleo/plugins', '.agents/plugins', '.pi/plugins'].map((root) => (
                           <li key={root}><code>{root}/&lt;name&gt;/plugin.json</code></li>
                         ))}
                       </ul>
@@ -3249,7 +3249,7 @@ export function Login({
                     <div className="skills-path-block">
                       <div className="skills-path-label">{t("settings.pluginsPathUser")}</div>
                       <ul className="skills-path-list">
-                        {['~/.casleo/plugins', '~/.agents/plugins', '~/.pi/plugins', '~/.cursor/plugins'].map((root) => (
+                        {['~/.casleo/plugins', '~/.agents/plugins', '~/.pi/plugins'].map((root) => (
                           <li key={root}><code>{root}/&lt;name&gt;/plugin.json</code></li>
                         ))}
                       </ul>

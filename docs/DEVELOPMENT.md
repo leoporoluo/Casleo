@@ -8,11 +8,11 @@
 
 Casleo 是一个基于 Electron 的本地优先 AI 编程桌面工作台：模型调用、工作区工具、终端命令、权限确认、会话历史与 diff 审查集中在一个桌面应用里。UI 与会话数据留在本机，模型请求直连用户配置的 provider 或本地网关。
 
-**核心定位**：Casleo 不重新实现 agent 基础能力。agent 循环、沙箱、会话、工具、checkpoint、MCP、Hooks 都由 npm 包 `tether-agent-core`（内部再封装 Pi 生态 `@earendil-works/pi-*`）提供。本仓库只负责：
+**核心定位**：Casleo 不重新实现 agent 基础能力。agent 循环、沙箱、会话、工具、checkpoint、MCP、Hooks 都由 npm 包 `casleo-agent-core`（内部再封装 Pi 生态 `@earendil-works/pi-*`）提供。本仓库只负责：
 
 - Electron 壳（窗口、菜单、IPC、权限入口、工作区文件访问、更新检查）
 - 渲染进程 UI（React，中文/英文界面）
-- 把 `tether-agent-core` 的 RPC 子进程桥接成桌面可用的 agent
+- 把 `casleo-agent-core` 的 RPC 子进程桥接成桌面可用的 agent
 
 | 技术                      | 用途                                               |
 | ------------------------- | -------------------------------------------------- |
@@ -22,7 +22,7 @@ Casleo 是一个基于 Electron 的本地优先 AI 编程桌面工作台：模�
 | Vite 7                    | 渲染进程构建 + dev server                          |
 | tsup 8                    | 主进程 / preload / 扩展构建为 ESM/CJS              |
 | Vitest 3                  | 单元测试                                           |
-| tether-agent-core 0.1.18   | agent 运行时（RPC worker、沙箱、会话、checkpoint） |
+| casleo-agent-core 0.1.18   | agent 运行时（RPC worker、沙箱、会话、checkpoint） |
 | electron-builder 26       | 打包 dmg / nsis / dir                              |
 
 ### 1.1 架构分层
@@ -36,7 +36,7 @@ Electron Main（src/main）
   窗口、工作区文件、凭据、AgentHost 子进程宿主、更新检查、预览协议
         │  换行分隔 JSON-RPC over stdio
         ▼
-tether-agent-core（node_modules 依赖，RPC worker 进程）
+casleo-agent-core（node_modules 依赖，RPC worker 进程）
   权限、沙箱、工具、checkpoint、MCP、会话文件、Pi agent 循环
 ```
 
@@ -122,7 +122,7 @@ pnpm pack:win       # 仅 Windows nsis
 
 ### 3.3 与 Runtime 同时开发
 
-应用从 npm 消费 `tether-agent-core`。如果要同时改 Runtime 本身，临时把本地 Runtime 包链接进来（README 建议 `../tether-runtime/packages/core`）。正式发布前记得改回 registry 版本。
+应用从 npm 消费 `casleo-agent-core`。如果要同时改 Runtime 本身，临时把本地 Runtime 包链接进来（README 建议 `../Casleo/casleo-agent-core`）。正式发布前记得改回 registry 版本。
 
 ## 4. IPC 契约（src/shared/types.ts）
 
@@ -161,7 +161,7 @@ pnpm pack:win       # 仅 Windows nsis
 
 ## 5. Agent 子进程协议（src/main/agent-host.ts）
 
-agent 运行在独立的 Node 子进程里（`tether-agent-core` 的 RPC 入口），通信协议是**换行分隔的 JSON-RPC over stdio**：
+agent 运行在独立的 Node 子进程里（`casleo-agent-core` 的 RPC 入口），通信协议是**换行分隔的 JSON-RPC over stdio**：
 
 - 请求：主进程向 `child.stdin` 写一行 `{ type, id, ...data }` JSON。
 - 响应：子进程在 stdout 回 `{ type: "response", id, success, data | error }`。
@@ -317,13 +317,13 @@ agent 事件通过 `agent:event` 推送，`App.tsx` 里先做副作用处理（`
 
 ### 7.1 会话文件
 
-会话由 `tether-agent-core` 管理（`CasleoStateStore` / `listCasleoThreads`），主进程只做映射：`sessions:list` 把 thread 转成 `SessionSummary`（含 `path` 会话文件路径、`storagePath` 索引路径、`preview` 等）。重命名通过**追加**一条 `session_info` 条目并重建索引完成（`sessions:rename`）。
+会话由 `casleo-agent-core` 管理（`CasleoStateStore` / `listCasleoThreads`），主进程只做映射：`sessions:list` 把 thread 转成 `SessionSummary`（含 `path` 会话文件路径、`storagePath` 索引路径、`preview` 等）。重命名通过**追加**一条 `session_info` 条目并重建索引完成（`sessions:rename`）。
 
 恢复：打开会话时 `agent:start({ sessionPath, resume: true })` 传入会话文件，agent 进程从磁盘恢复；渲染层用 `normalizeMessages` 重建消息，磁盘上的图片只存暂存路径，用 `stagedImages` 重建为 `src` 引用（经预览协议访问）。
 
 ### 7.2 /undo 与 checkpoint
 
-`tether-agent-core` 在文件写入时落 `tether-checkpoint` 条目（含每个文件的 `before` 内容）。`/undo` 流程：
+`casleo-agent-core` 在文件写入时落 `tether-checkpoint` 条目（含每个文件的 `before` 内容）。`/undo` 流程：
 
 1. `get_entries` 拉会话条目，`lastTurnRestoreFiles` 解析**最后一个真实用户轮之后**、未被 `tether-checkpoint-undone` 撤销过的最新 checkpoint 的 before 文件集。
 2. 弹 `ApprovalCard` 确认（`harness:undo` 特殊 id）。
@@ -337,7 +337,7 @@ agent 事件通过 `agent:event` 推送，`App.tsx` 里先做副作用处理（`
 
 ### 7.4 终端 jobs
 
-后台/进行中的 shell 命令由 `sessionTerminals` 从工具活动里提炼（`process_id` 追踪），InspectPanel 可 `stopJobs("/stop-job <id>")` 或 `/stop-jobs`（需要 tether-agent-core ≥ 0.1.6 提供该命令）。
+后台/进行中的 shell 命令由 `sessionTerminals` 从工具活动里提炼（`process_id` 追踪），InspectPanel 可 `stopJobs("/stop-job <id>")` 或 `/stop-jobs`（需要 casleo-agent-core ≥ 0.1.6 提供该命令）。
 
 ## 8. 权限、沙箱与安全边界
 
@@ -378,7 +378,7 @@ shared 层 `vision-api.ts` 提供纯函数：请求构造、响应解析、结�
 | 位置                                                                        | 内容                                                                                                                                   |
 | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `appData/Casleo`（userData，旧的 `appData/DSHarness` 首次启动自动改名迁移） | `recent-workspaces.json`（最近工作区）、`vision-config.json`、`chat-profiles.json`、`uploads/`（暂存图片）、`tasks/`（无项目时的 cwd） |
-| `~/.casleo`（getCasleoHome，tether-agent-core 管理）                        | `settings.json`（locale / 默认 provider+model）、会话索引与线程存储、凭据（`TETHER_CREDENTIALS_STORE=file` 时落文件而非系统钥匙串）    |
+| `~/.casleo`（getCasleoHome，casleo-agent-core 管理）                        | `settings.json`（locale / 默认 provider+model）、会话索引与线程存储、凭据（`TETHER_CREDENTIALS_STORE=file` 时落文件而非系统钥匙串）    |
 | 项目内 `.agents/`                                                           | `features.json`（跨会话任务清单）、`progress.md`（进度）——由技能约定维护                                                               |
 
 环境变量约定：`TETHER_CREDENTIALS_STORE=file`（分发版避免钥匙串弹窗）；`PI_TELEMETRY=0`；`PI_SKIP_VERSION_CHECK=1`；`HARNESS_EXTRA_MODELS` / `HARNESS_VISION_CONFIG` / `HARNESS_VISION_UPLOADS` 传给 agent 子进程。
@@ -403,7 +403,7 @@ shared 层 `vision-api.ts` 提供纯函数：请求构造、响应解析、结�
 | preload | `src/preload/index.ts`     | CJS（`.cjs`） | `dist-electron/preload/index.cjs`                          |
 | 扩展    | `src/extensions/vision.ts` | ESM（`.js`）  | `dist-electron/extensions/vision.js`                       |
 
-`electron` 与 `tether-agent-core` 标记为 external。
+`electron` 与 `casleo-agent-core` 标记为 external。
 
 ### 12.2 渲染进程（vite.config.ts）
 
@@ -425,7 +425,7 @@ postinstall / predev 执行：检查 Electron 发行二进制是否完整，缺�
 - 位置：与源码同目录的 `*.test.ts`（Vitest，node 环境），目前 12 个文件约 112 个用例。
 - 重点覆盖：`conversation.ts` 事件归并与解析（最大测试面）、`shared/*` 纯函数（i18n、chat-profiles、thinking、skills、vision-api、openai-models）、`main/*` 工具（rpc-lines、skills-fs、update-check）。
 - 运行：`pnpm test` 或 `node_modules/.bin/vitest run`；CI 里用默认配置。
-- 已知环境相关失败：`skills-fs.test.ts` 假设 `$HOME` 干净（临时 HOME 下只有它创建的 skill）；若本机 `$HOME` 下存在真实技能目录（如 `.cursor/skills-cursor`）会多出条目导致断言失败——CI/干净环境不受影响。
+- 已知环境相关失败：`skills-fs.test.ts` 假设 `$HOME` 干净（临时 HOME 下只有它创建的 skill）；若本机 `$HOME` 下存在其他真实技能目录会多出条目导致断言失败——CI/干净环境不受影响。
 
 给纯逻辑（conversation / shared）加功能时，遵循"先补 `*.test.ts` 再实现"的节奏；新用例用 Vitest 的 `describe/it/expect`。
 
@@ -456,7 +456,7 @@ postinstall / predev 执行：检查 Electron 发行二进制是否完整，缺�
 
 ### 14.5 修改会话持久化格式
 
-先看 `tether-agent-core` 的会话条目类型（`SessionEntryLike`：`message` / `custom` 条目）；`conversation.ts` 的解析函数与 `lastTurnRestoreFiles` 依赖 `tether-checkpoint` / `tether-checkpoint-undone` 的 customType 约定，改动需同步。
+先看 `casleo-agent-core` 的会话条目类型（`SessionEntryLike`：`message` / `custom` 条目）；`conversation.ts` 的解析函数与 `lastTurnRestoreFiles` 依赖 `tether-checkpoint` / `tether-checkpoint-undone` 的 customType 约定，改动需同步。
 
 ## 15. 工程约定（AGENTS.md 摘要）
 

@@ -1,6 +1,6 @@
 # Casleo
 
-面向仓库的 AI 编程桌面工作台。Agent 循环、沙箱、会话在 npm 包 `tether-agent-core`；本仓库只做 Electron 壳和中文工作流界面。
+面向仓库的 AI 编程桌面工作台。Agent 循环、沙箱、会话在工作区包 `casleo-agent-core`；本仓库只做 Electron 壳和中文工作流界面。
 
 ## 地图
 
@@ -12,7 +12,7 @@
 - 会话归并：[src/renderer/conversation.ts](src/renderer/conversation.ts)
 - IPC 契约：[src/shared/types.ts](src/shared/types.ts)
 - 长任务协议：`.agents/skills/init-long-run`、`.agents/skills/continue-long-run`、`.agents/skills/plan-then-act`
-- 界面气质（改 CSS / 组件 / 克隆同款工作台）：`.agents/skills/casleo-ui`（Cursor 侧同步 `.cursor/skills/casleo-ui`）
+- 界面气质（改 CSS / 组件 / 工作台视觉规范）：`.agents/skills/casleo-ui`
 
 ## Agent Skills
 

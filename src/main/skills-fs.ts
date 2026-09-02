@@ -6,9 +6,6 @@ import { shell } from "electron";
 const SKILL_ROOTS = [
   ".casleo/skills",
   ".agents/skills",
-  ".tether/skills",
-  ".cursor/skills",
-  ".cursor/skills-cursor",
 ] as const;
 
 export interface LocalSkillEntry {
@@ -68,8 +65,6 @@ const PLUGIN_ROOTS = [
   ".casleo/plugins",
   ".agents/plugins",
   ".pi/plugins",
-  ".cursor/plugins",
-  ".tether/plugins",
 ] as const;
 
 export async function listLocalPlugins(projectRoot?: string): Promise<LocalPluginEntry[]> {

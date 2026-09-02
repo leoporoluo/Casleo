@@ -1,0 +1,63 @@
+{
+  "name": "casleo-agent-core",
+  "version": "0.1.18",
+  "description": "Local-first agent runtime for the Casleo desktop workbench (tools, sandbox, sessions, RPC).",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/leoporoluo/Casleo#readme",
+  "bugs": {
+    "url": "https://github.com/leoporoluo/Casleo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leoporoluo/Casleo.git",
+    "directory": "casleo-agent-core"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./rpc": {
+      "types": "./dist/rpc-client.d.ts",
+      "import": "./dist/rpc-client.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "build:windows-sandbox": "node ../../scripts/build-windows-sandbox.mjs",
+    "postbuild": "node -e \"require('node:fs').chmodSync('dist/rpc-entry.js', 0o755)\"",
+    "prepack": "pnpm build && pnpm build:windows-sandbox",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dependencies": {
+    "@earendil-works/pi-agent-core": "0.84.4",
+    "@earendil-works/pi-ai": "0.84.4",
+    "@earendil-works/pi-coding-agent": "0.84.4",
+    "@earendil-works/pi-tui": "0.84.4",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@napi-rs/keyring": "^1.3.0",
+    "fast-glob": "^3.3.3",
+    "pi-web-access": "0.27.0",
+    "picocolors": "^1.1.1",
+    "typebox": "^1.3.7",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "typescript": "^5.9.2"
+  }
+}

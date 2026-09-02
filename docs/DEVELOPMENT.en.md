@@ -8,11 +8,11 @@
 
 Casleo is a local-first AI coding desktop workbench built on Electron: model calls, workspace tools, terminal commands, permission prompts, session history, and diff review all live in one desktop app. The UI and session data stay on your machine; model requests go directly to the provider or local gateway you configure.
 
-**Core positioning**: Casleo does not reimplement agent foundations. The agent loop, sandbox, sessions, tools, checkpoints, MCP, and Hooks are all provided by the npm package `tether-agent-core` (which wraps the Pi ecosystem `@earendil-works/pi-*`). This repository is responsible for:
+**Core positioning**: Casleo does not reimplement agent foundations. The agent loop, sandbox, sessions, tools, checkpoints, MCP, and Hooks are all provided by the npm package `casleo-agent-core` (which wraps the Pi ecosystem `@earendil-works/pi-*`). This repository is responsible for:
 
 - The Electron shell (windows, menus, IPC, permission entry points, workspace file access, update checks)
 - The renderer UI (React, Chinese/English interface)
-- Bridging the `tether-agent-core` RPC child process into a desktop-usable agent
+- Bridging the `casleo-agent-core` RPC child process into a desktop-usable agent
 
 | Technology | Purpose |
 | --- | --- |
@@ -22,7 +22,7 @@ Casleo is a local-first AI coding desktop workbench built on Electron: model cal
 | Vite 7 | Renderer build + dev server |
 | tsup 8 | Main / preload / extension builds (ESM/CJS) |
 | Vitest 3 | Unit tests |
-| tether-agent-core 0.1.18 | Agent runtime (RPC worker, sandbox, sessions, checkpoints) |
+| casleo-agent-core 0.1.18 | Agent runtime (RPC worker, sandbox, sessions, checkpoints) |
 | electron-builder 26 | Packaging dmg / nsis / dir |
 
 ### 1.1 Architecture Layers
@@ -36,7 +36,7 @@ Electron Main (src/main)
   windows, workspace files, credentials, AgentHost child-process host, update checks, preview protocol
         │  newline-delimited JSON-RPC over stdio
         ▼
-tether-agent-core (node_modules dependency, RPC worker process)
+casleo-agent-core (node_modules dependency, RPC worker process)
   permissions, sandbox, tools, checkpoints, MCP, session files, Pi agent loop
 ```
 
@@ -122,7 +122,7 @@ Note: outside CI, `pnpm test` may trigger pnpm's dependency-state check and try 
 
 ### 3.3 Developing Alongside the Runtime
 
-The app consumes `tether-agent-core` from npm. To work on the Runtime itself at the same time, temporarily link a local copy of the Runtime package (README suggests `../tether-runtime/packages/core`). Switch back to the registry version before releasing.
+The app consumes `casleo-agent-core` from npm. To work on the Runtime itself at the same time, temporarily link a local copy of the Runtime package (README suggests `../Casleo/casleo-agent-core`). Switch back to the registry version before releasing.
 
 ## 4. IPC Contract (src/shared/types.ts)
 
@@ -161,7 +161,7 @@ The app consumes `tether-agent-core` from npm. To work on the Runtime itself at 
 
 ## 5. Agent Child-Process Protocol (src/main/agent-host.ts)
 
-The agent runs in a separate Node child process (the `tether-agent-core` RPC entry point). The wire protocol is **newline-delimited JSON-RPC over stdio**:
+The agent runs in a separate Node child process (the `casleo-agent-core` RPC entry point). The wire protocol is **newline-delimited JSON-RPC over stdio**:
 
 - Requests: the main process writes one line of `{ type, id, ...data }` JSON to `child.stdin`.
 - Responses: the child writes `{ type: "response", id, success, data | error }` on stdout.
@@ -317,13 +317,13 @@ All styling lives in `styles.css` (hand-written CSS, no UI framework). Before ch
 
 ### 7.1 Session Files
 
-Sessions are managed by `tether-agent-core` (`CasleoStateStore` / `listCasleoThreads`); the main process only maps them: `sessions:list` converts threads to `SessionSummary` (including `path` session-file path, `storagePath` index path, `preview`, etc.). Renaming **appends** a `session_info` entry and rebuilds the index (`sessions:rename`).
+Sessions are managed by `casleo-agent-core` (`CasleoStateStore` / `listCasleoThreads`); the main process only maps them: `sessions:list` converts threads to `SessionSummary` (including `path` session-file path, `storagePath` index path, `preview`, etc.). Renaming **appends** a `session_info` entry and rebuilds the index (`sessions:rename`).
 
 Recovery: opening a session calls `agent:start({ sessionPath, resume: true })`; the agent process restores from disk and the renderer rebuilds messages with `normalizeMessages`. On-disk images only store staged paths, rebuilt as `src` references via `stagedImages` (served by the preview protocol).
 
 ### 7.2 /undo and Checkpoints
 
-`tether-agent-core` records a `tether-checkpoint` entry (with each file's `before` content) on file writes. The `/undo` flow:
+`casleo-agent-core` records a `tether-checkpoint` entry (with each file's `before` content) on file writes. The `/undo` flow:
 
 1. `get_entries` pulls session entries; `lastTurnRestoreFiles` resolves the `before` file set of the newest checkpoint **after the last real user turn** that has not been undone by `tether-checkpoint-undone`.
 2. Show an `ApprovalCard` confirmation (special id `harness:undo`).
@@ -337,7 +337,7 @@ Recovery: opening a session calls `agent:start({ sessionPath, resume: true })`; 
 
 ### 7.4 Terminal Jobs
 
-Background/in-flight shell commands are extracted from tool activity by `sessionTerminals` (tracked by `process_id`). The InspectPanel can `stopJobs("/stop-job <id>")` or `/stop-jobs` (requires tether-agent-core ≥ 0.1.6 to provide the commands).
+Background/in-flight shell commands are extracted from tool activity by `sessionTerminals` (tracked by `process_id`). The InspectPanel can `stopJobs("/stop-job <id>")` or `/stop-jobs` (requires casleo-agent-core ≥ 0.1.6 to provide the commands).
 
 ## 8. Permissions, Sandbox & Security Boundaries
 
@@ -378,7 +378,7 @@ The shared layer `vision-api.ts` provides pure functions: request construction, 
 | Location | Contents |
 | --- | --- |
 | `appData/Casleo` (userData; legacy `appData/DSHarness` is auto-renamed on first launch) | `recent-workspaces.json`, `vision-config.json`, `chat-profiles.json`, `uploads/` (staged images), `tasks/` (cwd without a project) |
-| `~/.casleo` (getCasleoHome, managed by tether-agent-core) | `settings.json` (locale / default provider+model), session index and thread storage, credentials (a file when `TETHER_CREDENTIALS_STORE=file` instead of the OS keyring) |
+| `~/.casleo` (getCasleoHome, managed by casleo-agent-core) | `settings.json` (locale / default provider+model), session index and thread storage, credentials (a file when `TETHER_CREDENTIALS_STORE=file` instead of the OS keyring) |
 | project `.agents/` | `features.json` (cross-session task list), `progress.md` (progress) — maintained by skill conventions |
 
 Environment variables: `TETHER_CREDENTIALS_STORE=file` (avoids keyring prompts in the distributed build); `PI_TELEMETRY=0`; `PI_SKIP_VERSION_CHECK=1`; `HARNESS_EXTRA_MODELS` / `HARNESS_VISION_CONFIG` / `HARNESS_VISION_UPLOADS` passed to the agent child process.
@@ -403,7 +403,7 @@ Skills are loaded by the Pi runtime (Casleo does not ship a separate loader); th
 | preload | `src/preload/index.ts` | CJS (`.cjs`) | `dist-electron/preload/index.cjs` |
 | Extension | `src/extensions/vision.ts` | ESM (`.js`) | `dist-electron/extensions/vision.js` |
 
-`electron` and `tether-agent-core` are marked external.
+`electron` and `casleo-agent-core` are marked external.
 
 ### 12.2 Renderer (vite.config.ts)
 
@@ -425,7 +425,7 @@ Runs on postinstall / predev: checks whether the Electron distribution binaries 
 - Location: `*.test.ts` next to the source (Vitest, node environment); currently 12 files with ~112 cases.
 - Focus: `conversation.ts` event merging and parsing (largest surface), `shared/*` pure functions (i18n, chat-profiles, thinking, skills, vision-api, openai-models), `main/*` utilities (rpc-lines, skills-fs, update-check).
 - Run: `pnpm test` or `node_modules/.bin/vitest run`; CI uses the default config.
-- Known environment-related failure: `skills-fs.test.ts` assumes a clean `$HOME` (a temp HOME containing only the skill it creates). If your machine's `$HOME` contains real skill directories (e.g. `.cursor/skills-cursor`), extra entries break the assertion — CI/clean environments are unaffected.
+- Known environment-related failure: `skills-fs.test.ts` assumes a clean `$HOME` (a temp HOME containing only the skill it creates). If your machine's `$HOME` contains other real skill directories, extra entries break the assertion — CI/clean environments are unaffected.
 
 When adding features to the pure logic (conversation / shared), follow a "write the `*.test.ts` first, then implement" rhythm; use Vitest's `describe/it/expect`.
 
@@ -456,7 +456,7 @@ Follow the four steps in §4.2. In main-process handlers, validate every value c
 
 ### 14.5 Changing the Session Persistence Format
 
-First look at `tether-agent-core`'s session entry types (`SessionEntryLike`: `message` / `custom` entries); the parsing functions in `conversation.ts` and `lastTurnRestoreFiles` depend on the `tether-checkpoint` / `tether-checkpoint-undone` customType conventions — keep them in sync.
+First look at `casleo-agent-core`'s session entry types (`SessionEntryLike`: `message` / `custom` entries); the parsing functions in `conversation.ts` and `lastTurnRestoreFiles` depend on the `tether-checkpoint` / `tether-checkpoint-undone` customType conventions — keep them in sync.
 
 ## 15. Engineering Conventions (AGENTS.md Summary)
 

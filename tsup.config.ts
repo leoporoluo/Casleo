@@ -8,7 +8,7 @@ export default defineConfig([
     outDir: "dist-electron",
     sourcemap: true,
     clean: false,
-    external: ["electron", "tether-agent-core"],
+    external: ["electron", "casleo-agent-core"],
     outExtension: () => ({ js: ".mjs" }),
   },
   {

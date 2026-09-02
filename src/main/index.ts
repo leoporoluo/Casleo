@@ -32,7 +32,7 @@ import {
   SUPPORTED_PROVIDER_IDS,
   type ApiKeyProviderId,
   type SupportedProviderId,
-} from "tether-agent-core";
+} from "casleo-agent-core";
 import { AgentHost } from "./agent-host";
 import { isPathInsideRoot } from "./workspace-path";
 import { listLocalPlugins, listLocalSkills, revealSkillPath } from "./skills-fs";

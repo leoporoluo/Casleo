@@ -1,0 +1,15 @@
+export { formatTetherError, runTether, runTetherProcess, } from "./cli-runtime.js";
+export { createTetherExtension } from "./tether-extension.js";
+export { createTetherRpcClient, getTetherRpcEntryPath, RpcClient, type TetherRpcClientOptions, type RpcClientOptions, } from "./rpc-client.js";
+export { authenticateProvider, getTetherAgentDir, getTetherAuthPath, hasDeepSeekEnvironmentKey, hasStoredDeepSeekKey, hasStoredProviderCredential, removeStoredDeepSeekKey, removeStoredProviderCredential, runAuthCommand, saveDeepSeekKey, saveProviderApiKey, validateDeepSeekKey, type ApiKeyProviderId, type KeyValidation, type ProviderLoginResult, } from "./auth.js";
+export type { AuthEvent, AuthInteraction, AuthPrompt } from "@earendil-works/pi-ai";
+export { createTetherCredentialStore, FileCredentialStore, installTetherCredentialStore, KeyringCredentialStore, type CreateCredentialStoreOptions, type TetherKeyringFactory, } from "./credential-store.js";
+export { getTetherArchivedSessionsDir, getTetherHome, getTetherSessionsDir, initializeTetherHome, partitionExistingSessions, partitionSessionFile, ensureSessionRuntimeLink, type PartitionedSessionPath, } from "./home.js";
+export { killProcessTree, listChildPids, trackDetachedChild, wipeTrackedChildren, } from "./process-tree.js";
+export { TetherStateStore, getTetherStatePath, indexTetherSession, listTetherThreads, type TetherThread, type ListThreadOptions, } from "./state.js";
+export { DEFAULT_DEEPSEEK_BASE_URL, DEEPSEEK_MAX_TOKENS, DEEPSEEK_CONTEXT_WINDOW, getTetherStorageSettings, getTetherSettingsPath, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, parseMaxTokens, resolveMaxTokens, saveDeepSeekBaseUrl, saveDeepSeekMaxTokens, type CredentialStoreMode, type TetherStorageSettings, type HistoryPersistence, } from "./settings.js";
+export { MODEL_CREDENTIAL_ENV_KEYS, SUPPORTED_PROVIDER_IDS, defaultEffortForProvider, defaultModelForProvider, getStoredModelSelection, isSupportedProviderId, parseSupportedProviderId, providerDisplayName, providerEnvironmentKey, stripModelCredentialEnvironment, type StoredModelSelection, type SupportedProviderId, } from "./providers.js";
+export { parseRuntimeArgs, printTetherHelp, sandboxModeSchema, type TetherRuntimeOptions, type ParsedRuntimeArgs, type SandboxMode, } from "./runtime-options.js";
+export { PERSONALIZATION_TONE_IDS, buildPersonalizationPrompt, composePersonalizedSystemPrompt, loadPersonalizationPrompt, type PersonalizationPreferences, type PersonalizationTone, } from "./personalization.js";
+export { TETHER_VERSION } from "./version.js";
+export { modelSupportsVision } from "./model-vision.js";

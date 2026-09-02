@@ -6,13 +6,12 @@
 
 **A local-first AI coding workbench built on the Pi ecosystem**
 
-Let DeepSeek and OpenAI-compatible models inspect, edit, and verify your repositories with explicit safety boundaries.
+Let compatible models inspect, edit, and verify your repositories with explicit safety boundaries.
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [Download latest](https://github.com/tt-11-dd/Casleo/releases/latest)
+[English](README.md) · [简体中文](README.zh-CN.md) · [Download latest](https://github.com/leoporoluo/Casleo/releases/latest)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Agent Core](https://img.shields.io/npm/v/tether-agent-core?label=tether-agent-core)](https://www.npmjs.com/package/tether-agent-core)
-[![Platform](https://img.shields.io/badge/platform-macOS%20arm64%20%7C%20Windows%20x64-lightgrey)](https://github.com/tt-11-dd/Casleo/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey)](https://github.com/leoporoluo/Casleo/releases/latest)
 
 </div>
 
@@ -20,16 +19,16 @@ Casleo is an Electron desktop agent for real codebases. It brings model calls, w
 
 ## Why Casleo
 
-- **DeepSeek first** — custom Base URL, model discovery, and reasoning-level controls, plus OpenAI-compatible endpoints such as OneAPI, Ollama, and vLLM.
+- **Provider-neutral** — custom Base URL, model discovery, and reasoning-level controls for OpenAI-compatible gateways and local endpoints.
 - **Visible and controllable** — inspect tool calls, command output, file changes, and context usage as work happens.
 - **Permission boundaries** — Plan, Ask, Workspace, and Full Access modes.
 - **Recoverable edits** — patch checkpoints let `/undo` restore the previous turn's file changes.
 - **Local-first state** — settings, credentials, and sessions live under `~/.casleo`; no telemetry or Casleo-hosted model proxy.
-- **Desktop workflow** — project threads, `@` file mentions, steer-while-generating, image input, themes (white / paper / dark), diff previews, and Chinese/English UI.
+- **Desktop workflow** — project threads, `@` file mentions, steer-while-generating, themes (paper / dark), diff previews, and Chinese/English UI.
 
 ## What Casleo uses from Pi
 
-Casleo does not reimplement the agent foundations. [`tether-agent-core`](https://www.npmjs.com/package/tether-agent-core) wraps the [Pi ecosystem](https://github.com/earendil-works/pi) and extends it:
+Casleo does not reimplement the agent foundations. The bundled `casleo-agent-core` package wraps the [Pi ecosystem](https://github.com/earendil-works/pi) and extends it:
 
 | Pi package | Used by Casleo for |
 | --- | --- |
@@ -40,8 +39,8 @@ Casleo does not reimplement the agent foundations. [`tether-agent-core`](https:/
 
 Casleo adds:
 
-- DeepSeek defaults and an OpenAI-compatible gateway workflow
-- Four permission modes, macOS Seatbelt, and an experimental Windows sandbox helper (install + enable)
+- OpenAI-compatible gateway workflow
+- Four permission modes and a Windows sandbox helper (install + enable)
 - Workspace-scoped tools, managed commands, file patches, and durable checkpoints
 - MCP, Hooks, Skills, planning, and subagent integration
 - The `~/.casleo` local data conventions and Electron/React desktop workbench
@@ -59,7 +58,7 @@ Electron Main
   windows, workspace, credentials, agent process host
         │  JSON-RPC over stdio
         ▼
-tether-agent-core
+casleo-agent-core
   Casleo permissions, sandbox, tools, checkpoints, MCP, sessions
         │
         ▼
@@ -69,14 +68,9 @@ Pi ecosystem
 
 The renderer has no direct Node.js access; desktop capabilities cross the typed IPC contract in `src/shared/types.ts`. The agent runs in a separate worker process. After a crash, an on-disk session can continue as a conversation, but Casleo does not silently replay unfinished commands.
 
-## Models and images
+## Models
 
-The desktop app currently focuses on DeepSeek and custom OpenAI-compatible Base URLs. `tether-agent-core` also includes provider foundations for OpenAI, Anthropic, OpenRouter, Z.AI, Kimi, MiniMax, and xAI; the desktop settings UI will expose these progressively.
-
-For pasted images:
-
-- Vision can use official DeepSeek Vision, or a compatible endpoint such as GLM-4V.
-- MinerU performs OCR by sending the image to the MinerU service; it is not offline local OCR.
+The desktop app supports custom OpenAI-compatible Base URLs and provider-specific model settings.
 
 ## Permission modes
 
@@ -106,33 +100,24 @@ Each skill is a directory with a `SKILL.md` file. Frontmatter must include `name
 
 ## Use Casleo
 
-Download from [GitHub Releases](https://github.com/tt-11-dd/Casleo/releases/latest):
-
-- macOS: Apple Silicon / arm64
-- Windows: Windows 10/11 x64
+Download the Windows x64 installer from [GitHub Releases](https://github.com/leoporoluo/Casleo/releases/latest).
 
 Then:
 
 1. Open a project folder.
-2. Configure a DeepSeek API key or compatible endpoint.
+2. Configure an API key and compatible endpoint.
 3. Describe a task, review tool activity and diffs, and use `/undo` when needed.
 
 ### Steer while generating
 
 While a reply is generating, you can still type and press Enter. That text is steered into the current turn immediately (shown above the composer), not queued for later. Slash commands are not steered. Switching thread, starting a new chat, or changing project clears the on-screen steer list.
 
-The current macOS package uses development signing. If Gatekeeper blocks it, right-click the app and choose **Open**, or run:
-
-```bash
-xattr -cr /Applications/Casleo.app
-```
-
 ## Develop locally
 
 Requires Node.js `>=22.19` and pnpm.
 
 ```bash
-git clone https://github.com/tt-11-dd/Casleo.git
+git clone https://github.com/leoporoluo/Casleo.git
 cd Casleo
 pnpm install
 pnpm dev
@@ -146,15 +131,15 @@ pnpm test
 pnpm build
 ```
 
-The app consumes `tether-agent-core` from npm. When developing the Runtime itself, temporarily link `../tether-runtime/packages/core`.
+The app uses the bundled `casleo-agent-core` workspace package.
 
 ## Acknowledgments
 
-Casleo's agent runtime is built on the open-source [Pi ecosystem](https://github.com/earendil-works/pi) (`@earendil-works/pi-agent-core`, `pi-ai`, `pi-coding-agent`, `pi-tui`). [`tether-agent-core`](https://www.npmjs.com/package/tether-agent-core) wraps Pi with Casleo's DeepSeek defaults, permission modes, sandboxing, checkpoints, MCP, Hooks, and local data layout. Pi dependencies retain their own licenses and copyright.
+Casleo's agent runtime is built on the open-source [Pi ecosystem](https://github.com/earendil-works/pi) (`@earendil-works/pi-agent-core`, `pi-ai`, `pi-coding-agent`, `pi-tui`) and adds permission modes, sandboxing, checkpoints, MCP, Hooks, Skills, and local data storage. Pi dependencies retain their own licenses and copyright.
 
 ## Privacy
 
-Casleo runs no telemetry or model relay service. Sessions, settings, and credentials stay local. To perform a task, prompts, relevant code context, and images are still sent to the model, gateway, or OCR service you choose. Review third-party privacy policies; sensitive projects can use a compatible local endpoint.
+Casleo runs no telemetry or model relay service. Sessions, settings, and credentials stay local. To perform a task, prompts and relevant code context are sent to the model or gateway you choose. Review third-party privacy policies; sensitive projects can use a local endpoint.
 
 ## License
 

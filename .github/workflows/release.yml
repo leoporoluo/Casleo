@@ -25,8 +25,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            target: mac
           - os: windows-latest
             target: win
 
@@ -70,11 +68,7 @@ jobs:
         id: stage
         run: |
           mkdir -p release-upload
-          if [ "${{ matrix.target }}" = "mac" ]; then
-            cp release/*.dmg release-upload/
-          else
-            cp release/*.exe release-upload/
-          fi
+          cp release/*.exe release-upload/
           ls -la release-upload
           echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
@@ -87,11 +81,8 @@ jobs:
           fail_on_unmatched_files: true
           body: |
             ## Downloads
-            - macOS (Apple Silicon): `Casleo-${{ steps.stage.outputs.version }}-arm64.dmg`
             - Windows (x64): `Casleo-Setup-${{ steps.stage.outputs.version }}.exe`
 
             ## Notes
             - Local-first Casleo agent powered by Pi
             - Supports custom OpenAI-compatible endpoints
-            - If macOS says the app can't be opened, right-click → Open, or run:
-              `xattr -cr /Applications/Casleo.app`
