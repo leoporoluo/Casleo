@@ -247,37 +247,10 @@ function AccountMenu({
   onOpenSettings(): void;
 }) {
   const { t } = useI18n();
-  const [menu, setMenu] = useState<{ left: number; bottom: number }>();
-  const root = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => {
-      setMenu(undefined);
-    };
-    window.addEventListener("pointerdown", close);
-    window.addEventListener("blur", close);
-    window.addEventListener("resize", close);
-    return () => {
-      window.removeEventListener("pointerdown", close);
-      window.removeEventListener("blur", close);
-      window.removeEventListener("resize", close);
-    };
-  }, [menu]);
-
-  const open = () => {
-    const node = root.current;
-    if (!node) return;
-    const rect = node.getBoundingClientRect();
-    setMenu({
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - 220)),
-      bottom: Math.max(8, window.innerHeight - rect.top + 6),
-    });
-  };
 
   return (
-    <div ref={root} className={menu ? "account-wrap open" : "account-wrap"}>
-      <button type="button" className="account" title={t("nav.settingsTitle")} onClick={open}>
+    <div className="account-wrap">
+      <button type="button" className="account" title={t("nav.settingsTitle")} onClick={onOpenSettings}>
         <div className="account-icon">
           <Icon path="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15H2.8a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.2 8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4V3.8a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z" size={15} />
         </div>
@@ -285,25 +258,6 @@ function AccountMenu({
           <strong>{t("menu.settings")}</strong>
         </div>
       </button>
-      {menu && createPortal(
-        <div
-          className="account-menu"
-          style={{ left: menu.left, bottom: menu.bottom }}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setMenu(undefined);
-              onOpenSettings();
-            }}
-          >
-            <Icon path="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15H2.8a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.2 8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4V3.8a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z" size={15} />
-            <span>{t("menu.settings")}</span>
-          </button>
-        </div>,
-        document.body,
-      )}
     </div>
   );
 }
