@@ -732,6 +732,15 @@ textarea::selection,
   font-size: 13px;
   font-weight: 500;
 }
+.chat-bar > .context-stats-wrap {
+  margin-left: auto;
+}
+.session-model-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
 .context-stats-wrap {
   position: relative;
   flex: none;
@@ -1406,7 +1415,6 @@ textarea::selection,
 .inspect-toggle {
   width: 28px;
   height: 28px;
-  margin-left: auto;
   display: grid;
   place-items: center;
   border-radius: 8px;
@@ -3053,6 +3061,16 @@ textarea::selection,
   gap: 4px;
   min-height: 32px;
   flex-wrap: wrap;
+}
+.prompt-bar-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.prompt-bar-end .send {
+  margin-left: 0;
 }
 .prompt-queue {
   display: flex;

@@ -12,7 +12,7 @@ import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThin
 import { tokenizeCode } from "./highlight";
 import type { AgentSkillCommand } from "../shared/skills";
 import type { LocalPluginEntry, PiPackageEntry, ResourceKind } from "../shared/types";
-import { PROJECT_PACKAGE_ROOTS, PROJECT_PLUGIN_ROOTS, PROJECT_SKILL_ROOTS, USER_PACKAGE_ROOTS, USER_PLUGIN_ROOTS, USER_SKILL_ROOTS, skillSlashCommand } from "../shared/skills";
+import { skillSlashCommand } from "../shared/skills";
 import { useI18n } from "./i18n";
 import type { MessageKey } from "../shared/i18n";
 
@@ -216,6 +216,7 @@ export function Chat({
   inspect,
   nav,
   title,
+  tools,
 }: {
   children: ReactNode;
   composer?: ReactNode;
@@ -223,6 +224,7 @@ export function Chat({
   inspect?: ReactNode;
   nav?: ReactNode;
   title?: string;
+  tools?: ReactNode;
 }) {
   const { t } = useI18n();
   const [drawer, setDrawer] = useState(false);
@@ -260,6 +262,7 @@ export function Chat({
     <section className={home ? "chat home" : "chat"}>
       <header className="chat-bar">
         {!home && title && <h1 className="chat-title">{title}</h1>}
+        {tools}
         {!home && nav}
         {inspect && (
           <button
@@ -1756,13 +1759,10 @@ export function PromptBar({
   onModel,
   effort,
   effortLevels,
-  contextWindow = DEFAULT_CONTEXT_WINDOW,
   onEffort,
   permission,
   onPermission,
   onCommand,
-  stats,
-  onCompact,
   skillCommands = [],
   pluginCommands = [],
   placement = "dock",
@@ -1783,13 +1783,10 @@ export function PromptBar({
   onModel(value: string): void;
   effort: string;
   effortLevels: string[];
-  contextWindow?: number;
   onEffort(value: string): void;
   permission: string;
   onPermission(value: string): void;
   onCommand(command: string): void;
-  stats?: AgentSessionStats;
-  onCompact?(): void;
   skillCommands?: AgentSkillCommand[];
   pluginCommands?: LocalPluginEntry[];
   placement?: "dock" | "hero";
@@ -2242,32 +2239,26 @@ export function PromptBar({
         )}
         <div className="prompt-bar">
           <PermissionPicker value={permission} down={hero} onChange={onPermission} />
-          {model.trim() && models.length > 0 && <Combo value={model} options={models} searchable placeholder={t("composer.filterModels")} down={hero} onChange={onModel} />}
-          {model.trim() && reasoningLevelsAvailable(effortLevels) && (
-            <EffortPicker value={effort} levels={effortLevels} down={hero} onChange={onEffort} />
-          )}
-          {!hero && (
-            <ContextStats
-              stats={stats}
+          <div className="prompt-bar-end">
+            <SessionModelControls
               model={model}
+              models={models}
+              onModel={onModel}
               effort={effort}
               effortLevels={effortLevels}
-              contextWindow={contextWindow}
-              up
-              running={running}
-              busy={disabled}
-              onCompact={onCompact}
+              onEffort={onEffort}
+              down={hero}
             />
-          )}
-          {running ? (
-            <button type="button" className="send stop" onClick={onStop} aria-label={t("composer.abort")}>
-              <i />
-            </button>
-          ) : (
-            <button type="submit" className="send" disabled={disabled || blank} aria-label={t("composer.send")}>
-              <Icon path="M12 19V5M5 12l7-7 7 7" size={15} />
-            </button>
-          )}
+            {running ? (
+              <button type="button" className="send stop" onClick={onStop} aria-label={t("composer.abort")}>
+                <i />
+              </button>
+            ) : (
+              <button type="submit" className="send" disabled={disabled || blank} aria-label={t("composer.send")}>
+                <Icon path="M12 19V5M5 12l7-7 7 7" size={15} />
+              </button>
+            )}
+          </div>
         </div>
       </form>
       </div>
@@ -2378,6 +2369,35 @@ export function PermissionPicker({
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+export function SessionModelControls({
+  model,
+  models,
+  onModel,
+  effort,
+  effortLevels,
+  onEffort,
+  down,
+}: {
+  model: string;
+  models: { value: string; label: string }[];
+  onModel(value: string): void;
+  effort: string;
+  effortLevels: string[];
+  onEffort(value: string): void;
+  down?: boolean;
+}) {
+  const { t } = useI18n();
+  if (!model.trim() || models.length === 0) return null;
+  return (
+    <div className="session-model-controls">
+      <Combo value={model} options={models} searchable placeholder={t("composer.filterModels")} down={down} onChange={onModel} />
+      {reasoningLevelsAvailable(effortLevels) && (
+        <EffortPicker value={effort} levels={effortLevels} down={down} onChange={onEffort} />
       )}
     </div>
   );
@@ -2936,6 +2956,17 @@ const THEME_DESC: Record<ThemeId, MessageKey> = {
   dark: "settings.themeDarkDesc",
 };
 
+const ICON_EXTENSION = [
+  "M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H8",
+  "M14 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z",
+].join("\n");
+
+const ICON_PACKAGE = [
+  "M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z",
+  "M12 22V12",
+  "M3.29 7 12 12l8.71-5",
+].join("\n");
+
 function settingsNav(t: ReturnType<typeof useI18n>["t"]): Array<{ label: string; items: Array<{ id: SettingsPane; label: string; icon: string }> }> {
   return [
   {
@@ -2961,12 +2992,12 @@ function settingsNav(t: ReturnType<typeof useI18n>["t"]): Array<{ label: string;
       {
         id: "plugins",
         label: t("settings.plugins"),
-        icon: "M9 3v2.5A1.5 1.5 0 0 1 7.5 7H5a2 2 0 0 0 0 4h2.5A1.5 1.5 0 0 1 9 12.5V15a2 2 0 0 0 4 0v-2.5A1.5 1.5 0 0 1 14.5 11H17a2 2 0 0 0 0-4h-2.5A1.5 1.5 0 0 1 13 5.5V3a2 2 0 0 0-4 0z",
+        icon: ICON_EXTENSION,
       },
       {
         id: "packages",
         label: t("settings.packages"),
-        icon: "M4 7h16M4 12h16M4 17h16M7 4v16M17 4v16",
+        icon: ICON_PACKAGE,
       },
       {
         id: "shortcuts",
@@ -3270,30 +3301,6 @@ export function Login({
 
             {pane === "skills" && (
               <>
-                <p className="settings-hint">{t("settings.skillsUse")}</p>
-
-                <div className="skills-section">
-                  <h3 className="skills-section-title">{t("settings.skillsPaths")}</h3>
-                  <div className="skills-paths">
-                    <div className="skills-path-block">
-                      <div className="skills-path-label">{t("settings.skillsPathProject")}</div>
-                      <ul className="skills-path-list">
-                        {PROJECT_SKILL_ROOTS.map((root) => (
-                          <li key={root}><code>{root}/&lt;name&gt;/SKILL.md</code></li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="skills-path-block">
-                      <div className="skills-path-label">{t("settings.skillsPathUser")}</div>
-                      <ul className="skills-path-list">
-                        {USER_SKILL_ROOTS.map((root) => (
-                          <li key={root}><code>{root}/&lt;name&gt;/SKILL.md</code></li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="skills-section">
                   <div className="skills-section-head">
                     <h3 className="skills-section-title">{t("settings.skillsTitle")}</h3>
@@ -3336,28 +3343,6 @@ export function Login({
 
             {pane === "plugins" && (
               <>
-                <p className="settings-hint">{t("settings.pluginsUse")}</p>
-                <div className="skills-section">
-                  <h3 className="skills-section-title">{t("settings.pluginsPaths")}</h3>
-                  <div className="skills-paths">
-                    <div className="skills-path-block">
-                      <div className="skills-path-label">{t("settings.pluginsPathProject")}</div>
-                      <ul className="skills-path-list">
-                        {PROJECT_PLUGIN_ROOTS.map((root) => (
-                          <li key={root}><code>{root}/&lt;name&gt;/plugin.json</code></li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="skills-path-block">
-                      <div className="skills-path-label">{t("settings.pluginsPathUser")}</div>
-                      <ul className="skills-path-list">
-                        {USER_PLUGIN_ROOTS.map((root) => (
-                          <li key={root}><code>{root}/&lt;name&gt;/plugin.json</code></li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
                 <div className="skills-section">
                   <div className="skills-section-head">
                     <h3 className="skills-section-title">{t("settings.pluginsTitle")}</h3>
@@ -3375,7 +3360,7 @@ export function Login({
                           className="skills-row plugin-row"
                           title={plugin.path ?? plugin.name}
                         >
-                          <Icon path="M9 3v2.5A1.5 1.5 0 0 1 7.5 7H5a2 2 0 0 0 0 4h2.5A1.5 1.5 0 0 1 9 12.5V15a2 2 0 0 0 4 0v-2.5A1.5 1.5 0 0 1 14.5 11H17a2 2 0 0 0 0-4h-2.5A1.5 1.5 0 0 1 13 5.5V3a2 2 0 0 0-4 0z" size={15} />
+                          <Icon path={ICON_EXTENSION} size={15} />
                           <button type="button" className="skills-row-main plugin-row-copy" onClick={() => {
                             if (!plugin.path) return;
                             void window.harness.app.revealPath(plugin.name, plugin.path).catch((error) => {
@@ -3399,30 +3384,6 @@ export function Login({
 
             {pane === "packages" && (
               <div className="packages-page">
-                <p className="settings-hint">{t("settings.packagesUse")}</p>
-                <div className="skills-section">
-                  <h3 className="skills-section-title">{t("settings.packagesConfig")}</h3>
-                  <div className="skills-paths">
-                    <div className="skills-path-block">
-                      <div className="skills-path-label">{t("settings.packagesPathUser")}</div>
-                      <ul className="skills-path-list">
-                        <li><code>~/.pi/agent/settings.json</code></li>
-                        {USER_PACKAGE_ROOTS.map((root) => <li key={root}><code>{root}/</code></li>)}
-                      </ul>
-                    </div>
-                    <div className="skills-path-block">
-                      <div className="skills-path-label">{t("settings.packagesPathProject")}</div>
-                      <ul className="skills-path-list">
-                        <li><code>.pi/settings.json</code></li>
-                        {PROJECT_PACKAGE_ROOTS.map((root) => <li key={root}><code>{root}/</code></li>)}
-                      </ul>
-                    </div>
-                  </div>
-                  <p className="settings-hint">{t("settings.packagesSources")}</p>
-                  <button type="button" className="ghost" onClick={() => void window.harness.app.openPackagesFolder()}>
-                    {t("settings.packagesOpen")}
-                  </button>
-                </div>
                 <div className="skills-section">
                   <h3 className="skills-section-title">{t("settings.packagesInstalled")}</h3>
                   {packages.length === 0 ? <p className="settings-hint">{t("settings.packagesEmpty")}</p> : (

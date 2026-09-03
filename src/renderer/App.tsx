@@ -59,6 +59,7 @@ import {
   Icon,
   InspectPanel,
   Login,
+  ContextStats,
   PromptBar,
   SidebarNav,
   Thinking,
@@ -1110,7 +1111,6 @@ export function App() {
       model={model}
       models={[...new Set([model, ...chatModels].filter(Boolean))].map((id) => ({ value: id, label: id }))}
       onModel={switchModel}
-      contextWindow={contextWindow}
       effort={effort}
       effortLevels={thinkingLevels}
       onEffort={applyEffort}
@@ -1140,8 +1140,6 @@ export function App() {
       }}
       skillCommands={agentSkills}
       pluginCommands={agentPlugins}
-      stats={stats}
-      onCompact={() => void compactContext()}
       placement={home ? "hero" : "dock"}
     />
   );
@@ -1270,6 +1268,18 @@ export function App() {
         home={home}
         title={sessions.find((session) => isSameSession(session, activeSession))?.title || (workspace ? baseName(workspace) : undefined)}
         composer={home ? undefined : composer}
+        tools={!home ? (
+          <ContextStats
+            stats={stats}
+            model={model}
+            effort={effort}
+            effortLevels={thinkingLevels}
+            contextWindow={contextWindow}
+            running={running}
+            busy={loading}
+            onCompact={() => void compactContext()}
+          />
+        ) : undefined}
         nav={<TurnNav items={anchors} />}
         inspect={workspace ? (
           <InspectPanel

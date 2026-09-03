@@ -95,7 +95,7 @@ Skills are loaded by the Pi runtime (Casleo does not ship a separate loader). St
 Each skill is a directory with a `SKILL.md` file. Frontmatter must include `name` and `description` (Pi validates; invalid skills are skipped).
 
 - Invoke with `/skill:name`; type `/` in the composer to see loaded skills
-- List paths and loaded skills under **Settings → Agent Skills**
+- List loaded skills under **Settings → Skills**
 - Project skills require trusting the workspace; `@` mentions only scan project `.agents/skills` and `.pi/skills`
 
 ## Use Casleo

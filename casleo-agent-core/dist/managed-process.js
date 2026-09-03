@@ -2,13 +2,14 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { BoundedOutput } from "./process.js";
 import { killProcessTree, trackDetachedChild } from "./process-tree.js";
+import { commandEnvironment } from "./env.js";
 import { stripModelCredentialEnvironment } from "./providers.js";
 import { sandboxCommand } from "./sandbox.js";
 export class ManagedProcessRegistry {
     records = new Map();
     async start(command, options) {
         const invocation = sandboxCommand(command, options.cwd, options.sandbox);
-        const env = stripModelCredentialEnvironment({ ...process.env });
+        const env = stripModelCredentialEnvironment(commandEnvironment());
         const child = spawn(invocation.command, invocation.args, {
             cwd: options.cwd,
             env,

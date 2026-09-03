@@ -7,6 +7,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { z } from "zod";
 import { renderCollapsibleToolResult, renderToolCall } from "./tool-ui.js";
 import { getCasleoHome } from "./home.js";
+import { commandEnvironment } from "./env.js";
 import { stripModelCredentialEnvironment } from "./providers.js";
 const stdioServerSchema = z.object({
     command: z.string().min(1),
@@ -152,7 +153,7 @@ function expandEnvironment(values) {
     ]));
 }
 function defaultStringEnvironment() {
-    return stripModelCredentialEnvironment(Object.fromEntries(Object.entries(process.env).filter((entry) => entry[1] !== undefined)));
+    return stripModelCredentialEnvironment(commandEnvironment(Object.fromEntries(Object.entries(process.env).filter((entry) => entry[1] !== undefined))));
 }
 function sanitizeName(value) {
     return value.replace(/[^a-zA-Z0-9_-]/g, "_");

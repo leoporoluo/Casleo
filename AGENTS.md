@@ -26,7 +26,7 @@ Skills 由 Pi 运行时加载（Casleo 不另写 loader）。标准路径：
 每个 skill 目录一个 `SKILL.md`，frontmatter 需含 `name` 与 `description`（Pi 校验，缺项不会加载）。
 
 - 调用：输入 `/skill:名称`；输入 `/` 时也会列出当前会话已加载的 skill
-- 查看：设置 → Agent Skills（展示路径与已加载列表）
+- 查看：设置 → Skills（展示已加载列表）
 - 项目 skill 需先信任项目；`@` 文件引用仅扫描项目内 `.agents/skills` 与 `.pi/skills`
 
 ## 约定

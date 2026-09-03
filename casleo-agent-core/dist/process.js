@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
 import { killProcessTree, trackDetachedChild } from "./process-tree.js";
+import { commandEnvironment } from "./env.js";
 import { stripModelCredentialEnvironment } from "./providers.js";
 export function runProcess(command, args, options) {
     const maxOutputBytes = options.maxOutputBytes ?? 200_000;
     const timeoutMs = options.timeoutMs ?? 120_000;
     return new Promise((resolve, reject) => {
-        const env = stripModelCredentialEnvironment({ ...process.env });
+        const env = stripModelCredentialEnvironment(commandEnvironment());
         const child = spawn(command, args, {
             cwd: options.cwd,
             env,
