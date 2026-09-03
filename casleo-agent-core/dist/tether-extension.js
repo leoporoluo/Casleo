@@ -1,4 +1,7 @@
 import { Text } from "@earendil-works/pi-tui";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { Type } from "typebox";
 import { commandNeedsNetwork, detectSandboxBoundary, SessionAccessController, } from "./access.js";
 import { classifyCommand } from "./approval.js";
@@ -255,13 +258,13 @@ export function createTetherExtension(options) {
                 const currentAccess = effectiveAccess();
                 // Casleo's original prompt is the complete prompt for each
                 // request. Do not prepend or append Pi's prompt a second time.
-                const systemPrompt = engineeringInstructions(projectCommands, currentAccess, {
+                const systemPrompt = `${engineeringInstructions(projectCommands, currentAccess, {
                     provider: ctx.model?.provider ?? options.providerId,
                     modelId: ctx.model?.id ?? options.modelId,
                     ...(ctx.model?.name ? { modelName: ctx.model.name } : {}),
                     transport: ctx.model?.api ?? options.transport,
                     baseUrl: options.baseUrl,
-                });
+                })}${await loadGlobalInstructions()}`;
                 if (permission !== "plan")
                     return { systemPrompt };
                 return {
@@ -1278,6 +1281,22 @@ function engineeringInstructions(projectCommands, access, runtime) {
         instructions.push("- Detected project commands (inspect their definitions before relying on them):", ...projectCommands.map((command) => `  - ${command}`));
     }
     return instructions.join("\n");
+}
+async function loadGlobalInstructions() {
+    const root = path.join(os.homedir(), ".pi", "agent");
+    try {
+        const entries = await fs.readdir(root, { withFileTypes: true });
+        const files = entries.filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"));
+        const contents = [];
+        for (const entry of files) {
+            const content = (await fs.readFile(path.join(root, entry.name), "utf8")).trim();
+            if (content) contents.push(`## ${entry.name}\n${content}`);
+        }
+        return contents.length ? `\n\n# 全局自定义指令\n${contents.join("\n\n")}` : "";
+    }
+    catch {
+        return "";
+    }
 }
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);

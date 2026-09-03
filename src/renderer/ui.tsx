@@ -3392,7 +3392,7 @@ export function Login({
 
             {pane === "prompts" && (
               <div className="prompt-templates-page">
-                <p className="settings-hint">全局自定义指令保存在 <code>~/.pi/agent/prompts/</code>，在输入框中用 <code>/{activePromptName.replace(/\.md$/i, "")}</code> 调用。</p>
+                <p className="settings-hint">全局自定义指令保存在 <code>~/.pi/agent/{activePromptName || "AGENTS.md"}</code>，新会话会自动生效，无需输入命令。</p>
                 <div className="prompt-template-toolbar">
                   <input aria-label="文件名" value={activePromptName} onChange={(event) => { setActivePromptName(event.target.value); setPromptStatus(""); }} placeholder="AGENTS.md" />
                   <button type="button" className="ghost" onClick={() => void window.harness.app.openPromptTemplatesFolder().catch((error) => setPromptStatus(error instanceof Error ? error.message : String(error)))}>打开文件夹</button>

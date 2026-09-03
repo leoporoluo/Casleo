@@ -171,7 +171,7 @@ function appPreferencesPath(): string {
 
 function promptTemplatesPath(): string {
   const home = process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir();
-  return path.join(home, ".pi", "agent", "prompts");
+  return path.join(home, ".pi", "agent");
 }
 
 async function listPromptTemplates(): Promise<PromptTemplate[]> {
