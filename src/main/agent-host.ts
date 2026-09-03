@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
 import { getCasleoRpcEntryPath } from "casleo-agent-core";
 import type { AgentEvent, AgentSessionStats, AgentSnapshot, AgentStartOptions } from "../shared/types";
-import { parseSkillCommands } from "../shared/skills";
+import { parseAgentCommands, parseSkillCommands } from "../shared/skills";
 import { killProcessTree } from "./process-tree";
 import { drainUtf8Lines } from "./rpc-lines";
 
@@ -56,6 +56,7 @@ export class AgentHost {
       models: [],
       thinkingLevels: [],
       skills: [],
+      commands: [],
     };
   }
 
@@ -75,11 +76,13 @@ export class AgentHost {
           }>;
         }>("get_commands").catch(() => ({ commands: [] })),
       ]);
+      const parsedCommands = parseAgentCommands(commands.commands);
       this.emitEvent({
         type: "desktop_snapshot_meta",
         models: models.models,
         thinkingLevels: thinkingLevels.levels,
         skills: parseSkillCommands(commands.commands),
+        commands: parsedCommands,
         ...(stats ? { stats } : {}),
       });
     } catch {

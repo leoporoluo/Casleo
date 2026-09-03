@@ -82,7 +82,6 @@ const zh = {
   "nav.reselectProject": "重新选择文件夹",
   "nav.sessionMenu": "对话菜单",
   "nav.sectionProjects": "项目",
-  "nav.recentActive": "最近活跃",
 
   "home.greeting": "今天想做点什么？",
   "suggest.openProject": "打开本地项目",
@@ -516,7 +515,6 @@ const en: Record<MessageKey, string> = {
   "nav.reselectProject": "Choose another folder",
   "nav.sessionMenu": "Chat menu",
   "nav.sectionProjects": "Projects",
-  "nav.recentActive": "Recently active",
 
   "home.greeting": "What do you want to work on?",
   "suggest.openProject": "Open a local project",

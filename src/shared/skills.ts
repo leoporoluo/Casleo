@@ -20,9 +20,50 @@ export interface AgentSkillCommand {
   enabled?: boolean;
 }
 
+export type AgentCommandSource = "extension" | "prompt" | "skill";
+
+export interface AgentSlashCommand {
+  name: string;
+  description?: string;
+  source: AgentCommandSource;
+  path?: string;
+  enabled?: boolean;
+}
+
 export function skillSlashCommand(name: string): string {
   const bare = name.startsWith("skill:") ? name.slice("skill:".length) : name.replace(/^\//, "");
   return `/skill:${bare}`;
+}
+
+export function agentSlashCommand(command: Pick<AgentSlashCommand, "name" | "source">): string {
+  return command.source === "skill" ? skillSlashCommand(command.name) : `/${command.name.replace(/^\/+/, "")}`;
+}
+
+export function parseAgentCommands(
+  commands: Array<{
+    name: string;
+    description?: string;
+    source?: string;
+    sourceInfo?: { path?: string; baseDir?: string };
+  }>,
+): AgentSlashCommand[] {
+  const result: AgentSlashCommand[] = [];
+  for (const command of commands) {
+    if (command.source !== "extension" && command.source !== "prompt" && command.source !== "skill") continue;
+    const rawName = command.name.replace(/^\/+/, "");
+    const name = command.source === "skill" && rawName.startsWith("skill:")
+      ? rawName.slice("skill:".length)
+      : rawName;
+    if (!name) continue;
+    const path = command.sourceInfo?.path ?? command.sourceInfo?.baseDir;
+    result.push({
+      name,
+      source: command.source,
+      ...(command.description ? { description: command.description } : {}),
+      ...(path ? { path } : {}),
+    });
+  }
+  return result.sort((a, b) => agentSlashCommand(a).localeCompare(agentSlashCommand(b)));
 }
 
 export function parseSkillCommands(

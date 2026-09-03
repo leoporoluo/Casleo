@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode } from "../shared/types";
-import { skillUserDisplay } from "../shared/skills";
+import { agentSlashCommand, skillSlashCommand, skillUserDisplay, type AgentSlashCommand } from "../shared/skills";
 import { visibleUserText } from "../shared/vision-api";
 import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
 import { applyTheme, readStoredTheme, THEMES, type ThemeId } from "../shared/theme";
@@ -12,7 +12,6 @@ import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThin
 import { tokenizeCode } from "./highlight";
 import type { AgentSkillCommand } from "../shared/skills";
 import type { LocalPluginEntry, PiPackageEntry, ResourceKind } from "../shared/types";
-import { skillSlashCommand } from "../shared/skills";
 import { useI18n } from "./i18n";
 import type { MessageKey } from "../shared/i18n";
 
@@ -138,10 +137,9 @@ export function CopyButton({
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const copy = async (host: HTMLElement) => {
-    const markdown = host.closest(".turn")?.querySelector(".stream .markdown");
-    const plain = markdown instanceof HTMLElement
-      ? markdown.innerText.replace(/\n{3,}/g, "\n\n").trim()
-      : "";
+    const block = host.closest(".markdown-code");
+    const markdown = block?.querySelector("pre") ?? host.closest(".turn")?.querySelector(".stream .markdown");
+    const plain = markdown instanceof HTMLElement ? markdown.innerText.replace(/\n{3,}/g, "\n\n").trim() : "";
     try {
       await navigator.clipboard.writeText(plain || text);
       setCopied(true);
@@ -1036,8 +1034,8 @@ function Markdown({ children, streaming, workspace }: { children: string; stream
             <code
               className={`${className ?? ""}${pathLike ? " markdown-path" : ""}`}
               {...props}
-              onClick={pathLike ? () => void window.harness.workspace.reveal(plain, workspace) : undefined}
-              title={pathLike ? "在资源管理器中打开" : undefined}
+              onClick={pathLike ? () => void window.harness.workspace.open(plain, workspace) : undefined}
+              title={pathLike ? "打开文件或文件夹" : undefined}
             >
               {children}
             </code>
@@ -1045,14 +1043,19 @@ function Markdown({ children, streaming, workspace }: { children: string; stream
         },
         a({ href, children, ...props }) {
           const external = typeof href === "string" && /^https?:\/\//i.test(href);
+          const local = typeof href === "string" ? localWorkspacePath(href) : undefined;
           return (
             <a
               {...props}
               href={href}
               onClick={(event) => {
-                if (!external || !href) return;
-                event.preventDefault();
-                void window.harness.app.openExternal(href);
+                if (external && href) {
+                  event.preventDefault();
+                  void window.harness.app.openExternal(href);
+                } else if (local && workspace) {
+                  event.preventDefault();
+                  void window.harness.workspace.open(local, workspace);
+                }
               }}
             >
               {children}
@@ -1783,7 +1786,7 @@ export function PromptBar({
   permission,
   onPermission,
   onCommand,
-  skillCommands = [],
+  slashCommands = [],
   pluginCommands = [],
   placement = "dock",
 }: {
@@ -1807,7 +1810,7 @@ export function PromptBar({
   permission: string;
   onPermission(value: string): void;
   onCommand(command: string): void;
-  skillCommands?: AgentSkillCommand[];
+  slashCommands?: AgentSlashCommand[];
   pluginCommands?: LocalPluginEntry[];
   placement?: "dock" | "hero";
 }) {
@@ -1832,15 +1835,20 @@ export function PromptBar({
     : pluginReference
       ? { trigger: "#" as const, query: pluginReference[1] ?? "", start: cursor - (pluginReference[1]?.length ?? 0) - 1 }
       : undefined;
-  const referenceMatches = reference
+  const referenceMatches: Array<{ name: string; description?: string; insert: string }> = reference
     ? reference.trigger === "/"
       ? [
         ...(reference.query === "" || "plan".startsWith(reference.query.toLowerCase())
-          ? [{ name: "plan", description: t("perm.plan") }]
+          ? [{ name: "plan", description: t("perm.plan"), insert: "/plan" }]
           : []),
-        ...skillCommands.filter((item) => item.enabled !== false && item.name.toLowerCase().startsWith(reference.query.toLowerCase())),
+        ...slashCommands
+          .filter((item) => item.enabled !== false && item.name.toLowerCase().startsWith(reference.query.toLowerCase()))
+          .map((item) => ({ name: item.name, description: item.description, insert: agentSlashCommand(item) })),
       ].slice(0, 12)
-      : pluginCommands.filter((item) => item.name.toLowerCase().startsWith(reference.query.toLowerCase())).slice(0, 12)
+      : pluginCommands
+        .filter((item) => item.name.toLowerCase().startsWith(reference.query.toLowerCase()))
+        .map((item) => ({ name: item.name, description: item.description, insert: `#${item.name}` }))
+        .slice(0, 12)
     : [];
 
   useEffect(() => {
@@ -1947,26 +1955,9 @@ export function PromptBar({
     });
   };
 
-  const slash = skillCommands.length > 0 && (value === "/" || /^\/[^\s]*$/.test(value));
-  const commands = skillCommands
-    .map((skill) => ({ id: skillSlashCommand(skill.name) }))
-    .filter((item) => item.id.startsWith(value || "/"));
-
-  const insertSkillCommand = (command: string) => {
-    const next = `${command} `;
-    setValue(next);
-    const caret = next.length;
-    setCursor(caret);
-    setPicked(0);
-    requestAnimationFrame(() => {
-      area.current?.focus();
-      if (area.current) placeCaret(area.current, caret);
-    });
-  };
-
-  const insertReference = (name: string) => {
+  const insertReference = (item: { name: string; insert: string }) => {
     if (!reference) return;
-    const prefix = reference.trigger === "/" ? (name === "plan" ? "/plan" : `/skill:${name}`) : `#${name}`;
+    const prefix = item.insert;
     const next = `${value.slice(0, reference.start)}${prefix} ${value.slice(cursor)}`;
     const caret = reference.start + prefix.length + 1;
     setValue(next);
@@ -2018,36 +2009,13 @@ export function PromptBar({
       if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) {
         event.preventDefault();
         const item = referenceMatches[picked] ?? referenceMatches[0];
-        if (item) insertReference(item.name);
+        if (item) insertReference(item);
         return;
       }
       if (event.key === "Escape") {
         event.preventDefault();
         setValue(`${value.slice(0, reference.start)}${value.slice(cursor)}`);
         setCursor(reference.start);
-        return;
-      }
-    }
-    if (slash && commands.length > 0) {
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        setPicked((current) => (current + 1) % commands.length);
-        return;
-      }
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setPicked((current) => (current - 1 + commands.length) % commands.length);
-        return;
-      }
-      if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) {
-        event.preventDefault();
-        const cmd = commands[picked] ?? commands[0];
-        if (cmd) insertSkillCommand(cmd.id);
-        return;
-      }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setValue("");
         return;
       }
     }
@@ -2077,11 +2045,6 @@ export function PromptBar({
         }
         return;
       }
-    }
-    if (slash && event.key === "Enter" && commands[0] && !event.shiftKey) {
-      event.preventDefault();
-      insertSkillCommand((commands[picked] ?? commands[0]).id);
-      return;
     }
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
@@ -2154,7 +2117,7 @@ export function PromptBar({
                 type="button"
                 className={index === picked ? "on" : ""}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => insertReference(item.name)}
+                onClick={() => insertReference(item)}
               >
                 <span className="prompt-reference-mark">{reference.trigger}</span>
                 <strong>{item.name}</strong>
@@ -2180,8 +2143,8 @@ export function PromptBar({
           onDropCapture={dropIntoPrompt}
           onSubmit={(event) => {
             event.preventDefault();
-            if (slash && commands[0]) {
-              insertSkillCommand((commands[picked] ?? commands[0]).id);
+            if (reference?.trigger === "/" && referenceMatches.length > 0) {
+              insertReference(referenceMatches[picked] ?? referenceMatches[0]);
               return;
             }
             sendNow();
@@ -2221,22 +2184,7 @@ export function PromptBar({
           onKeyDown={onKey}
           onPaste={() => undefined}
         />
-        {slash && !reference && (
-          <div className="slash-menu">
-            {commands.length === 0 && <p className="slash-empty">{t("composer.noCommands")}</p>}
-            {commands.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                className={index === picked ? "on" : ""}
-                onClick={() => insertSkillCommand(item.id)}
-              >
-                <code>{item.id}</code>
-              </button>
-            ))}
-          </div>
-        )}
-        {mention && !slash && (
+        {mention && !reference && (
           <div
             className="slash-menu files"
             ref={menu}
@@ -2300,13 +2248,13 @@ function permissionOptions(t: ReturnType<typeof useI18n>["t"]): PermissionOption
     value: "ask",
     label: t("perm.ask"),
     desc: t("perm.askDesc"),
-    icon: "M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10zm0-14v5m0 3h.01",
+    icon: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.5 9a2.5 2.5 0 1 1 4.2 1.8c-.8.7-1.7 1.1-1.7 2.7M12 17h.01",
   },
   {
     value: "auto",
     label: t("perm.auto"),
     desc: t("perm.autoDesc"),
-    icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+    icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v5M12 16h.01",
   },
   {
     value: "full",
@@ -2619,6 +2567,17 @@ function splitApprovalCopy(title: string, message?: string) {
     command: rest.replace(/this may delete data or alter system\/process state\.?/gi, "").trim(),
     destructive: true,
   };
+}
+
+function localWorkspacePath(href: string): string | undefined {
+  const value = href.trim();
+  if (!value || value.startsWith("#") || /^(?:mailto|tel|javascript):/i.test(value)) return undefined;
+  if (/^[a-z][a-z\d+.-]*:/i.test(value) && !/^[a-z]:[\\/]/i.test(value)) return undefined;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function compactApprovalMessage(heading: string, message: string, fallback: string): string {

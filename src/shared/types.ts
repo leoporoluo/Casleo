@@ -1,5 +1,5 @@
 import type { Locale } from "./i18n";
-import type { AgentSkillCommand } from "./skills";
+import type { AgentSlashCommand, AgentSkillCommand } from "./skills";
 import type { ApiTransport } from "./chat-profiles";
 
 /** Previews load through their own origin so page storage works without reaching the app. */
@@ -138,6 +138,7 @@ export interface AgentSnapshot {
   stats?: AgentSessionStats;
   cwd?: string;
   skills?: AgentSkillCommand[];
+  commands?: AgentSlashCommand[];
 }
 
 export type AgentEvent = Record<string, unknown> & { type: string };

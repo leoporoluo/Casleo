@@ -1316,7 +1316,10 @@ async function resolveInWorkspace(
       (item) => path.resolve(item.path) === root,
     );
   if (!allowed) throw new Error("Folder is not an opened project");
-  const resolved = path.resolve(root, relativePath);
+  const requested = relativePath.trim();
+  const resolved = path.isAbsolute(requested)
+    ? path.resolve(requested)
+    : path.resolve(root, requested);
   if (!isPathInsideRoot(root, resolved))
     throw new Error("Path outside workspace");
   // Lexical check alone loses to symlinks (e.g. workspace/link → ~/.ssh). Re-check after realpath.

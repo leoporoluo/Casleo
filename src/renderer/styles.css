@@ -1137,60 +1137,6 @@ textarea::selection,
   letter-spacing: -0.02em;
   line-height: 1.25;
 }
-.home-recents {
-  margin-top: 36px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.home-recents-head {
-  color: var(--ink-3);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 0 6px;
-  margin-bottom: 4px;
-}
-.home-recent {
-  width: 100%;
-  min-height: 38px;
-  padding: 8px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-radius: 8px;
-  text-align: left;
-  font-size: 13.5px;
-  color: var(--ink-2);
-  transition: background 0.12s ease;
-}
-.home-recent:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.home-recent-main {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-}
-.home-recent-main svg {
-  flex: none;
-  color: var(--ink-3);
-}
-.home-recent span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.home-recent small {
-  flex: none;
-  color: var(--ink-3);
-  font-size: 12px;
-}
-
 .session-pane {
   width: var(--col);
   margin: 0 auto;

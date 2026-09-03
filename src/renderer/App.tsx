@@ -10,7 +10,7 @@ import type {
   WorkspaceItem,
   LocalPluginEntry,
 } from "../shared/types";
-import type { AgentSkillCommand } from "../shared/skills";
+import type { AgentSlashCommand, AgentSkillCommand } from "../shared/skills";
 import { skillSlashCommand } from "../shared/skills";
 import {
   DEFAULT_EFFORT,
@@ -67,21 +67,6 @@ import {
   UserTurn,
 } from "./ui";
 import { useI18n } from "./i18n";
-import type { MessageKey } from "../shared/i18n";
-
-function relativeTime(iso: string, t: (key: MessageKey, vars?: Record<string, string | number>) => string) {
-  const delta = Date.now() - Date.parse(iso);
-  const minutes = Math.round(delta / 60_000);
-  if (minutes < 1) return t("common.justNow");
-  if (minutes < 60) return t("common.minutesAgo", { n: minutes });
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return t("common.hoursAgo", { n: hours });
-  const days = Math.round(hours / 24);
-  if (days === 1) return t("common.yesterday");
-  if (days < 7) return t("common.daysAgo", { n: days });
-  return new Date(iso).toLocaleDateString();
-}
-
 function sessionFileOf(snapshot: AgentSnapshot): string | undefined {
   if (typeof snapshot.stats?.sessionFile === "string") return snapshot.stats.sessionFile;
   if (typeof snapshot.state.sessionFile === "string") return snapshot.state.sessionFile;
@@ -302,6 +287,7 @@ export function App() {
   const [preview, setPreview] = useState<FileChange>();
   const [featureTodos, setFeatureTodos] = useState<SessionTodo[]>([]);
   const [agentSkills, setAgentSkills] = useState<AgentSkillCommand[]>([]);
+  const [agentCommands, setAgentCommands] = useState<AgentSlashCommand[]>([]);
   const [agentPlugins, setAgentPlugins] = useState<LocalPluginEntry[]>([]);
   const [stoppedJobs, setStoppedJobs] = useState<string[]>([]);
   const scroller = useRef<HTMLDivElement>(null);
@@ -523,6 +509,7 @@ export function App() {
         setMessages([...normalizeMessages(snapshot.messages), seedMessage]);
         setStats(snapshot.stats);
         setAgentSkills(snapshot.skills ?? []);
+        setAgentCommands(snapshot.commands ?? []);
         setRunning(true);
       } else {
         const raw = normalizeMessages(snapshot.messages);
@@ -532,6 +519,7 @@ export function App() {
         setStats(snapshot.stats);
         setRunning(Boolean(snapshot.state.isStreaming) && !hadRunning);
         setAgentSkills(snapshot.skills ?? []);
+        setAgentCommands(snapshot.commands ?? []);
         if (resume && hadRunning) setToast(t("toast.sessionInterrupted"));
         if (sessionPath && next.length === 0) {
           setToast(t("toast.sessionEmpty"));
@@ -900,7 +888,16 @@ export function App() {
     // A newly submitted turn should always follow the conversation tail.
     stick.current = true;
     if (running) {
-      if (text.startsWith("/")) return;
+      if (text.startsWith("/")) {
+        fillPrompt("");
+        try {
+          await window.harness.agent.command("prompt", { message: text });
+        } catch (error) {
+          fillPrompt(text);
+          setToast(friendlyAgentError(error));
+        }
+        return;
+      }
       const followup = text;
       fillPrompt("");
       try {
@@ -989,6 +986,7 @@ export function App() {
           agentModelIdsRef.current = agentModelsRef.current.map((item) => item.id).filter(Boolean);
         }
         if (Array.isArray(event.skills)) setAgentSkills(event.skills as AgentSkillCommand[]);
+        if (Array.isArray(event.commands)) setAgentCommands(event.commands as AgentSlashCommand[]);
         if (event.stats && typeof event.stats === "object") setStats(event.stats as AgentSessionStats);
       }
       if (event.type === "agent_settled") {
@@ -1102,11 +1100,6 @@ export function App() {
     return () => window.cancelAnimationFrame(frame);
   }, [messages, running, uiRequest, home]);
 
-  const homeRecents = (
-    workspace
-      ? projects.find((item) => item.item.path === workspace)?.sessions ?? []
-      : projects.flatMap((item) => item.sessions).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
-  ).slice(0, 5);
   const composer = (
     <PromptBar
       fillText={promptFill.text}
@@ -1156,7 +1149,7 @@ export function App() {
         if (command === "/compact") void compactContext();
         if (command === "/login") setLoginOpen(true);
       }}
-      skillCommands={agentSkills}
+      slashCommands={agentCommands}
       pluginCommands={agentPlugins}
       placement={home ? "hero" : "dock"}
     />
@@ -1392,27 +1385,6 @@ export function App() {
                 <h1>{workspace ? baseName(workspace) : t("home.greeting")}</h1>
               </div>
               {composer}
-              {homeRecents.length > 0 && (
-                <div className="home-recents">
-                  <div className="home-recents-head">
-                    <span>{t("nav.recentActive")}</span>
-                  </div>
-                  {homeRecents.map((session) => (
-                    <button
-                      key={session.id}
-                      type="button"
-                      className="home-recent"
-                      onClick={() => openSession(session)}
-                    >
-                      <div className="home-recent-main">
-                        <Icon path="M19 3H5a2 2 0 0 0-2 2v14l4-4h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" size={14} />
-                        <span>{session.title || t("common.unnamedSession")}</span>
-                      </div>
-                      <small>{relativeTime(session.updatedAt, t)}</small>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           )}
           {!home && groups.length === 0 && (
