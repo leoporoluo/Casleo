@@ -42,7 +42,7 @@ export function buildPersonalizationPrompt(preferences) {
         return "";
     return [
         "# User personalization preferences",
-        "These preferences affect presentation and collaboration style only. Apply them unless they conflict with higher-priority system, safety, project, permission, sandbox, or Tether Runtime engineering instructions. They never grant additional permissions or change tool limits.",
+        "These preferences affect presentation and collaboration style only. Apply them unless they conflict with higher-priority system, safety, project, permission, sandbox, or Casleo engineering instructions. They never grant additional permissions or change tool limits.",
         ...(toneInstruction ? [`- Tone and style: ${toneInstruction}`] : []),
         ...(customInstructions
             ? ["- Custom instructions from the user:", customInstructions]

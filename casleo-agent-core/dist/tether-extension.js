@@ -128,14 +128,14 @@ export function createTetherExtension(options) {
             };
             const updateStatus = (ctx) => {
                 const currentAccess = effectiveAccess();
-                const status = `Tether Runtime · ${permission} · ${sandboxDescription({
+                const status = `Casleo · ${permission} · ${sandboxDescription({
                     mode: currentAccess.sandbox,
                     network: currentAccess.network,
                 })}`;
                 ctx.ui.setStatus("tether", permission === "plan"
                     ? ctx.ui.theme.fg("warning", status)
                     : brandBlue(status, ctx.ui.theme));
-                ctx.ui.setTitle(`Tether Runtime — ${ctx.cwd}`);
+                ctx.ui.setTitle(`Casleo — ${ctx.cwd}`);
                 ctx.ui.setWidget("tether-plan", planWidgetLines(planState, ctx));
             };
             registerDeepSeekProvider(pi, options);
@@ -296,8 +296,8 @@ export function createTetherExtension(options) {
                     return {
                         block: true,
                         reason: event.toolName === "bash" || event.toolName === "run_command"
-                            ? "This shell tool bypasses Tether Runtime's managed OS sandbox. Use exec_command instead."
-                            : "This write tool bypasses Tether Runtime checkpoints. Use apply_patch instead.",
+                            ? "This shell tool bypasses Casleo's managed OS sandbox. Use exec_command instead."
+                            : "This write tool bypasses Casleo checkpoints. Use apply_patch instead.",
                     };
                 }
                 if (permission === "plan" && !planAllowedTools.has(event.toolName)) {
@@ -578,7 +578,7 @@ export function createTetherExtension(options) {
                     try {
                         const baseUrl = normalizeDeepSeekBaseUrl(requested || options.baseUrl);
                         await saveDeepSeekBaseUrl(baseUrl);
-                        ctx.ui.notify(`${baseUrl}\nSaved. Restart Tether Runtime to use this API endpoint.`, "info");
+                        ctx.ui.notify(`${baseUrl}\nSaved. Restart Casleo to use this API endpoint.`, "info");
                     }
                     catch (error) {
                         ctx.ui.notify(error.message, "error");
@@ -730,7 +730,7 @@ export function createTetherExtension(options) {
                 },
             });
             pi.registerCommand("doctor", {
-                description: "Show Tether Runtime runtime diagnostics",
+                description: "Show Casleo runtime diagnostics",
                 handler: async (_args, ctx) => {
                     const usage = ctx.getContextUsage();
                     const currentAccess = effectiveAccess();
@@ -1275,9 +1275,9 @@ function engineeringInstructions(projectCommands, access, runtime) {
         ? `${runtime.modelId} (${runtime.modelName})`
         : runtime.modelId;
     const instructions = [
-        "# Tether Runtime engineering contract",
+        "# Casleo engineering contract",
         `- Active runtime model: ${runtime.provider}/${modelLabel} via ${runtime.transport} (${runtime.baseUrl}).`,
-        "- You are Tether, the coding assistant in this workspace. When asked what model you are or which API model is in use, answer briefly with the active runtime model above.",
+        "- You are Casleo, the coding assistant in this workspace. When asked what model you are or which API model is in use, answer briefly with the active runtime model above.",
         "- Work to a verified repository outcome: inspect first, make focused changes, run the narrowest relevant checks, then broaden validation in proportion to risk.",
         "- When a check fails, diagnose the evidence and keep repairing while a safe in-scope next step remains. Never hide, truncate in prose, or reinterpret a failing exit code as success.",
         "- Before changing files below nested directories, discover applicable AGENTS.md and CLAUDE.md files and obey them from broadest to most specific scope.",
@@ -1287,13 +1287,13 @@ function engineeringInstructions(projectCommands, access, runtime) {
         "- Use update_plan for complex multi-step work. Keep at most one step in_progress and update statuses as verified work advances.",
         "- Use delegate only when 2+ independent subtasks each need a long read-only or isolated implement pass; never delegate a single repo walk or one directory.",
         "- Prefer read_file/list_files/search_files for one-path exploration; delegate explorers only for parallel modules.",
-        `- Commands execute locally in ${commandSandbox}; this is the Tether Runtime OS sandbox, not a model-provider cloud sandbox.`,
+        `- Commands execute locally in ${commandSandbox}; this is the Casleo OS sandbox, not a model-provider cloud sandbox.`,
         `- Command network access is ${access.network ? "enabled" : "disabled until the user grants scoped access"}; do not work around this boundary.`,
         ...(access.network
             ? []
             : [
                 "- Loopback preview servers (127.0.0.1 / localhost) are allowed inside the sandbox so the user can open them in a browser. Do not tell the user a preview URL works unless the process is actually listening. Outbound internet still needs a network grant.",
-                "- Tether Runtime handles recognized network and sandbox denials with an allow-once / allow-for-session / deny prompt and retries approved commands automatically. If the user denies access, report that decision; do not suggest bypassing the sandbox.",
+                "- Casleo handles recognized network and sandbox denials with an allow-once / allow-for-session / deny prompt and retries approved commands automatically. If the user denies access, report that decision; do not suggest bypassing the sandbox.",
             ]),
         "- Keep the final answer evidence-based: changed files, checks actually run, failures or limitations, and the shortest useful next action.",
     ];
