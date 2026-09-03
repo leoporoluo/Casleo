@@ -35,6 +35,16 @@ export interface LocalPluginEntry {
   name: string;
   description?: string;
   path?: string;
+  enabled?: boolean;
+}
+
+export type ResourceKind = "skill" | "extension";
+
+export interface PiPackageEntry {
+  source: string;
+  scope: "global" | "project";
+  settingsPath: string;
+  enabled: boolean;
 }
 
 export interface SessionSummary {
@@ -153,6 +163,11 @@ export interface DesktopApi {
     revealPath(skillName: string, hint?: string): Promise<void>;
     listSkills(): Promise<Array<{ name: string; path: string }>>;
     listPlugins(): Promise<LocalPluginEntry[]>;
+    listPackages(): Promise<PiPackageEntry[]>;
+    setResourceEnabled(kind: ResourceKind, resourcePath: string, enabled: boolean): Promise<void>;
+    deleteResource(kind: ResourceKind, resourcePath: string): Promise<void>;
+    setPackageEnabled(source: string, scope: "global" | "project", enabled: boolean): Promise<void>;
+    deletePackage(source: string, scope: "global" | "project"): Promise<void>;
     checkUpdate(): Promise<void>;
     getLocale(): Promise<Locale>;
     setLocale(locale: Locale): Promise<void>;
@@ -161,6 +176,7 @@ export interface DesktopApi {
     listPromptTemplates(): Promise<PromptTemplate[]>;
     savePromptTemplate(name: string, content: string): Promise<PromptTemplate>;
     openPromptTemplatesFolder(): Promise<void>;
+    openPackagesFolder(): Promise<void>;
   };
   /** Frameless windows off macOS need the renderer to drive the caption buttons. */
   window: {

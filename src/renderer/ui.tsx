@@ -11,8 +11,8 @@ import { effortLabelKey, pickEffortOptions, reasoningLevelsAvailable } from "../
 import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThinking, delegateProgress, delegateStatusLabel, filterMentionPaths, formatCommand, isRecoverableRequestError, liveStatus, omitFinalReply, repairMarkdownTables, splitHttpUrls, splitPatch, stripEmptyMarkdown, spliceFileMention, terminalLabel, toolCommand, toolSummary, toolWritePreview, traceRows, turnWork, assistantReplyText, webSearchCard, workspaceRelative, type ChatImage, type ChatMessage, type FileChange, type SessionFile, type SessionTerminal, type SessionTodo, type ToolActivity, type TraceRow, type WorkItem } from "./conversation";
 import { tokenizeCode } from "./highlight";
 import type { AgentSkillCommand } from "../shared/skills";
-import type { LocalPluginEntry } from "../shared/types";
-import { PROJECT_PLUGIN_ROOTS, PROJECT_SKILL_ROOTS, USER_PLUGIN_ROOTS, USER_SKILL_ROOTS, skillSlashCommand } from "../shared/skills";
+import type { LocalPluginEntry, PiPackageEntry, ResourceKind } from "../shared/types";
+import { PROJECT_PACKAGE_ROOTS, PROJECT_PLUGIN_ROOTS, PROJECT_SKILL_ROOTS, USER_PACKAGE_ROOTS, USER_PLUGIN_ROOTS, USER_SKILL_ROOTS, skillSlashCommand } from "../shared/skills";
 import { useI18n } from "./i18n";
 import type { MessageKey } from "../shared/i18n";
 
@@ -988,7 +988,7 @@ function copyMarkdownPlain(event: { preventDefault(): void; clipboardData: DataT
   event.clipboardData?.setData("text/plain", selected);
 }
 
-function Markdown({ children, streaming }: { children: string; streaming?: boolean }) {
+function Markdown({ children, streaming, workspace }: { children: string; streaming?: boolean; workspace?: string }) {
   const source = compactFencedCode(
     stripEmptyMarkdown(repairMarkdownTables(streaming ? closeOpenFences(children) : children)),
   );
@@ -1000,12 +1000,43 @@ function Markdown({ children, streaming }: { children: string; streaming?: boole
         pre({ children }) {
           const plain = extractNodeText(children).trim();
           if (!plain) return null;
-          return <pre>{children}</pre>;
+          return (
+            <div className="markdown-code">
+              <CopyButton text={plain} className="code-copy" size={13} />
+              <pre>{children}</pre>
+            </div>
+          );
         },
         code({ children, className, ...props }) {
           const plain = extractNodeText(children).trim();
           if (!plain && !className) return null;
-          return <code className={className} {...props}>{children}</code>;
+          const pathLike = !className && /^(?:[A-Za-z]:[\\/]|\.\.?[\\/]|(?:\.agents|\.pi)[\\/])/.test(plain);
+          return (
+            <code
+              className={`${className ?? ""}${pathLike ? " markdown-path" : ""}`}
+              {...props}
+              onClick={pathLike ? () => void window.harness.workspace.reveal(plain, workspace) : undefined}
+              title={pathLike ? "在资源管理器中打开" : undefined}
+            >
+              {children}
+            </code>
+          );
+        },
+        a({ href, children, ...props }) {
+          const external = typeof href === "string" && /^https?:\/\//i.test(href);
+          return (
+            <a
+              {...props}
+              href={href}
+              onClick={(event) => {
+                if (!external || !href) return;
+                event.preventDefault();
+                void window.harness.app.openExternal(href);
+              }}
+            >
+              {children}
+            </a>
+          );
         },
       }}
     >
@@ -1040,16 +1071,18 @@ function extractNodeText(node: ReactNode): string {
 export function StreamingText({
   text,
   streaming,
+  workspace,
 }: {
   text: string;
   streaming?: boolean;
+  workspace?: string;
 }) {
   if (!text && !streaming) return null;
   return (
     <div className={streaming ? "stream live" : "stream"}>
       {text ? (
         <div className="markdown">
-          <Markdown streaming={streaming}>{text}</Markdown>
+          <Markdown streaming={streaming} workspace={workspace}>{text}</Markdown>
         </div>
       ) : null}
       {streaming ? <span className="caret" aria-hidden="true" /> : null}
@@ -1059,12 +1092,14 @@ export function StreamingText({
 
 export const AssistantTurn = memo(function AssistantTurn({
   messages,
+  workspace,
   onOpenFile,
   errorRecovered = false,
   recoverableFailStreak = 0,
   onRetry,
 }: {
   messages: ChatMessage[];
+  workspace?: string;
   onOpenFile?(file: FileChange): void;
   errorRecovered?: boolean;
   recoverableFailStreak?: number;
@@ -1108,7 +1143,7 @@ export const AssistantTurn = memo(function AssistantTurn({
         </div>
       )}
       <ChangeSummary files={changes} onOpen={onOpenFile} />
-      <StreamingText text={text} streaming={live} />
+      <StreamingText text={text} streaming={live} workspace={workspace} />
       {!live && text.trim() && (
         <div className="bubble-actions assistant">
           <CopyAction text={text} />
@@ -1782,7 +1817,12 @@ export function PromptBar({
       : undefined;
   const referenceMatches = reference
     ? reference.trigger === "/"
-      ? skillCommands.filter((item) => item.name.toLowerCase().startsWith(reference.query.toLowerCase())).slice(0, 12)
+      ? [
+        ...(reference.query === "" || "plan".startsWith(reference.query.toLowerCase())
+          ? [{ name: "plan", description: t("perm.plan") }]
+          : []),
+        ...skillCommands.filter((item) => item.enabled !== false && item.name.toLowerCase().startsWith(reference.query.toLowerCase())),
+      ].slice(0, 12)
       : pluginCommands.filter((item) => item.name.toLowerCase().startsWith(reference.query.toLowerCase())).slice(0, 12)
     : [];
 
@@ -1909,7 +1949,7 @@ export function PromptBar({
 
   const insertReference = (name: string) => {
     if (!reference) return;
-    const prefix = reference.trigger === "/" ? `/skill:${name}` : `#${name}`;
+    const prefix = reference.trigger === "/" ? (name === "plan" ? "/plan" : `/skill:${name}`) : `#${name}`;
     const next = `${value.slice(0, reference.start)}${prefix} ${value.slice(cursor)}`;
     const caret = reference.start + prefix.length + 1;
     setValue(next);
@@ -2164,7 +2204,7 @@ export function PromptBar({
           onKeyDown={onKey}
           onPaste={() => undefined}
         />
-        {slash && (
+        {slash && !reference && (
           <div className="slash-menu">
             {commands.length === 0 && <p className="slash-empty">{t("composer.noCommands")}</p>}
             {commands.map((item, index) => (
@@ -2246,12 +2286,6 @@ export interface PermissionOptionConfig {
 function permissionOptions(t: ReturnType<typeof useI18n>["t"]): PermissionOptionConfig[] {
   return [
   {
-    value: "plan",
-    label: t("perm.plan"),
-    desc: t("perm.planDesc"),
-    icon: "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M7 8h10M7 12h7M7 16h5",
-  },
-  {
     value: "ask",
     label: t("perm.ask"),
     desc: t("perm.askDesc"),
@@ -2286,7 +2320,9 @@ export function PermissionPicker({
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const options = permissionOptions(t);
-  const selected = options.find((item) => item.value === value) ?? options[2]!;
+  // /plan remains a command-only mode; the persistent picker mirrors Codex's
+  // three access choices and falls back to the default automatic mode.
+  const selected = options.find((item) => item.value === value) ?? options[1]!;
 
   useEffect(() => {
     if (!open) return;
@@ -2886,7 +2922,7 @@ function ApiProfilesEditor({
   );
 }
 
-type SettingsPane = "chat" | "appearance" | "shortcuts" | "skills" | "plugins" | "prompts";
+type SettingsPane = "chat" | "appearance" | "shortcuts" | "skills" | "plugins" | "packages" | "prompts";
 
 const THEME_LABEL: Record<ThemeId, MessageKey> = {
   system: "settings.themeSystem",
@@ -2926,6 +2962,11 @@ function settingsNav(t: ReturnType<typeof useI18n>["t"]): Array<{ label: string;
         id: "plugins",
         label: t("settings.plugins"),
         icon: "M9 3v2.5A1.5 1.5 0 0 1 7.5 7H5a2 2 0 0 0 0 4h2.5A1.5 1.5 0 0 1 9 12.5V15a2 2 0 0 0 4 0v-2.5A1.5 1.5 0 0 1 14.5 11H17a2 2 0 0 0 0-4h-2.5A1.5 1.5 0 0 1 13 5.5V3a2 2 0 0 0-4 0z",
+      },
+      {
+        id: "packages",
+        label: t("settings.packages"),
+        icon: "M4 7h16M4 12h16M4 17h16M7 4v16M17 4v16",
       },
       {
         id: "shortcuts",
@@ -2977,6 +3018,12 @@ export function Login({
   const [activePromptName, setActivePromptName] = useState("AGENTS.md");
   const [promptContent, setPromptContent] = useState("");
   const [promptStatus, setPromptStatus] = useState("");
+  const [packages, setPackages] = useState<PiPackageEntry[]>([]);
+  const [resourceBusy, setResourceBusy] = useState<string>();
+  const [pendingDelete, setPendingDelete] = useState<
+    | { type: "resource"; kind: ResourceKind; path: string; label: string }
+    | { type: "package"; source: string; scope: "global" | "project" }
+  >();
 
   const activeCustom = customProfiles.find((item) => item.id === activeCustomId) ?? customProfiles[0];
   const chatUrl = activeCustom?.url ?? "";
@@ -3046,6 +3093,39 @@ export function Login({
     }).catch(() => undefined);
   }, [pane]);
 
+  useEffect(() => {
+    if (pane !== "packages") return;
+    void window.harness.app.listPackages().then(setPackages).catch(() => setPackages([]));
+  }, [pane]);
+
+  const changeResource = async (kind: ResourceKind, resourcePath: string, enabled: boolean) => {
+    const key = `${kind}:${resourcePath}`;
+    setResourceBusy(key);
+    try {
+      await window.harness.app.setResourceEnabled(kind, resourcePath, enabled);
+      if (kind === "skill") onRefreshSkills?.();
+      else onRefreshPlugins?.();
+    } catch (error) {
+      setSkillRevealError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setResourceBusy(undefined);
+    }
+  };
+
+  const removeResource = async (kind: ResourceKind, resourcePath: string) => {
+    const key = `${kind}:${resourcePath}`;
+    setResourceBusy(key);
+    try {
+      await window.harness.app.deleteResource(kind, resourcePath);
+      if (kind === "skill") onRefreshSkills?.();
+      else onRefreshPlugins?.();
+    } catch (error) {
+      setPromptStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setResourceBusy(undefined);
+    }
+  };
+
   return (
     <div className="settings-route" onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
       <header className="settings-route-head">
@@ -3111,6 +3191,8 @@ export function Login({
                       ? t("settings.skills")
                       : pane === "plugins"
                         ? t("settings.plugins")
+                        : pane === "packages"
+                          ? t("settings.packages")
                         : pane === "shortcuts"
                         ? t("settings.shortcuts")
                         : pane === "prompts" ? "自定义指令" : t("settings.shortcuts")}
@@ -3229,21 +3311,21 @@ export function Login({
                       {agentSkills.map((skill) => {
                         const command = skillSlashCommand(skill.name);
                         return (
-                          <button
+                          <div
                             key={skill.name}
-                            type="button"
                             className="skills-row"
                             title={skill.path ?? command}
-                            onClick={() => {
+                          >
+                            <button type="button" className="skills-row-main" onClick={() => {
                               void window.harness.app.revealPath(skill.name, skill.path).catch((error) => {
                                 const message = error instanceof Error ? error.message : t("settings.skillsRevealFailed");
                                 setSkillRevealError(message);
                                 window.setTimeout(() => setSkillRevealError((current) => (current === message ? undefined : current)), 2200);
                               });
-                            }}
-                          >
-                            <code className="skills-row-name">{command}</code>
-                          </button>
+                            }}><code className="skills-row-name">{command}</code></button>
+                            <PreferenceSegment checked={skill.enabled !== false} onChange={(enabled) => { if (skill.path) void changeResource("skill", skill.path, enabled); }} />
+                            <button type="button" className="resource-delete" disabled={resourceBusy === `skill:${skill.path}`} aria-label={t("settings.resourceDelete")} onClick={() => { if (skill.path) setPendingDelete({ type: "resource", kind: "skill", path: skill.path, label: skill.name }); }}><Icon path="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={14} /></button>
+                          </div>
                         );
                       })}
                     </div>
@@ -3288,31 +3370,88 @@ export function Login({
                   ) : (
                     <div className="skills-list">
                       {agentPlugins.map((plugin) => (
-                        <button
+                        <div
                           key={plugin.name}
-                          type="button"
                           className="skills-row plugin-row"
                           title={plugin.path ?? plugin.name}
-                          onClick={() => {
+                        >
+                          <Icon path="M9 3v2.5A1.5 1.5 0 0 1 7.5 7H5a2 2 0 0 0 0 4h2.5A1.5 1.5 0 0 1 9 12.5V15a2 2 0 0 0 4 0v-2.5A1.5 1.5 0 0 1 14.5 11H17a2 2 0 0 0 0-4h-2.5A1.5 1.5 0 0 1 13 5.5V3a2 2 0 0 0-4 0z" size={15} />
+                          <button type="button" className="skills-row-main plugin-row-copy" onClick={() => {
                             if (!plugin.path) return;
                             void window.harness.app.revealPath(plugin.name, plugin.path).catch((error) => {
                               const message = error instanceof Error ? error.message : t("settings.pluginsRevealFailed");
                               setSkillRevealError(message);
                               window.setTimeout(() => setSkillRevealError((current) => (current === message ? undefined : current)), 2200);
                             });
-                          }}
-                        >
-                          <Icon path="M9 3v2.5A1.5 1.5 0 0 1 7.5 7H5a2 2 0 0 0 0 4h2.5A1.5 1.5 0 0 1 9 12.5V15a2 2 0 0 0 4 0v-2.5A1.5 1.5 0 0 1 14.5 11H17a2 2 0 0 0 0-4h-2.5A1.5 1.5 0 0 1 13 5.5V3a2 2 0 0 0-4 0z" size={15} />
-                          <span className="plugin-row-copy">
+                          }}>
                             <strong>{plugin.name}</strong>
                             {plugin.description && <small>{plugin.description}</small>}
-                          </span>
-                        </button>
+                          </button>
+                          <PreferenceSegment checked={plugin.enabled !== false} onChange={(enabled) => { if (plugin.path) void changeResource("extension", plugin.path, enabled); }} />
+                          <button type="button" className="resource-delete" disabled={resourceBusy === `extension:${plugin.path}`} aria-label={t("settings.resourceDelete")} onClick={() => { if (plugin.path) setPendingDelete({ type: "resource", kind: "extension", path: plugin.path, label: plugin.name }); }}><Icon path="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={14} /></button>
+                        </div>
                       ))}
                     </div>
                   )}
                 </div>
               </>
+            )}
+
+            {pane === "packages" && (
+              <div className="packages-page">
+                <p className="settings-hint">{t("settings.packagesUse")}</p>
+                <div className="skills-section">
+                  <h3 className="skills-section-title">{t("settings.packagesConfig")}</h3>
+                  <div className="skills-paths">
+                    <div className="skills-path-block">
+                      <div className="skills-path-label">{t("settings.packagesPathUser")}</div>
+                      <ul className="skills-path-list">
+                        <li><code>~/.pi/agent/settings.json</code></li>
+                        {USER_PACKAGE_ROOTS.map((root) => <li key={root}><code>{root}/</code></li>)}
+                      </ul>
+                    </div>
+                    <div className="skills-path-block">
+                      <div className="skills-path-label">{t("settings.packagesPathProject")}</div>
+                      <ul className="skills-path-list">
+                        <li><code>.pi/settings.json</code></li>
+                        {PROJECT_PACKAGE_ROOTS.map((root) => <li key={root}><code>{root}/</code></li>)}
+                      </ul>
+                    </div>
+                  </div>
+                  <p className="settings-hint">{t("settings.packagesSources")}</p>
+                  <button type="button" className="ghost" onClick={() => void window.harness.app.openPackagesFolder()}>
+                    {t("settings.packagesOpen")}
+                  </button>
+                </div>
+                <div className="skills-section">
+                  <h3 className="skills-section-title">{t("settings.packagesInstalled")}</h3>
+                  {packages.length === 0 ? <p className="settings-hint">{t("settings.packagesEmpty")}</p> : (
+                    <div className="skills-list">
+                      {packages.map((item) => {
+                        const key = `${item.scope}:${item.source}`;
+                        return (
+                          <div className="skills-row package-row" key={key} title={item.settingsPath}>
+                            <span className="skills-row-main plugin-row-copy">
+                              <strong>{item.source}</strong>
+                              <small>{item.scope === "global" ? t("settings.packagesPathUser") : t("settings.packagesPathProject")}</small>
+                            </span>
+                            <PreferenceSegment checked={item.enabled} onChange={(enabled) => void (async () => {
+                              setResourceBusy(key);
+                              try {
+                                await window.harness.app.setPackageEnabled(item.source, item.scope, enabled);
+                                setPackages(await window.harness.app.listPackages());
+                              } catch (error) {
+                                setPromptStatus(error instanceof Error ? error.message : String(error));
+                              } finally { setResourceBusy(undefined); }
+                            })()} />
+                            <button type="button" className="resource-delete" disabled={resourceBusy === key} aria-label={t("settings.resourceDelete")} onClick={() => setPendingDelete({ type: "package", source: item.source, scope: item.scope })}><Icon path="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={14} /></button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {pane === "shortcuts" && (
@@ -3404,7 +3543,33 @@ export function Login({
           </footer>
         </div>
       </form>
-    </div>
+      {pendingDelete && (
+        <div className="modal" onClick={(event) => { if (event.target === event.currentTarget) setPendingDelete(undefined); }}>
+          <div className="panel resource-delete-panel" role="alertdialog" aria-modal="true">
+            <h2>{t("settings.resourceDeleteTitle")}</h2>
+            <p>{t("settings.resourceDeleteBody", { name: pendingDelete.type === "resource" ? pendingDelete.label : pendingDelete.source })}</p>
+            <div className="row-actions">
+              <button type="button" className="ghost" onClick={() => setPendingDelete(undefined)}>{t("common.cancel")}</button>
+              <button type="button" className="primary danger" onClick={() => void (async () => {
+                const target = pendingDelete;
+                setPendingDelete(undefined);
+                if (target.type === "resource") await removeResource(target.kind, target.path);
+                else {
+                  const key = `${target.scope}:${target.source}`;
+                  setResourceBusy(key);
+                  try {
+                    await window.harness.app.deletePackage(target.source, target.scope);
+                    setPackages(await window.harness.app.listPackages());
+                  } catch (error) {
+                    setPromptStatus(error instanceof Error ? error.message : String(error));
+                  } finally { setResourceBusy(undefined); }
+                }
+              })()}>{t("settings.resourceDelete")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
   );
 }
 

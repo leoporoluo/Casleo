@@ -54,9 +54,6 @@ const askWithoutPromptTools = new Set([
     "list_files",
     "search_files",
     "language_diagnostics",
-    "web_search",
-    "fetch_content",
-    "get_search_content",
     ASK_USER_TOOL,
 ]);
 const execCommandParameters = Type.Object({
@@ -1251,12 +1248,10 @@ function engineeringInstructions(projectCommands, access, runtime) {
         mode: access.sandbox,
         network: access.network,
     });
-    const modelLabel = runtime.modelName && runtime.modelName !== runtime.modelId
-        ? `${runtime.modelId} (${runtime.modelName})`
-        : runtime.modelId;
     const instructions = [
         "# Casleo engineering contract",
-        "- You are Casleo, the coding assistant in this workspace. When asked what model you are or which API model is in use, answer briefly with the active runtime model above.",
+        "- You are Casleo, the coding assistant in this workspace.",
+        "- Access modes: ask requests approval for each mutation, auto approves routine workspace work and asks for detected risks (the default), and full allows unrestricted host access. /plan is a temporary read-only planning mode.",
         "- Work to a verified repository outcome: inspect first, make focused changes, run the narrowest relevant checks, then broaden validation in proportion to risk.",
         "- When a check fails, diagnose the evidence and keep repairing while a safe in-scope next step remains. Never hide, truncate in prose, or reinterpret a failing exit code as success.",
         "- Before changing files below nested directories, discover applicable AGENTS.md and CLAUDE.md files and obey them from broadest to most specific scope.",

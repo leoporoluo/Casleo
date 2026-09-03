@@ -4,15 +4,20 @@ export const PROJECT_SKILL_ROOTS = [".pi/skills", ".agents/skills"] as const;
 /** User-global dirs (always available; not listed in workspace @ picker). */
 export const USER_SKILL_ROOTS = ["~/.pi/agent/skills", "~/.agents/skills"] as const;
 
-/** Plugin roots mirror Pi's project/user layout and the Casleo compatibility home. */
+/** Extension roots mirror Pi's project/user layout. */
 export const PROJECT_PLUGIN_ROOTS = [".pi/extensions"] as const;
 export const USER_PLUGIN_ROOTS = ["~/.pi/agent/extensions"] as const;
+
+/** Pi installs package sources under these directories; settings.json controls loading. */
+export const PROJECT_PACKAGE_ROOTS = [".pi/npm", ".pi/git"] as const;
+export const USER_PACKAGE_ROOTS = ["~/.pi/agent/npm", "~/.pi/agent/git"] as const;
 
 export interface AgentSkillCommand {
   name: string;
   description?: string;
   /** Skill root dir or SKILL.md path from agent sourceInfo. */
   path?: string;
+  enabled?: boolean;
 }
 
 export function skillSlashCommand(name: string): string {

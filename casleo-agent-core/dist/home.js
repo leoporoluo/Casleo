@@ -20,6 +20,13 @@ export async function initializeCasleoHome() {
     // its own sessions and credentials in the application data directory.
     process.env.PI_CODING_AGENT_DIR = path.join(os.homedir(), ".pi", "agent");
     process.env.PI_CODING_AGENT_SESSION_DIR = sessions;
+    const piAgent = process.env.PI_CODING_AGENT_DIR;
+    // Keep Pi's standard global resource roots ready for first launch. Pi owns
+    // discovery and settings; Casleo only ensures the documented roots exist.
+    await fs.mkdir(path.join(piAgent, "extensions"), { recursive: true });
+    await fs.mkdir(path.join(piAgent, "npm"), { recursive: true });
+    await fs.mkdir(path.join(piAgent, "skills"), { recursive: true });
+    await fs.writeFile(path.join(piAgent, "AGENTS.md"), "", { flag: "a", mode: 0o600 });
     await fs.mkdir(home, { recursive: true, mode: 0o700 });
     await fs.chmod(home, 0o700).catch(() => undefined);
     await fs.mkdir(sessions, { recursive: true, mode: 0o700 });

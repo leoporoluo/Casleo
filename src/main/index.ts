@@ -36,7 +36,7 @@ import {
 } from "casleo-agent-core";
 import { AgentHost } from "./agent-host";
 import { isPathInsideRoot } from "./workspace-path";
-import { listLocalPlugins, listLocalSkills, revealSkillPath } from "./skills-fs";
+import { deleteResource, listLocalPlugins, listLocalSkills, revealSkillPath, setResourceEnabled } from "./skills-fs";
 import { apiBaseUrl, listOpenAiModels } from "../shared/openai-models";
 import {
   activeChat,
@@ -91,6 +91,7 @@ import {
   type WorkspaceItem,
 } from "../shared/types";
 import { PROJECT_SKILL_ROOTS } from "../shared/skills";
+import type { PiPackageEntry, ResourceKind } from "../shared/types";
 
 const ALLOWED_AGENT_COMMANDS = new Set([
   "prompt",
@@ -205,6 +206,76 @@ async function openPromptTemplatesFolder(): Promise<void> {
   await fsp.mkdir(root, { recursive: true, mode: 0o700 });
   const error = await shell.openPath(root);
   if (error) throw new Error(error);
+}
+
+async function openPackagesFolder(): Promise<void> {
+  const root = path.join(process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir(), ".pi", "agent");
+  await fsp.mkdir(root, { recursive: true, mode: 0o700 });
+  const error = await shell.openPath(root);
+  if (error) throw new Error(error);
+}
+
+function piSettingsPath(scope: "global" | "project"): string {
+  if (scope === "project") {
+    if (!activeAgentCwd) throw new Error("请先打开并信任一个项目");
+    return path.join(activeAgentCwd, ".pi", "settings.json");
+  }
+  return path.join(process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir(), ".pi", "agent", "settings.json");
+}
+
+async function readPiSettings(scope: "global" | "project"): Promise<{ path: string; settings: Record<string, unknown> }> {
+  const file = piSettingsPath(scope);
+  try {
+    const value = JSON.parse(await fsp.readFile(file, "utf8"));
+    return { path: file, settings: value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {} };
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return { path: file, settings: {} };
+    throw error;
+  }
+}
+
+async function writePiSettings(scope: "global" | "project", settings: Record<string, unknown>): Promise<void> {
+  const file = piSettingsPath(scope);
+  await fsp.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+  await fsp.writeFile(file, `${JSON.stringify(settings, null, 2)}\n`, { mode: 0o600 });
+}
+
+async function listPiPackages(): Promise<PiPackageEntry[]> {
+  const result: PiPackageEntry[] = [];
+  for (const scope of ["global", "project"] as const) {
+    if (scope === "project" && !activeAgentCwd) continue;
+    const { path: settingsPath, settings } = await readPiSettings(scope);
+    const packages = Array.isArray(settings.packages) ? settings.packages : [];
+    for (const item of packages) {
+      const source = typeof item === "string" ? item : item && typeof item === "object" && typeof (item as Record<string, unknown>).source === "string" ? String((item as Record<string, unknown>).source) : "";
+      if (!source) continue;
+      const enabled = typeof item !== "string" && item && typeof item === "object" && (item as Record<string, unknown>).autoload === false ? false : true;
+      result.push({ source, scope, settingsPath, enabled });
+    }
+  }
+  return result;
+}
+
+async function updatePiPackage(source: string, scope: "global" | "project", action: "enable" | "disable" | "delete"): Promise<void> {
+  const normalized = source.trim();
+  if (!normalized) throw new Error("Invalid package source");
+  const { settings } = await readPiSettings(scope);
+  const packages = Array.isArray(settings.packages) ? settings.packages : [];
+  const index = packages.findIndex((item) => (typeof item === "string" ? item : item && typeof item === "object" && typeof (item as Record<string, unknown>).source === "string" ? (item as Record<string, unknown>).source : "") === normalized);
+  if (index < 0) throw new Error("找不到该 Package");
+  if (action === "delete") packages.splice(index, 1);
+  else {
+    const current = packages[index];
+    if (typeof current === "string") packages[index] = { source: current, ...(action === "disable" ? { autoload: false } : {}) };
+    else if (current && typeof current === "object") {
+      const next = { ...(current as Record<string, unknown>) };
+      if (action === "disable") next.autoload = false;
+      else delete next.autoload;
+      packages[index] = next;
+    }
+  }
+  settings.packages = packages;
+  await writePiSettings(scope, settings);
 }
 
 async function loadAppPreferences(): Promise<void> {
@@ -448,6 +519,7 @@ function registerIpc(): void {
     return savePromptTemplate(name, content);
   });
   ipcMain.handle("app:open-prompt-templates-folder", () => openPromptTemplatesFolder());
+  ipcMain.handle("app:open-packages-folder", () => openPackagesFolder());
   ipcMain.handle("app:open-external", async (_event, url: string) => {
     if (!isSafeExternalUrl(url))
       throw new Error("Only http(s) links can be opened");
@@ -470,6 +542,26 @@ function registerIpc(): void {
   ipcMain.handle("app:list-plugins", async () =>
     listLocalPlugins(activeAgentCwd),
   );
+  ipcMain.handle("app:list-packages", () => listPiPackages());
+  ipcMain.handle("app:set-resource-enabled", async (_event, kind: ResourceKind, resourcePath: string, enabled: boolean) => {
+    if (kind !== "skill" && kind !== "extension") throw new Error("Invalid resource type");
+    if (typeof resourcePath !== "string" || typeof enabled !== "boolean") throw new Error("Invalid resource request");
+    await setResourceEnabled(kind, resourcePath, enabled, activeAgentCwd);
+  });
+  ipcMain.handle("app:delete-resource", async (_event, kind: ResourceKind, resourcePath: string) => {
+    if (kind !== "skill" && kind !== "extension") throw new Error("Invalid resource type");
+    if (typeof resourcePath !== "string") throw new Error("Invalid resource path");
+    await deleteResource(kind, resourcePath, activeAgentCwd);
+  });
+  ipcMain.handle("app:set-package-enabled", async (_event, source: string, scope: "global" | "project", enabled: boolean) => {
+    if ((scope !== "global" && scope !== "project") || typeof source !== "string" || typeof enabled !== "boolean") throw new Error("Invalid package request");
+    await updatePiPackage(source, scope, enabled ? "enable" : "disable");
+  });
+  ipcMain.handle("app:delete-package", async (_event, source: string, scope: "global" | "project") => {
+    if (scope !== "global" && scope !== "project") throw new Error("Invalid package scope");
+    if (typeof source !== "string") throw new Error("Invalid package source");
+    await updatePiPackage(source, scope, "delete");
+  });
 
   ipcMain.handle("window:minimize", () => mainWindow?.minimize());
   ipcMain.handle("window:toggle-maximize", () => {

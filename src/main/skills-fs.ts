@@ -21,12 +21,14 @@ async function projectRoots(projectRoot: string, roots: readonly string[]): Prom
 export interface LocalSkillEntry {
   name: string;
   path: string;
+  enabled?: boolean;
 }
 
 export interface LocalPluginEntry {
   name: string;
   description?: string;
   path?: string;
+  enabled?: boolean;
 }
 
 function expandHome(value: string): string {
@@ -41,6 +43,47 @@ async function pathExists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function isInsideRoot(target: string, root: string): boolean {
+  const relative = path.relative(path.resolve(root), path.resolve(target));
+  return relative !== "" && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
+async function resourceRoots(kind: "skill" | "extension", projectRoot?: string): Promise<string[]> {
+  const roots = kind === "skill"
+    ? [path.join(process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir(), ".pi/agent/skills"), path.join(process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir(), ".agents/skills")]
+    : USER_PLUGIN_ROOTS.map((root) => expandHome(root));
+  if (projectRoot) roots.push(...await projectRoots(projectRoot, kind === "skill" ? [".pi/skills", ".agents/skills"] : PROJECT_PLUGIN_ROOTS));
+  return roots;
+}
+
+async function assertResourcePath(kind: "skill" | "extension", resourcePath: string, projectRoot?: string): Promise<string> {
+  const target = path.resolve(expandHome(resourcePath));
+  const roots = await resourceRoots(kind, projectRoot);
+  if (!roots.some((root) => isInsideRoot(target, root))) throw new Error("资源路径不在 Pi 标准目录内");
+  return target;
+}
+
+export async function setResourceEnabled(kind: "skill" | "extension", resourcePath: string, enabled: boolean, projectRoot?: string): Promise<void> {
+  const target = await assertResourcePath(kind, resourcePath, projectRoot);
+  if (kind === "skill") {
+    const currentlyEnabled = await pathExists(path.join(target, "SKILL.md"));
+    if (enabled === currentlyEnabled) return;
+    const manifest = path.join(target, enabled ? "SKILL.md.disabled" : "SKILL.md");
+    const next = path.join(target, enabled ? "SKILL.md" : "SKILL.md.disabled");
+    await fsp.rename(manifest, next);
+    return;
+  }
+  const disabled = target.endsWith(".disabled");
+  if (enabled === !disabled) return;
+  const next = enabled ? target.slice(0, -".disabled".length) : `${target}.disabled`;
+  await fsp.rename(target, next);
+}
+
+export async function deleteResource(kind: "skill" | "extension", resourcePath: string, projectRoot?: string): Promise<void> {
+  const target = await assertResourcePath(kind, resourcePath, projectRoot);
+  await fsp.rm(target, { recursive: true, force: false });
 }
 
 export async function listLocalSkills(projectRoot?: string): Promise<LocalSkillEntry[]> {
@@ -60,13 +103,18 @@ export async function listLocalSkills(projectRoot?: string): Promise<LocalSkillE
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       const dir = path.join(root, entry.name);
-      if (!(await pathExists(path.join(dir, "SKILL.md")))) continue;
-      if (!skills.has(entry.name)) skills.set(entry.name, dir);
+      const enabled = await pathExists(path.join(dir, "SKILL.md"));
+      if (!enabled && !(await pathExists(path.join(dir, "SKILL.md.disabled")))) continue;
+      const name = entry.name;
+      if (!skills.has(name)) skills.set(name, dir);
     }
   }
-  return [...skills.entries()]
-    .map(([name, skillPath]) => ({ name, path: skillPath }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const result = await Promise.all([...skills.entries()].map(async ([name, skillPath]) => ({
+    name,
+    path: skillPath,
+    ...(!(await pathExists(path.join(skillPath, "SKILL.md"))) ? { enabled: false } : {}),
+  })));
+  return result.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function listLocalPlugins(projectRoot?: string): Promise<LocalPluginEntry[]> {
@@ -84,14 +132,15 @@ export async function listLocalPlugins(projectRoot?: string): Promise<LocalPlugi
       continue;
     }
     for (const entry of entries) {
-      if (!entry.isDirectory() && !(entry.isFile() && entry.name.endsWith(".ts"))) continue;
+      if (!entry.isDirectory() && !(entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".ts.disabled")))) continue;
+      const disabled = entry.name.endsWith(".disabled");
       const dir = path.join(root, entry.name);
       if (entry.isFile()) {
-        const name = entry.name.replace(/\.ts$/, "");
-        if (!plugins.has(name)) plugins.set(name, { name, path: dir });
+        const name = entry.name.replace(/\.ts(?:\.disabled)?$/, "");
+        if (!plugins.has(name)) plugins.set(name, { name, path: dir, ...(disabled ? { enabled: false } : {}) });
         continue;
       }
-      let name = entry.name;
+      let name = disabled ? entry.name.slice(0, -".disabled".length) : entry.name;
       let description: string | undefined;
       for (const manifestName of ["plugin.json", "package.json"]) {
         try {
@@ -103,7 +152,7 @@ export async function listLocalPlugins(projectRoot?: string): Promise<LocalPlugi
           // A directory name is a valid fallback for lightweight plugins.
         }
       }
-      if (!plugins.has(name)) plugins.set(name, { name, ...(description ? { description } : {}), path: dir });
+      if (!plugins.has(name)) plugins.set(name, { name, ...(description ? { description } : {}), path: dir, ...(disabled ? { enabled: false } : {}) });
     }
   }
   return [...plugins.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -122,7 +171,7 @@ export async function resolveSkillRevealPath(skillName: string, hint?: string): 
 
   const local = await listLocalSkills();
   const match = local.find((item) => item.name === normalized);
-  if (match) return path.join(match.path, "SKILL.md");
+  if (match) return path.join(match.path, match.enabled === false ? "SKILL.md.disabled" : "SKILL.md");
 
   throw new Error(`找不到 skill「${normalized}」的目录`);
 }

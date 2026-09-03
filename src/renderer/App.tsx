@@ -11,7 +11,7 @@ import type {
   LocalPluginEntry,
 } from "../shared/types";
 import type { AgentSkillCommand } from "../shared/skills";
-import { parseSkillCommands, skillSlashCommand } from "../shared/skills";
+import { skillSlashCommand } from "../shared/skills";
 import {
   DEFAULT_EFFORT,
   levelsForModel,
@@ -67,8 +67,6 @@ import {
 } from "./ui";
 import { useI18n } from "./i18n";
 import type { MessageKey } from "../shared/i18n";
-
-const PERMISSIONS: PermissionMode[] = ["plan", "ask", "auto", "full"];
 
 function relativeTime(iso: string, t: (key: MessageKey, vars?: Record<string, string | number>) => string) {
   const delta = Date.now() - Date.parse(iso);
@@ -410,29 +408,9 @@ export function App() {
   }, [sessions, workspaces]);
 
   const refreshAgentSkills = useCallback(async () => {
-    const loadDisk = () => window.harness.app.listSkills().catch(() => [] as AgentSkillCommand[]);
-    if (!agentCwd.current) {
-      setAgentSkills(await loadDisk());
-      return;
-    }
-    try {
-      const data = await window.harness.agent.command<{
-        commands: Array<{
-          name: string;
-          description?: string;
-          source?: string;
-          sourceInfo?: { path?: string; baseDir?: string };
-        }>;
-      }>("get_commands");
-      const fromAgent = parseSkillCommands(data.commands);
-      if (fromAgent.length) {
-        setAgentSkills(fromAgent);
-        return;
-      }
-      setAgentSkills(await loadDisk());
-    } catch {
-      setAgentSkills(await loadDisk());
-    }
+    // Keep disabled filesystem entries visible in Settings; the composer
+    // filters them out before offering slash completion.
+    setAgentSkills(await window.harness.app.listSkills().catch(() => [] as AgentSkillCommand[]));
   }, []);
 
   const refreshAgentPlugins = useCallback(async () => {
@@ -1397,6 +1375,7 @@ export function App() {
                   <AssistantTurn
                     key={group.id}
                     messages={group.messages}
+                    workspace={workspace}
                     errorRecovered={recovered}
                     recoverableFailStreak={recoverableStreaks[index] ?? 0}
                     onOpenFile={setPreview}
