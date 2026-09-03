@@ -4,13 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { tetherEnv } from "./env.js";
-import { getTetherHome } from "./home.js";
-const EXPERIMENTAL_ENV = "TETHER_WINDOWS_SANDBOX";
-const HELPER_ENV = "TETHER_WINDOWS_SANDBOX_HELPER";
-const STATE_ENV = "TETHER_WINDOWS_SANDBOX_STATE";
+import { casleoEnv } from "./env.js";
+import { getCasleoHome } from "./home.js";
+const EXPERIMENTAL_ENV = "CASLEO_WINDOWS_SANDBOX";
+const HELPER_ENV = "CASLEO_WINDOWS_SANDBOX_HELPER";
+const STATE_ENV = "CASLEO_WINDOWS_SANDBOX_STATE";
 export function windowsNativeSandboxEnabled() {
-    const value = tetherEnv("WINDOWS_SANDBOX")?.trim().toLowerCase();
+    const value = casleoEnv("WINDOWS_SANDBOX")?.trim().toLowerCase();
     return process.platform === "win32" && (value === "1" || value === "true");
 }
 export function windowsNativeSandboxCommand(shellCommand, cwd, options) {
@@ -25,7 +25,7 @@ export function windowsNativeSandboxCommand(shellCommand, cwd, options) {
 }
 export function buildWindowsSandboxCommand(shellCommand, cwd, options, runtime) {
     const shell = runtime.shell ?? nativePowerShellCommand(shellCommand);
-    const requestPath = path.join(os.tmpdir(), `tether-windows-sandbox-${process.pid}-${randomUUID()}.json`);
+    const requestPath = path.join(os.tmpdir(), `casleo-windows-sandbox-${process.pid}-${randomUUID()}.json`);
     fs.writeFileSync(requestPath, JSON.stringify({
         version: 1,
         state_path: runtime.statePath,
@@ -42,11 +42,11 @@ export function buildWindowsSandboxCommand(shellCommand, cwd, options, runtime) 
     };
 }
 function nativePowerShellCommand(shellCommand) {
-    const configured = tetherEnv("SHELL")?.trim();
+    const configured = casleoEnv("SHELL")?.trim();
     if (configured) {
         const resolved = path.resolve(configured);
         if (path.basename(resolved).toLowerCase() !== "pwsh.exe" || !fs.existsSync(resolved)) {
-            throw new Error("The Windows native sandbox requires TETHER_SHELL to point to pwsh.exe.");
+            throw new Error("The Windows native sandbox requires CASLEO_SHELL to point to pwsh.exe.");
         }
         return powerShellInvocation(resolved, shellCommand);
     }
@@ -80,11 +80,11 @@ export function windowsNativeSandboxDescription(options) {
     }
 }
 function configuredRuntime() {
-    const helperPath = tetherEnv("WINDOWS_SANDBOX_HELPER")?.trim();
+    const helperPath = casleoEnv("WINDOWS_SANDBOX_HELPER")?.trim();
     const resolvedHelper = helperPath
         ? path.resolve(helperPath)
         : resolvePackagedHelper(process.arch);
-    const resolvedState = path.resolve(tetherEnv("WINDOWS_SANDBOX_STATE")?.trim() ?? path.join(getTetherHome(), "windows-sandbox", "state.bin"));
+    const resolvedState = path.resolve(casleoEnv("WINDOWS_SANDBOX_STATE")?.trim() ?? path.join(getCasleoHome(), "windows-sandbox", "state.bin"));
     if (!fs.existsSync(resolvedHelper)) {
         throw new Error(`Windows sandbox helper is missing: ${resolvedHelper}`);
     }
@@ -96,10 +96,10 @@ export function parseWindowsSandboxLifecycleCommand(argv) {
     const command = argv[1];
     if (command === "setup" || command === "status" || command === "uninstall") {
         if (argv.length !== 2)
-            throw new Error(`tether sandbox ${command} does not accept arguments.`);
+            throw new Error(`casleo sandbox ${command} does not accept arguments.`);
         return command;
     }
-    throw new Error("Usage: tether sandbox <setup|status|uninstall>");
+    throw new Error("Usage: casleo sandbox <setup|status|uninstall>");
 }
 export function runWindowsSandboxLifecycle(command) {
     if (process.platform !== "win32") {
@@ -147,7 +147,7 @@ function resolvePackagedHelper(architecture) {
     if (!target)
         throw new Error(`Unsupported Windows sandbox architecture: ${architecture}`);
     const moduleRoot = path.dirname(fileURLToPath(import.meta.url));
-    const relative = `${target}/tether-windows-sandbox.exe`;
+    const relative = `${target}/casleo-windows-sandbox.exe`;
     const helper = path.join(moduleRoot, "native", "windows-sandbox", relative);
     const manifestPath = path.join(moduleRoot, "native", "windows-sandbox", "manifest.json");
     if (!fs.existsSync(helper) || !fs.existsSync(manifestPath)) {

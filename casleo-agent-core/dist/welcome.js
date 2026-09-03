@@ -2,15 +2,15 @@ import os from "node:os";
 import path from "node:path";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { brandBlue } from "./brand.js";
-/** Terminal pixel-art rendering of Tether Runtime's block-whale logo. */
-export const TETHER_LOGO = [
+/** Terminal pixel-art rendering of Casleo Runtime's block-whale logo. */
+export const CASLEO_LOGO = [
     "      ▀▄▀",
     "▄▄▄██████▄",
     " ███████ █",
     "█▀███████▀",
     "     ██",
 ];
-export class TetherWelcomeHeader {
+export class CasleoWelcomeHeader {
     details;
     theme;
     constructor(details, theme) {
@@ -26,13 +26,13 @@ export function renderWelcome(width, details, theme) {
     if (width <= 0)
         return [];
     if (width < 18) {
-        return [truncateToWidth(brandBlue(`Tether Runtime v${details.version}`, theme), width, "")];
+        return [truncateToWidth(brandBlue(`Casleo Runtime v${details.version}`, theme), width, "")];
     }
     const padding = width >= 24 ? "  " : "";
     const gap = "   ";
-    const logo = normalizeLogo(TETHER_LOGO);
+    const logo = normalizeLogo(CASLEO_LOGO);
     const info = [
-        `${theme.bold("Tether Runtime")} ${theme.fg("muted", `v${details.version}`)}`,
+        `${theme.bold("Casleo Runtime")} ${theme.fg("muted", `v${details.version}`)}`,
         theme.fg("muted", `${details.modelName ?? humanizeModel(details.modelId)} · ${details.effort} effort`),
         theme.fg("muted", formatCwd(details.cwd)),
     ];

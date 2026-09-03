@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 const CURRENT_UI_DEFAULTS_VERSION = 1;
 const ADAPTIVE_THEME = "light/dark";
-/** Apply Tether Runtime's startup surface and native blinking-cursor defaults without replacing preferences. */
-export async function ensureTetherUiDefaults(agentDirectory) {
+/** Apply Casleo Runtime's startup surface and native blinking-cursor defaults without replacing preferences. */
+export async function ensureCasleoUiDefaults(agentDirectory) {
     const settingsPath = path.join(agentDirectory, "settings.json");
     let settings = {};
     try {
@@ -14,14 +14,14 @@ export async function ensureTetherUiDefaults(agentDirectory) {
             return;
     }
     let changed = false;
-    if ((settings.tetherUiDefaultsVersion ?? 0) < CURRENT_UI_DEFAULTS_VERSION) {
+    if ((settings.casleoUiDefaultsVersion ?? 0) < CURRENT_UI_DEFAULTS_VERSION) {
         // Older Pi versions persisted the theme detected at first launch. Migrate
         // built-in light/dark choices once so the UI follows the terminal again;
         // custom themes and later explicit choices remain untouched.
         if (settings.theme === undefined || settings.theme === "light" || settings.theme === "dark") {
             settings.theme = ADAPTIVE_THEME;
         }
-        settings.tetherUiDefaultsVersion = CURRENT_UI_DEFAULTS_VERSION;
+        settings.casleoUiDefaultsVersion = CURRENT_UI_DEFAULTS_VERSION;
         changed = true;
     }
     if (settings.quietStartup === undefined) {

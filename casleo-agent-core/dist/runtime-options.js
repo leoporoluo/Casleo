@@ -2,9 +2,9 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { z } from "zod";
 import { harnessSchema, permissionSchema, transportSchema, } from "./config.js";
-import { tetherEnv } from "./env.js";
-import { TETHER_VERSION } from "./version.js";
-import { DEFAULT_DEEPSEEK_BASE_URL, getTetherStorageSettings, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, parseMaxTokens, resolveMaxTokens, } from "./settings.js";
+import { casleoEnv } from "./env.js";
+import { CASLEO_VERSION } from "./version.js";
+import { DEFAULT_DEEPSEEK_BASE_URL, getCasleoStorageSettings, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, parseMaxTokens, resolveMaxTokens, } from "./settings.js";
 import { ASK_USER_TOOL } from "./ask-user.js";
 import { defaultEffortForProvider, defaultModelForProvider, getStoredModelSelection, parseSupportedProviderId, SUPPORTED_PROVIDER_IDS, } from "./providers.js";
 const require = createRequire(import.meta.url);
@@ -34,22 +34,22 @@ export function parseRuntimeArgs(argv) {
         getStoredDeepSeekBaseUrl() ??
         DEFAULT_DEEPSEEK_BASE_URL;
     let maxTokens = getStoredDeepSeekMaxTokens();
-    let providerId = parseSupportedProviderId(tetherEnv("PROVIDER") ?? storedSelection?.providerId ?? "openai");
-    let modelExplicit = tetherEnv("MODEL") !== undefined;
-    let modelId = tetherEnv("MODEL") ??
+    let providerId = parseSupportedProviderId(casleoEnv("PROVIDER") ?? storedSelection?.providerId ?? "openai");
+    let modelExplicit = casleoEnv("MODEL") !== undefined;
+    let modelId = casleoEnv("MODEL") ??
         (storedSelection?.providerId === providerId ? storedSelection.modelId : undefined);
-    let effortExplicit = tetherEnv("EFFORT") !== undefined;
-    let effort = tetherEnv("EFFORT");
-    let transport = transportSchema.parse(tetherEnv("TRANSPORT") ?? "openai-responses");
-    let harness = harnessSchema.parse(tetherEnv("HARNESS") ?? "minimal");
-    let permission = permissionSchema.parse(tetherEnv("PERMISSION") ?? "auto");
-    let sandbox = sandboxModeSchema.parse(tetherEnv("SANDBOX") ?? "workspace-write");
+    let effortExplicit = casleoEnv("EFFORT") !== undefined;
+    let effort = casleoEnv("EFFORT");
+    let transport = transportSchema.parse(casleoEnv("TRANSPORT") ?? "openai-responses");
+    let harness = harnessSchema.parse(casleoEnv("HARNESS") ?? "minimal");
+    let permission = permissionSchema.parse(casleoEnv("PERMISSION") ?? "auto");
+    let sandbox = sandboxModeSchema.parse(casleoEnv("SANDBOX") ?? "workspace-write");
     let network = false;
     let webSearch = false;
     let activeTools;
     let toolsExplicit = false;
-    let writableRoots = parseWritableRoots(cwd, tetherEnv("WRITABLE_ROOTS"));
-    const personalizationFile = tetherEnv("PERSONALIZATION_FILE")?.trim();
+    let writableRoots = parseWritableRoots(cwd, casleoEnv("WRITABLE_ROOTS"));
+    const personalizationFile = casleoEnv("PERSONALIZATION_FILE")?.trim();
     let help = false;
     let version = false;
     let yolo = false;
@@ -145,13 +145,13 @@ export function parseRuntimeArgs(argv) {
         !["--approve", "-a", "--no-approve", "-na"].some((flag) => hasFlag(forwarded, flag))) {
         forwarded.unshift("--approve");
     }
-    if (getTetherStorageSettings().historyPersistence === "none" &&
+    if (getCasleoStorageSettings().historyPersistence === "none" &&
         !["--no-session", "--session", "--resume", "--continue", "--fork"].some((flag) => hasFlag(forwarded, flag))) {
         forwarded.unshift("--no-session");
     }
     modelId ??= defaultModelForProvider(providerId);
     effort ??= defaultEffortForProvider(providerId);
-    const extraModelIds = (tetherEnv("EXTRA_MODELS") ?? tetherEnv("HARNESS_EXTRA_MODELS") ?? "")
+    const extraModelIds = (casleoEnv("EXTRA_MODELS") ?? casleoEnv("HARNESS_EXTRA_MODELS") ?? "")
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
@@ -189,7 +189,7 @@ export function parseRuntimeArgs(argv) {
     };
 }
 function defaultActiveTools(harness) {
-    const delegation = Number(tetherEnv("SUBAGENT_DEPTH") ?? "0") < 1 ? ["delegate"] : [];
+    const delegation = Number(casleoEnv("SUBAGENT_DEPTH") ?? "0") < 1 ? ["delegate"] : [];
     return harness === "minimal"
         ? ["update_plan", "exec_command", "write_stdin", "apply_patch", ...WEB_ACCESS_TOOLS, ASK_USER_TOOL, ...delegation]
         : [
@@ -206,18 +206,18 @@ function defaultActiveTools(harness) {
             ...delegation,
         ];
 }
-export function printTetherHelp() {
-    process.stdout.write(`Tether Runtime ${TETHER_VERSION} — local-first coding agent
+export function printCasleoHelp() {
+    process.stdout.write(`Casleo Runtime ${CASLEO_VERSION} — local-first coding agent
 
 Usage:
-  tether [options] [prompt]
-  tether -p "task"                 Non-interactive text mode
-  tether --mode json -p "task"     JSONL/CI mode
-  tether --mode rpc                IDE/RPC server
-  tether --resume                  Pick a saved session
-  tether --continue                Continue the latest workspace session
+  casleo [options] [prompt]
+  casleo -p "task"                 Non-interactive text mode
+  casleo --mode json -p "task"     JSONL/CI mode
+  casleo --mode rpc                IDE/RPC server
+  casleo --resume                  Pick a saved session
+  casleo --continue                Continue the latest workspace session
 
-Tether Runtime options:
+Casleo Runtime options:
   -C, --cwd <dir>                  Workspace directory
   --provider <id>                 ${SUPPORTED_PROVIDER_IDS.join("|")}
   --base-url <url>                 DeepSeek API base URL
@@ -237,21 +237,21 @@ Session and editor features:
   --name, --fork, --session, --session-dir, --skill, --extension
   --mode text|json|rpc, --print, --no-session, --continue, --resume
 
-Tether Runtime commands:
+Casleo Runtime commands:
   /plan /permissions /effort /base-url /status /undo /checkpoints /diff /jobs /mcp /agents /doctor
 
 Authentication:
-  tether login [provider]           Sign in to a supported model provider
-  tether logout [provider]          Remove the selected provider credential
-  tether auth status                Show credential sources without revealing secrets
+  casleo login [provider]           Sign in to a supported model provider
+  casleo logout [provider]          Remove the selected provider credential
+  casleo auth status                Show credential sources without revealing secrets
   /login                            Choose a provider interactively
   /login <provider>                 Authenticate a specific provider
 
 Experimental Windows sandbox:
-  tether sandbox setup              Install identities and WFP filters (elevated terminal)
-  tether sandbox status             Inspect native sandbox readiness
-  tether sandbox uninstall          Remove native sandbox state (elevated terminal)
-  TETHER_WINDOWS_SANDBOX=1          Explicitly opt in after setup succeeds
+  casleo sandbox setup              Install identities and WFP filters (elevated terminal)
+  casleo sandbox status             Inspect native sandbox readiness
+  casleo sandbox uninstall          Remove native sandbox state (elevated terminal)
+  CASLEO_WINDOWS_SANDBOX=1          Explicitly opt in after setup succeeds
 `);
 }
 function splitFlag(argument) {

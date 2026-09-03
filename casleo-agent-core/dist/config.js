@@ -1,6 +1,6 @@
 import path from "node:path";
 import { z } from "zod";
-import { tetherEnv } from "./env.js";
+import { casleoEnv } from "./env.js";
 import { DEFAULT_DEEPSEEK_BASE_URL, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, resolveMaxTokens, } from "./settings.js";
 export const effortSchema = z.enum(["low", "high", "max"]);
 export const transportSchema = z.enum([
@@ -15,12 +15,12 @@ export const permissionSchema = z.enum(["plan", "ask", "auto", "full"]);
 export function loadConfig(options) {
     const workspace = path.resolve(options.cwd ?? process.cwd());
     const apiKey = process.env.OPENAI_API_KEY?.trim() ?? "";
-    const effort = effortSchema.parse(options.effort ?? tetherEnv("EFFORT") ?? "max");
-    const transport = transportSchema.parse(options.transport ?? tetherEnv("TRANSPORT") ?? "openai-responses");
-    const harness = harnessSchema.parse(options.harness ?? tetherEnv("HARNESS") ?? "minimal");
+    const effort = effortSchema.parse(options.effort ?? casleoEnv("EFFORT") ?? "max");
+    const transport = transportSchema.parse(options.transport ?? casleoEnv("TRANSPORT") ?? "openai-responses");
+    const harness = harnessSchema.parse(options.harness ?? casleoEnv("HARNESS") ?? "minimal");
     const permission = options.yes
         ? "full"
-        : permissionSchema.parse(options.permission ?? tetherEnv("PERMISSION") ?? "auto");
+        : permissionSchema.parse(options.permission ?? casleoEnv("PERMISSION") ?? "auto");
     const baseUrl = normalizeDeepSeekBaseUrl(options.baseUrl ??
         process.env.OPENAI_BASE_URL ??
         getStoredDeepSeekBaseUrl() ??
@@ -30,7 +30,7 @@ export function loadConfig(options) {
         apiKey,
         baseUrl,
         maxTokens: resolveMaxTokens(baseUrl, getStoredDeepSeekMaxTokens()),
-        modelId: options.model ?? tetherEnv("MODEL") ?? "gpt-5.6-sol",
+        modelId: options.model ?? casleoEnv("MODEL") ?? "gpt-5.6-sol",
         effort,
         transport,
         harness,

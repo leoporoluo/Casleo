@@ -2,20 +2,20 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { tetherEnv } from "./env.js";
-export function getTetherHome() {
-    return resolveHomePath(tetherEnv("HOME") ?? path.join(os.homedir(), ".tether"));
+import { casleoEnv } from "./env.js";
+export function getCasleoHome() {
+    return resolveHomePath(casleoEnv("HOME") ?? path.join(os.homedir(), ".casleo"));
 }
-export function getTetherSessionsDir() {
-    return resolveHomePath(tetherEnv("SESSIONS_DIR") ?? path.join(getTetherHome(), "sessions"));
+export function getCasleoSessionsDir() {
+    return resolveHomePath(casleoEnv("SESSIONS_DIR") ?? path.join(getCasleoHome(), "sessions"));
 }
-export function getTetherArchivedSessionsDir() {
-    return resolveHomePath(tetherEnv("ARCHIVED_SESSIONS_DIR") ?? path.join(getTetherHome(), "archived_sessions"));
+export function getCasleoArchivedSessionsDir() {
+    return resolveHomePath(casleoEnv("ARCHIVED_SESSIONS_DIR") ?? path.join(getCasleoHome(), "archived_sessions"));
 }
-/** Configure the underlying runtime to use Tether Runtime-owned paths only. */
-export async function initializeTetherHome() {
-    const home = getTetherHome();
-    const sessions = getTetherSessionsDir();
+/** Configure the underlying runtime to use Casleo Runtime-owned paths only. */
+export async function initializeCasleoHome() {
+    const home = getCasleoHome();
+    const sessions = getCasleoSessionsDir();
     // Pi resources remain in their official global location while Casleo keeps
     // its own sessions and credentials in the application data directory.
     process.env.PI_CODING_AGENT_DIR = path.join(os.homedir(), ".pi", "agent");
@@ -24,8 +24,8 @@ export async function initializeTetherHome() {
     await fs.chmod(home, 0o700).catch(() => undefined);
     await fs.mkdir(sessions, { recursive: true, mode: 0o700 });
     await fs.chmod(sessions, 0o700).catch(() => undefined);
-    await fs.mkdir(getTetherArchivedSessionsDir(), { recursive: true, mode: 0o700 });
-    await fs.chmod(getTetherArchivedSessionsDir(), 0o700).catch(() => undefined);
+    await fs.mkdir(getCasleoArchivedSessionsDir(), { recursive: true, mode: 0o700 });
+    await fs.chmod(getCasleoArchivedSessionsDir(), 0o700).catch(() => undefined);
     await ensureWebSearchDefaults(home);
     await partitionExistingSessions(sessions);
     return home;
@@ -46,7 +46,7 @@ async function ensureWebSearchDefaults(home) {
  * no transcript content is duplicated.
  */
 export async function partitionSessionFile(file) {
-    const sessions = getTetherSessionsDir();
+    const sessions = getCasleoSessionsDir();
     const runtimePath = path.resolve(file);
     const relative = path.relative(sessions, runtimePath);
     if (relative.startsWith("..") || path.isAbsolute(relative)) {
@@ -88,7 +88,7 @@ export async function partitionSessionFile(file) {
         return { runtimePath, storagePath: runtimePath };
     }
 }
-export async function partitionExistingSessions(sessions = getTetherSessionsDir()) {
+export async function partitionExistingSessions(sessions = getCasleoSessionsDir()) {
     let entries;
     try {
         entries = await fs.readdir(sessions, { withFileTypes: true });

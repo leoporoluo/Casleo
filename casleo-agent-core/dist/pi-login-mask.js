@@ -1,5 +1,5 @@
 import { LoginDialogComponent } from "@earendil-works/pi-coding-agent";
-const PATCH_MARKER = Symbol.for("tether.login-secret-mask");
+const PATCH_MARKER = Symbol.for("casleo.login-secret-mask");
 const MASK = "•";
 export function installPiLoginSecretMask() {
     const prototype = LoginDialogComponent.prototype;
@@ -10,23 +10,23 @@ export function installPiLoginSecretMask() {
     const originalReplace = prototype.replaceInputWithSubmittedText;
     prototype.showPrompt = function (message, placeholder) {
         const dialog = this;
-        dialog.tetherSecretPrompt = /api[\s_-]*key|密钥/i.test(message);
-        if (dialog.tetherSecretPrompt)
+        dialog.casleoSecretPrompt = /api[\s_-]*key|密钥/i.test(message);
+        if (dialog.casleoSecretPrompt)
             maskRuntimeInput(dialog.input);
         return originalShowPrompt.call(this, message, placeholder);
     };
     prototype.replaceInputWithSubmittedText = function (value) {
         const dialog = this;
-        const displayValue = dialog.tetherSecretPrompt ? MASK.repeat(Math.min(12, Math.max(8, value.length))) : value;
+        const displayValue = dialog.casleoSecretPrompt ? MASK.repeat(Math.min(12, Math.max(8, value.length))) : value;
         originalReplace.call(this, displayValue);
-        dialog.tetherSecretPrompt = false;
+        dialog.casleoSecretPrompt = false;
     };
 }
 function maskRuntimeInput(input) {
     const runtime = input;
-    if (runtime.tetherMaskInstalled)
+    if (runtime.casleoMaskInstalled)
         return;
-    runtime.tetherMaskInstalled = true;
+    runtime.casleoMaskInstalled = true;
     const originalRender = input.render;
     input.render = function (width) {
         const value = input.value;

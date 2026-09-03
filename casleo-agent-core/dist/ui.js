@@ -61,7 +61,7 @@ function formatNumber(value) {
 }
 export function printBanner(workspace, model, resumedMessages, details) {
     process.stdout.write([
-        pc.bold(pc.cyan("Tether Runtime")),
+        pc.bold(pc.cyan("Casleo Runtime")),
         `${pc.dim("model")}      ${model}`,
         details ? `${pc.dim("runtime")}    ${details.transport} · ${details.harness} harness` : "",
         details ? `${pc.dim("mode")}       ${details.permission} · effort ${details.effort}` : "",

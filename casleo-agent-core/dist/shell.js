@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { tetherEnv } from "./env.js";
+import { casleoEnv } from "./env.js";
 /** Host shell dialect for the model. Affirmative only — listing forbidden Unix syntax makes the model recite it. */
 export function shellPromptRules(platform = process.platform) {
     if (platform === "win32") {
@@ -44,7 +44,7 @@ export function hostShellCommand(shellCommand) {
     };
 }
 function resolveWindowsPowerShell() {
-    const configured = tetherEnv("SHELL")?.trim();
+    const configured = casleoEnv("SHELL")?.trim();
     if (configured)
         return configured;
     for (const executable of ["pwsh.exe", "powershell.exe"]) {

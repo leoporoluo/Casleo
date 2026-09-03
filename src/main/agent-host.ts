@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
-import { getTetherRpcEntryPath } from "casleo-agent-core";
+import { getCasleoRpcEntryPath } from "casleo-agent-core";
 import type { AgentEvent, AgentSessionStats, AgentSnapshot, AgentStartOptions } from "../shared/types";
 import { parseSkillCommands } from "../shared/skills";
 import { killProcessTree } from "./process-tree";
@@ -94,7 +94,7 @@ export class AgentHost {
   }): Promise<AgentSnapshot> {
     await this.stop();
     const args = [
-      getTetherRpcEntryPath(),
+      getCasleoRpcEntryPath(),
       "--mode",
       "rpc",
       "--harness",
@@ -133,7 +133,7 @@ export class AgentHost {
         ...(options.visionConfig ? { HARNESS_VISION_CONFIG: options.visionConfig } : {}),
         ...(options.visionUploads ? { HARNESS_VISION_UPLOADS: options.visionUploads } : {}),
         ...(options.writableRoots?.length
-          ? { TETHER_WRITABLE_ROOTS: options.writableRoots.join(path.delimiter) }
+          ? { CASLEO_WRITABLE_ROOTS: options.writableRoots.join(path.delimiter) }
           : {}),
       },
       detached: process.platform !== "win32",

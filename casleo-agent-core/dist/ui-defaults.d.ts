@@ -1,2 +1,2 @@
-/** Apply Tether Runtime's startup surface and native blinking-cursor defaults without replacing preferences. */
-export declare function ensureTetherUiDefaults(agentDirectory: string): Promise<void>;
+/** Apply Casleo Runtime's startup surface and native blinking-cursor defaults without replacing preferences. */
+export declare function ensureCasleoUiDefaults(agentDirectory: string): Promise<void>;

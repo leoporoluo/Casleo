@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { Type } from "typebox";
-import { tetherEnv } from "./env.js";
+import { casleoEnv } from "./env.js";
 import { runProcess } from "./process.js";
 import { killProcessTree } from "./process-tree.js";
 import { oneLine, renderCollapsibleToolResult, renderToolCall } from "./tool-ui.js";
@@ -21,16 +21,16 @@ const delegateSchema = Type.Object({
     tasks: Type.Array(agentTaskSchema, { minItems: 1, maxItems: 8 }),
 });
 function delegateMaxTasks() {
-    const raw = Number(tetherEnv("DELEGATE_MAX_TASKS") ?? "3");
+    const raw = Number(casleoEnv("DELEGATE_MAX_TASKS") ?? "3");
     if (!Number.isFinite(raw))
         return 3;
     return Math.min(8, Math.max(1, Math.floor(raw)));
 }
 function delegateExplorerModel(runtime) {
-    return tetherEnv("DELEGATE_EXPLORER_MODEL")?.trim() || runtime.modelId;
+    return casleoEnv("DELEGATE_EXPLORER_MODEL")?.trim() || runtime.modelId;
 }
 export function registerSubagentTools(pi, runtime) {
-    if (Number(tetherEnv("SUBAGENT_DEPTH") ?? "0") >= 1)
+    if (Number(casleoEnv("SUBAGENT_DEPTH") ?? "0") >= 1)
         return;
     pi.registerTool({
         name: "delegate",
@@ -214,7 +214,7 @@ Return concise evidence, exact file paths, commands/checks, and any unresolved r
         ];
         const env = {
             ...process.env,
-            TETHER_SUBAGENT_DEPTH: String(Number(tetherEnv("SUBAGENT_DEPTH") ?? "0") + 1),
+            CASLEO_SUBAGENT_DEPTH: String(Number(casleoEnv("SUBAGENT_DEPTH") ?? "0") + 1),
         };
         onLive?.("思考中…");
         const execution = await spawnCapture(invocation.command, args, agentCwd, env, signal, onLive);
@@ -261,7 +261,7 @@ async function createWorktree(cwd) {
         throw new Error("Implementer agents require a Git repository");
     }
     const gitRoot = rootResult.stdout.trim();
-    const parent = await fsPromises.mkdtemp(path.join(os.tmpdir(), "tether-worktree-"));
+    const parent = await fsPromises.mkdtemp(path.join(os.tmpdir(), "casleo-worktree-"));
     const target = path.join(parent, "workspace");
     const result = await runProcess("git", ["worktree", "add", "--detach", target, "HEAD"], {
         cwd: gitRoot,
@@ -285,7 +285,7 @@ async function removeWorktree(gitRoot, worktree) {
 function childInvocation() {
     const script = process.argv[1];
     if (!script)
-        throw new Error("Cannot locate the Tether Runtime entrypoint");
+        throw new Error("Cannot locate the Casleo Runtime entrypoint");
     if (script.endsWith(".ts")) {
         const executable = path.resolve(path.dirname(script), "..", "node_modules", ".bin", "tsx");
         if (!fs.existsSync(executable))

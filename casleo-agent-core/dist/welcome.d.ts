@@ -7,9 +7,9 @@ export interface WelcomeDetails {
     effort: string;
     version: string;
 }
-/** Terminal pixel-art rendering of Tether Runtime's block-whale logo. */
-export declare const TETHER_LOGO: string[];
-export declare class TetherWelcomeHeader implements Component {
+/** Terminal pixel-art rendering of Casleo Runtime's block-whale logo. */
+export declare const CASLEO_LOGO: string[];
+export declare class CasleoWelcomeHeader implements Component {
     private readonly details;
     private readonly theme;
     constructor(details: WelcomeDetails, theme: Theme);

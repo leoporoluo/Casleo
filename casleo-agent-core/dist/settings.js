@@ -3,8 +3,8 @@ import fs from "node:fs";
 import { chmod, mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { getTetherHome } from "./home.js";
-import { tetherEnv } from "./env.js";
+import { getCasleoHome } from "./home.js";
+import { casleoEnv } from "./env.js";
 export const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 export const DEEPSEEK_MAX_TOKENS = 384_000;
 const configuredContextWindow = Number.parseInt(process.env.CASLEO_CONTEXT_WINDOW ?? "", 10);
@@ -30,10 +30,10 @@ export function resolveMaxTokens(baseUrl, configured) {
         return DEEPSEEK_MAX_TOKENS;
     return parseMaxTokens(configured) ?? DEEPSEEK_MAX_TOKENS;
 }
-export function getTetherSettingsPath() {
-    return tetherEnv("CONFIG_PATH") ?? path.join(getTetherHome(), "config.json");
+export function getCasleoSettingsPath() {
+    return casleoEnv("CONFIG_PATH") ?? path.join(getCasleoHome(), "config.json");
 }
-export function getStoredDeepSeekBaseUrl(settingsPath = getTetherSettingsPath()) {
+export function getStoredDeepSeekBaseUrl(settingsPath = getCasleoSettingsPath()) {
     try {
         return baseUrlFromSettings(JSON.parse(fs.readFileSync(settingsPath, "utf8")));
     }
@@ -41,12 +41,12 @@ export function getStoredDeepSeekBaseUrl(settingsPath = getTetherSettingsPath())
         if (isNodeError(error) && error.code === "ENOENT")
             return undefined;
         if (error instanceof SyntaxError) {
-            throw new Error(`Cannot parse Tether Runtime settings file: ${settingsPath}`);
+            throw new Error(`Cannot parse Casleo Runtime settings file: ${settingsPath}`);
         }
         throw error;
     }
 }
-export function getStoredDeepSeekMaxTokens(settingsPath = getTetherSettingsPath()) {
+export function getStoredDeepSeekMaxTokens(settingsPath = getCasleoSettingsPath()) {
     try {
         const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
         if (!isRecord(settings) || !isRecord(settings.deepseek))
@@ -57,18 +57,18 @@ export function getStoredDeepSeekMaxTokens(settingsPath = getTetherSettingsPath(
         if (isNodeError(error) && error.code === "ENOENT")
             return undefined;
         if (error instanceof SyntaxError) {
-            throw new Error(`Cannot parse Tether Runtime settings file: ${settingsPath}`);
+            throw new Error(`Cannot parse Casleo Runtime settings file: ${settingsPath}`);
         }
         throw error;
     }
 }
-export function getTetherStorageSettings(settingsPath = getTetherSettingsPath()) {
+export function getCasleoStorageSettings(settingsPath = getCasleoSettingsPath()) {
     const settings = readSettingsSync(settingsPath);
     const configuredStore = settings.cli_auth_credentials_store;
-    const environmentStore = tetherEnv("CREDENTIALS_STORE");
+    const environmentStore = casleoEnv("CREDENTIALS_STORE");
     const credentialStore = parseCredentialStoreMode(environmentStore ?? configuredStore ?? "auto");
     const historyPersistence = parseHistoryPersistence(settings.history?.persistence ?? "save-all");
-    const sqliteHome = tetherEnv("SQLITE_HOME") ?? settings.sqlite_home;
+    const sqliteHome = casleoEnv("SQLITE_HOME") ?? settings.sqlite_home;
     return {
         credentialStore,
         historyPersistence,
@@ -87,14 +87,14 @@ export function parseHistoryPersistence(value) {
         return value;
     throw new Error("history.persistence must be save-all or none");
 }
-export async function saveDeepSeekBaseUrl(baseUrl, settingsPath = getTetherSettingsPath()) {
+export async function saveDeepSeekBaseUrl(baseUrl, settingsPath = getCasleoSettingsPath()) {
     const normalized = normalizeDeepSeekBaseUrl(baseUrl);
     const settings = await readSettings(settingsPath);
     settings.deepseek = { ...(settings.deepseek ?? {}), baseUrl: normalized };
     await persistSettings(settings, settingsPath);
     return normalized;
 }
-export async function saveDeepSeekMaxTokens(maxTokens, settingsPath = getTetherSettingsPath()) {
+export async function saveDeepSeekMaxTokens(maxTokens, settingsPath = getCasleoSettingsPath()) {
     const settings = await readSettings(settingsPath);
     const next = { ...(settings.deepseek ?? {}) };
     const parsed = parseMaxTokens(maxTokens);
@@ -148,7 +148,7 @@ async function readSettings(settingsPath) {
         if (isNodeError(error) && error.code === "ENOENT")
             return {};
         if (error instanceof SyntaxError) {
-            throw new Error(`Cannot parse Tether Runtime settings file: ${settingsPath}`);
+            throw new Error(`Cannot parse Casleo Runtime settings file: ${settingsPath}`);
         }
         throw error;
     }
@@ -162,7 +162,7 @@ function readSettingsSync(settingsPath) {
         if (isNodeError(error) && error.code === "ENOENT")
             return {};
         if (error instanceof SyntaxError) {
-            throw new Error(`Cannot parse Tether Runtime settings file: ${settingsPath}`);
+            throw new Error(`Cannot parse Casleo Runtime settings file: ${settingsPath}`);
         }
         throw error;
     }
@@ -170,9 +170,9 @@ function readSettingsSync(settingsPath) {
 function resolveConfiguredPath(value) {
     const trimmed = value.trim();
     if (trimmed === "~")
-        return process.env.HOME ?? getTetherHome();
+        return process.env.HOME ?? getCasleoHome();
     if (trimmed.startsWith("~/")) {
-        return path.resolve(process.env.HOME ?? path.dirname(getTetherHome()), trimmed.slice(2));
+        return path.resolve(process.env.HOME ?? path.dirname(getCasleoHome()), trimmed.slice(2));
     }
     return path.resolve(trimmed);
 }

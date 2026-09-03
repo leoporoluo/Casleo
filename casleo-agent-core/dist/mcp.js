@@ -2,11 +2,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { TETHER_VERSION } from "./version.js";
+import { CASLEO_VERSION } from "./version.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
 import { renderCollapsibleToolResult, renderToolCall } from "./tool-ui.js";
-import { getTetherHome } from "./home.js";
+import { getCasleoHome } from "./home.js";
 import { stripModelCredentialEnvironment } from "./providers.js";
 const stdioServerSchema = z.object({
     command: z.string().min(1),
@@ -57,7 +57,7 @@ export class MCPManager {
         this.servers.length = 0;
     }
     async connectServer(pi, ctx, serverName, config) {
-        const client = new Client({ name: "tether", version: TETHER_VERSION });
+        const client = new Client({ name: "casleo", version: CASLEO_VERSION });
         let close;
         try {
             if ("command" in config) {
@@ -128,9 +128,9 @@ export class MCPManager {
 }
 async function loadMcpConfigs(cwd, includeProject) {
     const configs = {};
-    const files = [path.join(getTetherHome(), "mcp.json")];
+    const files = [path.join(getCasleoHome(), "mcp.json")];
     if (includeProject) {
-        files.push(path.join(cwd, ".tether", "mcp.json"));
+        files.push(path.join(cwd, ".casleo", "mcp.json"));
     }
     for (const file of files) {
         try {

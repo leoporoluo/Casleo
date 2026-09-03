@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { TetherRuntimeOptions } from "./runtime-options.js";
+import type { CasleoRuntimeOptions } from "./runtime-options.js";
 type AgentRole = "explorer" | "implementer" | "reviewer" | "tester";
 interface SubagentResult {
     role: AgentRole;
@@ -8,7 +8,7 @@ interface SubagentResult {
     output: string;
     diff?: string;
 }
-export declare function registerSubagentTools(pi: ExtensionAPI, runtime: TetherRuntimeOptions): void;
+export declare function registerSubagentTools(pi: ExtensionAPI, runtime: CasleoRuntimeOptions): void;
 /** Compact one-line status from a child agent JSONL event. */
 export declare function liveFromJsonlLine(line: string): string | undefined;
 /** Compact text for the parent model; full reports stay in details.results for UI. */

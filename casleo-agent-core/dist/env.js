@@ -1,5 +1,5 @@
-/** Read a Tether runtime environment variable. */
-export function tetherEnv(name) {
-    return process.env[`TETHER_${name}`];
+/** Read a Casleo runtime environment variable. */
+export function casleoEnv(name) {
+    return process.env[`CASLEO_${name}`];
 }
 //# sourceMappingURL=env.js.map

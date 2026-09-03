@@ -323,9 +323,9 @@ Recovery: opening a session calls `agent:start({ sessionPath, resume: true })`; 
 
 ### 7.2 /undo and Checkpoints
 
-`casleo-agent-core` records a `tether-checkpoint` entry (with each file's `before` content) on file writes. The `/undo` flow:
+`casleo-agent-core` records a `casleo-checkpoint` entry (with each file's `before` content) on file writes. The `/undo` flow:
 
-1. `get_entries` pulls session entries; `lastTurnRestoreFiles` resolves the `before` file set of the newest checkpoint **after the last real user turn** that has not been undone by `tether-checkpoint-undone`.
+1. `get_entries` pulls session entries; `lastTurnRestoreFiles` resolves the `before` file set of the newest checkpoint **after the last real user turn** that has not been undone by `casleo-checkpoint-undone`.
 2. Show an `ApprovalCard` confirmation (special id `harness:undo`).
 3. On confirm, `workspace:restore(files)` writes the files back (`content: null` means delete) and `dropLastTurn` removes the turn from the UI.
 
@@ -378,10 +378,10 @@ The shared layer `vision-api.ts` provides pure functions: request construction, 
 | Location | Contents |
 | --- | --- |
 | `appData/Casleo` (userData; legacy `appData/DSHarness` is auto-renamed on first launch) | `recent-workspaces.json`, `vision-config.json`, `chat-profiles.json`, `uploads/` (staged images), `tasks/` (cwd without a project) |
-| `~/.casleo` (getCasleoHome, managed by casleo-agent-core) | `settings.json` (locale / default provider+model), session index and thread storage, credentials (a file when `TETHER_CREDENTIALS_STORE=file` instead of the OS keyring) |
+| `~/.casleo` (getCasleoHome, managed by casleo-agent-core) | `settings.json` (locale / default provider+model), session index and thread storage, credentials (a file when `CASLEO_CREDENTIALS_STORE=file` instead of the OS keyring) |
 | project `.agents/` | `features.json` (cross-session task list), `progress.md` (progress) — maintained by skill conventions |
 
-Environment variables: `TETHER_CREDENTIALS_STORE=file` (avoids keyring prompts in the distributed build); `PI_TELEMETRY=0`; `PI_SKIP_VERSION_CHECK=1`; `HARNESS_EXTRA_MODELS` / `HARNESS_VISION_CONFIG` / `HARNESS_VISION_UPLOADS` passed to the agent child process.
+Environment variables: `CASLEO_CREDENTIALS_STORE=file` (avoids keyring prompts in the distributed build); `PI_TELEMETRY=0`; `PI_SKIP_VERSION_CHECK=1`; `HARNESS_EXTRA_MODELS` / `HARNESS_VISION_CONFIG` / `HARNESS_VISION_UPLOADS` passed to the agent child process.
 
 ## 11. Skills System
 
@@ -456,7 +456,7 @@ Follow the four steps in §4.2. In main-process handlers, validate every value c
 
 ### 14.5 Changing the Session Persistence Format
 
-First look at `casleo-agent-core`'s session entry types (`SessionEntryLike`: `message` / `custom` entries); the parsing functions in `conversation.ts` and `lastTurnRestoreFiles` depend on the `tether-checkpoint` / `tether-checkpoint-undone` customType conventions — keep them in sync.
+First look at `casleo-agent-core`'s session entry types (`SessionEntryLike`: `message` / `custom` entries); the parsing functions in `conversation.ts` and `lastTurnRestoreFiles` depend on the `casleo-checkpoint` / `casleo-checkpoint-undone` customType conventions — keep them in sync.
 
 ## 15. Engineering Conventions (AGENTS.md Summary)
 
@@ -474,7 +474,7 @@ First look at `casleo-agent-core`'s session entry types (`SessionEntryLike`: `me
 | Agent hangs without response | Check `AgentHost` request timeouts (45s normal / 30min long); the child's stderr is appended to error messages |
 | Tests fail with `kill EPERM` | The sandbox restricts tinypool from cleaning up child processes; use `vitest run --pool=threads` |
 | Skills not loading | Frontmatter missing `name`/`description`; project skills need a trusted project; the path must be under a standard skill root |
-| /undo has no effect | The turn made no write-type tool calls; or the checkpoint was already undone; `get_entries` should show a `tether-checkpoint` entry |
+| /undo has no effect | The turn made no write-type tool calls; or the checkpoint was already undone; `get_entries` should show a `casleo-checkpoint` entry |
 | Opening legacy session data | First launch tries to rename `DSHarness` to `Casleo`; if migration is unavailable the old directory stays usable only by older builds |
 
 ---

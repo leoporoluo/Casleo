@@ -2,15 +2,15 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { tetherEnv } from "./env.js";
-import { getTetherHome } from "./home.js";
-import { getTetherStorageSettings, } from "./settings.js";
-const KEYRING_SERVICE = "tether-agent-core";
-const STORE_PATCH = Symbol.for("tether.agent.credential-store-installed");
+import { casleoEnv } from "./env.js";
+import { getCasleoHome } from "./home.js";
+import { getCasleoStorageSettings, } from "./settings.js";
+const KEYRING_SERVICE = "casleo-agent-core";
+const STORE_PATCH = Symbol.for("casleo.agent.credential-store-installed");
 const LOCK_STALE_MS = 30_000;
 const LOCK_TIMEOUT_MS = 15_000;
 function defaultAuthPath() {
-    return path.join(getTetherHome(), "auth.json");
+    return path.join(getCasleoHome(), "auth.json");
 }
 /** Plain JSON fallback compatible with pi's existing auth.json shape. */
 export class FileCredentialStore {
@@ -54,7 +54,7 @@ export class FileCredentialStore {
 export class KeyringCredentialStore {
     factory;
     metadataPath;
-    constructor(factory, metadataPath = path.join(getTetherHome(), "credential-metadata.json")) {
+    constructor(factory, metadataPath = path.join(getCasleoHome(), "credential-metadata.json")) {
         this.factory = factory;
         this.metadataPath = metadataPath;
     }
@@ -94,7 +94,7 @@ export class KeyringCredentialStore {
     }
     lockPath(providerId) {
         const safeProvider = providerId.replace(/[^a-zA-Z0-9_.-]/gu, "_");
-        return path.join(getTetherHome(), ".credential-locks", `${safeProvider}.lock`);
+        return path.join(getCasleoHome(), ".credential-locks", `${safeProvider}.lock`);
     }
     async remember(providerId, type) {
         const metadata = await readMetadata(this.metadataPath);
@@ -172,8 +172,8 @@ class AutoCredentialStore {
         await this.file.delete(providerId);
     }
 }
-export async function createTetherCredentialStore(options = {}) {
-    const configured = getTetherStorageSettings();
+export async function createCasleoCredentialStore(options = {}) {
+    const configured = getCasleoStorageSettings();
     const mode = options.mode ?? configured.credentialStore;
     const file = new FileCredentialStore(options.authPath ?? defaultAuthPath());
     if (mode === "file")
@@ -192,7 +192,7 @@ export async function createTetherCredentialStore(options = {}) {
             throw new Error(`System keyring is unavailable: ${errorMessage(error)}`);
         }
     }
-    const keyring = new KeyringCredentialStore(factory, options.metadataPath ?? path.join(getTetherHome(), "credential-metadata.json"));
+    const keyring = new KeyringCredentialStore(factory, options.metadataPath ?? path.join(getCasleoHome(), "credential-metadata.json"));
     if (mode === "keyring")
         return keyring;
     const automatic = new AutoCredentialStore(keyring, file);
@@ -201,14 +201,14 @@ export async function createTetherCredentialStore(options = {}) {
 }
 /**
  * pi's CLI creates ModelRuntime internally. Patch its public factory once so every
- * TUI, JSON, and RPC runtime receives the same Tether Runtime-owned credential store.
+ * TUI, JSON, and RPC runtime receives the same Casleo Runtime-owned credential store.
  */
-export async function installTetherCredentialStore() {
+export async function installCasleoCredentialStore() {
     const { ModelRuntime } = await import("@earendil-works/pi-coding-agent");
     const runtime = ModelRuntime;
     if (runtime[STORE_PATCH])
         return;
-    const credentials = await createTetherCredentialStore();
+    const credentials = await createCasleoCredentialStore();
     const create = ModelRuntime.create.bind(ModelRuntime);
     ModelRuntime.create = (options = {}) => create({ ...options, credentials: options.credentials ?? credentials });
     runtime[STORE_PATCH] = true;
@@ -224,7 +224,7 @@ async function readCredentialData(authPath) {
         if (isNodeError(error) && error.code === "ENOENT")
             return {};
         if (error instanceof SyntaxError)
-            throw new Error(`Cannot parse Tether Runtime auth file: ${authPath}`);
+            throw new Error(`Cannot parse Casleo Runtime auth file: ${authPath}`);
         throw error;
     }
 }
@@ -245,7 +245,7 @@ async function readMetadata(metadataPath) {
         if (isNodeError(error) && error.code === "ENOENT")
             return emptyMetadata();
         if (error instanceof SyntaxError) {
-            throw new Error(`Cannot parse Tether Runtime credential metadata: ${metadataPath}`);
+            throw new Error(`Cannot parse Casleo Runtime credential metadata: ${metadataPath}`);
         }
         throw error;
     }
@@ -330,6 +330,6 @@ function errorMessage(error) {
 function canUseInteractiveKeyring() {
     return Boolean(process.versions.electron ||
         (process.stdin.isTTY && process.stdout.isTTY) ||
-        tetherEnv("ALLOW_HEADLESS_KEYRING") === "1");
+        casleoEnv("ALLOW_HEADLESS_KEYRING") === "1");
 }
 //# sourceMappingURL=credential-store.js.map

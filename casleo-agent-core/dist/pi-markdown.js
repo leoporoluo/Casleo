@@ -1,6 +1,6 @@
 import { AssistantMessageComponent } from "@earendil-works/pi-coding-agent";
-const PATCH_MARKER = Symbol.for("tether.markdown-code-blocks");
-const THEME_MARKER = Symbol.for("tether.markdown-theme");
+const PATCH_MARKER = Symbol.for("casleo.markdown-code-blocks");
+const THEME_MARKER = Symbol.for("casleo.markdown-theme");
 /** Remove Pi's literal fence rows while retaining parsing and syntax highlighting. */
 export function codexStyleMarkdownTheme(theme) {
     if (theme[THEME_MARKER])

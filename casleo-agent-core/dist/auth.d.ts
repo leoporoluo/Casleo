@@ -15,8 +15,8 @@ export type KeyValidation = {
     status: "unverified";
     message: string;
 };
-export declare function getTetherAgentDir(): string;
-export declare function getTetherAuthPath(): string;
+export declare function getCasleoAgentDir(): string;
+export declare function getCasleoAuthPath(): string;
 export declare function hasStoredDeepSeekKey(authPath?: string): Promise<boolean>;
 export declare function hasStoredProviderCredential(providerId: SupportedProviderId, authPath?: string): Promise<boolean>;
 export declare function hasDeepSeekEnvironmentKey(): boolean;

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getTetherHome } from "./home.js";
+import { getCasleoHome } from "./home.js";
 export const SUPPORTED_PROVIDER_IDS = [
     "deepseek",
     "openai-codex",
@@ -97,7 +97,7 @@ export function providerDisplayName(providerId) {
 export function providerEnvironmentKey(providerId) {
     return PROVIDER_ENVIRONMENT_KEYS[providerId];
 }
-export function getStoredModelSelection(settingsPath = path.join(getTetherHome(), "settings.json")) {
+export function getStoredModelSelection(settingsPath = path.join(getCasleoHome(), "settings.json")) {
     try {
         const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
         if (typeof settings.defaultProvider !== "string")

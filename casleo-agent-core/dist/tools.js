@@ -13,7 +13,7 @@ const DEFAULT_IGNORES = [
     "**/build/**",
     "**/coverage/**",
     "**/.next/**",
-    "**/.tether/**",
+    "**/.casleo/**",
 ];
 export function createCodingTools(workspace, harness = "safe") {
     const readFileParameters = Type.Object({
@@ -322,7 +322,7 @@ function assertSafeGlob(pattern) {
     }
 }
 async function writeFileAtomic(target, content) {
-    const temporary = path.join(path.dirname(target), `.${path.basename(target)}.tether-${process.pid}-${Date.now()}.tmp`);
+    const temporary = path.join(path.dirname(target), `.${path.basename(target)}.casleo-${process.pid}-${Date.now()}.tmp`);
     let mode;
     try {
         mode = (await fs.stat(target)).mode;

@@ -1,19 +1,19 @@
 import process from "node:process";
 import pc from "picocolors";
 import { ensureFirstRunAuth, runAuthCommand } from "./auth.js";
-import { installTetherCredentialStore } from "./credential-store.js";
-import { createTetherExtension } from "./tether-extension.js";
-import { initializeTetherHome } from "./home.js";
+import { installCasleoCredentialStore } from "./credential-store.js";
+import { createCasleoExtension } from "./casleo-extension.js";
+import { initializeCasleoHome } from "./home.js";
 import { installPiLoginSecretMask } from "./pi-login-mask.js";
 import { installPiMarkdownCodeBlocks } from "./pi-markdown.js";
 import { parseSupportedProviderId } from "./providers.js";
-import { parseRuntimeArgs, printTetherHelp } from "./runtime-options.js";
-import { installTetherRuntimeBranding } from "./runtime-branding.js";
-import { ensureTetherUiDefaults } from "./ui-defaults.js";
-import { TETHER_VERSION } from "./version.js";
+import { parseRuntimeArgs, printCasleoHelp } from "./runtime-options.js";
+import { installCasleoRuntimeBranding } from "./runtime-branding.js";
+import { ensureCasleoUiDefaults } from "./ui-defaults.js";
+import { CASLEO_VERSION } from "./version.js";
 import { parseWindowsSandboxLifecycleCommand, runWindowsSandboxLifecycle, } from "./windows-sandbox.js";
-/** Run one Tether Runtime CLI, JSON, or RPC process using the shared runtime. */
-export async function runTether(argv) {
+/** Run one Casleo Runtime CLI, JSON, or RPC process using the shared runtime. */
+export async function runCasleo(argv) {
     const windowsSandboxCommand = parseWindowsSandboxLifecycleCommand(argv);
     if (windowsSandboxCommand) {
         runWindowsSandboxLifecycle(windowsSandboxCommand);
@@ -21,18 +21,18 @@ export async function runTether(argv) {
     }
     const parsed = parseRuntimeArgs(argv);
     if (parsed.help) {
-        printTetherHelp();
+        printCasleoHelp();
         return;
     }
     if (parsed.version) {
-        process.stdout.write(`${TETHER_VERSION}\n`);
+        process.stdout.write(`${CASLEO_VERSION}\n`);
         return;
     }
     process.chdir(parsed.options.cwd);
-    const agentDirectory = await initializeTetherHome();
+    const agentDirectory = await initializeCasleoHome();
     process.env.PI_TELEMETRY ??= "0";
     process.env.PI_SKIP_VERSION_CHECK ??= "1";
-    await ensureTetherUiDefaults(agentDirectory);
+    await ensureCasleoUiDefaults(agentDirectory);
     const authCommand = parseAuthCommand(argv);
     if (authCommand) {
         await runAuthCommand(authCommand.command, {
@@ -47,24 +47,24 @@ export async function runTether(argv) {
     });
     installPiLoginSecretMask();
     installPiMarkdownCodeBlocks();
-    installTetherRuntimeBranding();
-    await installTetherCredentialStore();
+    installCasleoRuntimeBranding();
+    await installCasleoCredentialStore();
     const { main } = await import("@earendil-works/pi-coding-agent");
     await main(parsed.piArgs, {
-        extensionFactories: [createTetherExtension(parsed.options)],
+        extensionFactories: [createCasleoExtension(parsed.options)],
     });
 }
 /** Process-oriented wrapper used by the terminal and bundled RPC entry points. */
-export async function runTetherProcess(argv) {
+export async function runCasleoProcess(argv) {
     try {
-        await runTether(argv);
+        await runCasleo(argv);
     }
     catch (error) {
-        process.stderr.write(`${pc.red("error:")} ${formatTetherError(error)}\n`);
+        process.stderr.write(`${pc.red("error:")} ${formatCasleoError(error)}\n`);
         process.exitCode = 1;
     }
 }
-export function formatTetherError(error) {
+export function formatCasleoError(error) {
     if (error instanceof Error) {
         if (error.name === "ZodError")
             return error.message;

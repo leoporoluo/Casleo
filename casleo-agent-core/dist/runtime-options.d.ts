@@ -9,7 +9,7 @@ export declare const sandboxModeSchema: z.ZodEnum<{
     "danger-full-access": "danger-full-access";
 }>;
 export type SandboxMode = z.infer<typeof sandboxModeSchema>;
-export interface TetherRuntimeOptions {
+export interface CasleoRuntimeOptions {
     cwd: string;
     providerId: SupportedProviderId;
     baseUrl: string;
@@ -28,10 +28,10 @@ export interface TetherRuntimeOptions {
     writableRoots: string[];
 }
 export interface ParsedRuntimeArgs {
-    options: TetherRuntimeOptions;
+    options: CasleoRuntimeOptions;
     piArgs: string[];
     help: boolean;
     version: boolean;
 }
 export declare function parseRuntimeArgs(argv: string[]): ParsedRuntimeArgs;
-export declare function printTetherHelp(): void;
+export declare function printCasleoHelp(): void;

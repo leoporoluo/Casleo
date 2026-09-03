@@ -1,5 +1,5 @@
 #!/usr/bin/env node
 import process from "node:process";
-import { runTetherProcess } from "./cli-runtime.js";
-void runTetherProcess(process.argv.slice(2));
+import { runCasleoProcess } from "./cli-runtime.js";
+void runCasleoProcess(process.argv.slice(2));
 //# sourceMappingURL=rpc-entry.js.map

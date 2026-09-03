@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
-export declare const PLAN_STATE_ENTRY = "tether-plan-state";
+export declare const PLAN_STATE_ENTRY = "casleo-plan-state";
 declare const planStepSchema: Type.TObject<{
     step: Type.TString;
     status: Type.TUnion<[Type.TLiteral<"pending">, Type.TLiteral<"in_progress">, Type.TLiteral<"completed">]>;

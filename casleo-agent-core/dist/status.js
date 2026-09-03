@@ -35,7 +35,7 @@ export function formatStatusReport(details) {
         : `${usage.latestCacheHitRate === undefined ? "?" : `${usage.latestCacheHitRate.toFixed(1)}%`} latest hit · ${formatTokenCount(usage.cacheRead)} read${usage.cacheWrite ? ` · ${formatTokenCount(usage.cacheWrite)} write` : ""}`;
     const session = details.sessionName || details.sessionFile || "memory only";
     return [
-        "Tether Runtime status",
+        "Casleo Runtime status",
         `model      ${details.provider}/${details.model} · ${details.effort} · ${details.transport}`,
         `workspace  ${workspace}`,
         `access     ${details.permission} · ${details.sandbox} · network ${details.network ? "enabled" : "blocked"}`,

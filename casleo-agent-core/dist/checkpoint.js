@@ -50,7 +50,7 @@ export async function restoreCheckpoint(workspace, checkpoint, force = false) {
             continue;
         }
         await fs.mkdir(path.dirname(absolute), { recursive: true });
-        const temporary = path.join(path.dirname(absolute), `.${path.basename(absolute)}.tether-undo-${process.pid}-${Date.now()}.tmp`);
+        const temporary = path.join(path.dirname(absolute), `.${path.basename(absolute)}.casleo-undo-${process.pid}-${Date.now()}.tmp`);
         try {
             await fs.writeFile(temporary, snapshot.content, {
                 encoding: "utf8",

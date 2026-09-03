@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { getTetherSessionsDir } from "./home.js";
+import { getCasleoSessionsDir } from "./home.js";
 export class SessionStore {
     workspace;
     model;
@@ -10,7 +10,7 @@ export class SessionStore {
         this.workspace = workspace;
         this.model = model;
         const id = crypto.createHash("sha256").update(workspace).digest("hex").slice(0, 20);
-        this.file = path.join(getTetherSessionsDir(), `${id}.json`);
+        this.file = path.join(getCasleoSessionsDir(), `${id}.json`);
     }
     async load() {
         try {

@@ -1,6 +1,6 @@
-# Tether tokens
+# Casleo tokens
 
-Canonical hex. Desktop: `tether-ai/src/renderer/styles.css` `:root`. Site aliases in `tether-site/src/styles.css`.
+Canonical hex. Desktop: `casleo-ai/src/renderer/styles.css` `:root`. Site aliases in `casleo-site/src/styles.css`.
 
 ## Color
 

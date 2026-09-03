@@ -16,14 +16,14 @@ import {
   Tray,
 } from "electron";
 import {
-  createTetherCredentialStore,
+  createCasleoCredentialStore,
   ensureSessionRuntimeLink,
-  getTetherHome,
+  getCasleoHome,
   getStoredDeepSeekBaseUrl,
   getStoredModelSelection,
-  initializeTetherHome,
-  listTetherThreads,
-  TetherStateStore,
+  initializeCasleoHome,
+  listCasleoThreads,
+  CasleoStateStore,
   defaultModelForProvider,
   providerDisplayName,
   providerEnvironmentKey,
@@ -123,7 +123,7 @@ let appPreferences: AppPreferences = { ...DEFAULT_APP_PREFERENCES };
 let tray: Tray | undefined;
 
 // Desktop distribution favors a quiet first run; the owner-only file avoids OS keyring prompts.
-process.env.TETHER_CREDENTIALS_STORE = "file";
+process.env.CASLEO_CREDENTIALS_STORE = "file";
 
 let mainWindow: BrowserWindow | undefined;
 let agentHost: AgentHost | undefined;
@@ -163,7 +163,7 @@ fs.mkdirSync(userDataPath, { recursive: true, mode: 0o700 });
 app.setPath("userData", userDataPath);
 // The Pi bridge reads its home from this compatibility environment variable;
 // point it at Casleo's private data directory so no legacy home is created.
-process.env.TETHER_HOME = userDataPath;
+process.env.CASLEO_HOME = userDataPath;
 
 function appPreferencesPath(): string {
   return path.join(userDataPath, "preferences.json");
@@ -490,7 +490,7 @@ function registerIpc(): void {
   });
   ipcMain.handle("workspace:recent", () => recentWorkspaces.list());
   ipcMain.handle("workspace:forget", async (_event, workspacePath: string) => {
-    const store = new TetherStateStore();
+    const store = new CasleoStateStore();
     try {
       await store.refresh();
       for (const thread of store.list({ cwd: workspacePath })) {
@@ -687,7 +687,7 @@ function registerIpc(): void {
     await writeHomeJson("mcp.json", serializeMcpServers(Array.isArray(rows) ? rows : []));
   });
   ipcMain.handle("services:reveal-mcp", async () => {
-    const file = path.join(getTetherHome(), "mcp.json");
+    const file = path.join(getCasleoHome(), "mcp.json");
     try {
       await fsp.access(file);
     } catch {
@@ -709,7 +709,7 @@ function registerIpc(): void {
   });
 
   ipcMain.handle("sessions:list", async (_event, cwd?: string) => {
-    const threads = await listTetherThreads(cwd ? { cwd } : {});
+    const threads = await listCasleoThreads(cwd ? { cwd } : {});
     return threads.map(
       (thread): SessionSummary => ({
         path: thread.sessionPath,
@@ -729,7 +729,7 @@ function registerIpc(): void {
     );
   });
   ipcMain.handle("sessions:remove", async (_event, id: string) => {
-    const store = new TetherStateStore();
+    const store = new CasleoStateStore();
     try {
       await store.refresh();
       await store.archive(id);
@@ -740,7 +740,7 @@ function registerIpc(): void {
   ipcMain.handle(
     "sessions:pin",
     async (_event, id: string, pinned: boolean) => {
-      const store = new TetherStateStore();
+      const store = new CasleoStateStore();
       try {
         await store.refresh();
         if (!store.setPinned(id, pinned))
@@ -755,7 +755,7 @@ function registerIpc(): void {
     async (_event, id: string, title: string) => {
       const name = title.trim().slice(0, 96);
       if (!name) throw new Error("Conversation name cannot be empty");
-      const store = new TetherStateStore();
+      const store = new CasleoStateStore();
       try {
         await store.refresh();
         const thread = store.get(id);
@@ -776,7 +776,7 @@ function registerIpc(): void {
   );
 
   ipcMain.handle("auth:status", async (): Promise<ProviderStatus[]> => {
-    const credentialStore = await createTetherCredentialStore();
+    const credentialStore = await createCasleoCredentialStore();
     const storedProviders = new Set(
       (await credentialStore.list()).map((entry) => entry.providerId),
     );
@@ -811,7 +811,7 @@ function registerIpc(): void {
   ipcMain.handle(
     "auth:read-api-key",
     async (_event, provider: ApiKeyProviderId) => {
-      const stored = await (await createTetherCredentialStore()).read(provider);
+      const stored = await (await createCasleoCredentialStore()).read(provider);
       if (stored && stored.type === "api_key" && typeof stored.key === "string")
         return stored.key;
       const envName = providerEnvironmentKey(provider);
@@ -938,14 +938,14 @@ function registerIpc(): void {
 
 async function readHomeJson(name: string): Promise<unknown> {
   try {
-    return JSON.parse(await fsp.readFile(path.join(getTetherHome(), name), "utf8"));
+    return JSON.parse(await fsp.readFile(path.join(getCasleoHome(), name), "utf8"));
   } catch {
     return {};
   }
 }
 
 async function writeHomeJson(name: string, value: unknown): Promise<void> {
-  const file = path.join(getTetherHome(), name);
+  const file = path.join(getCasleoHome(), name);
   await fsp.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
   await fsp.writeFile(file, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
 }
@@ -954,7 +954,7 @@ async function saveDefaultModel(
   providerId: string,
   modelId: string,
 ): Promise<void> {
-  const settingsPath = path.join(getTetherHome(), "settings.json");
+  const settingsPath = path.join(getCasleoHome(), "settings.json");
   let settings: Record<string, unknown> = {};
   try {
     settings = JSON.parse(await fsp.readFile(settingsPath, "utf8")) as Record<
@@ -973,7 +973,7 @@ async function saveDefaultModel(
 }
 
 async function readSettingsFile(): Promise<Record<string, unknown>> {
-  const settingsPath = path.join(getTetherHome(), "settings.json");
+  const settingsPath = path.join(getCasleoHome(), "settings.json");
   try {
     return JSON.parse(await fsp.readFile(settingsPath, "utf8")) as Record<
       string,
@@ -996,7 +996,7 @@ async function loadLocale(): Promise<Locale> {
 }
 
 async function saveLocale(locale: Locale): Promise<void> {
-  const settingsPath = path.join(getTetherHome(), "settings.json");
+  const settingsPath = path.join(getCasleoHome(), "settings.json");
   const settings = await readSettingsFile();
   settings.locale = locale;
   await fsp.mkdir(path.dirname(settingsPath), { recursive: true, mode: 0o700 });
@@ -1112,7 +1112,7 @@ async function loadChatProfiles(): Promise<ChatProfiles> {
   } catch {
     /* migrate from the single stored slot */
   }
-  const stored = await (await createTetherCredentialStore()).read("deepseek");
+  const stored = await (await createCasleoCredentialStore()).read("deepseek");
   const apiKey =
     stored && stored.type === "api_key" && typeof stored.key === "string"
       ? stored.key
@@ -1174,7 +1174,7 @@ async function loadVisionConfig(): Promise<VisionConfig> {
 async function materializeDeepSeekVision(
   fallbackKey = "",
 ): Promise<VisionConfig> {
-  const store = await createTetherCredentialStore();
+  const store = await createCasleoCredentialStore();
   try {
     const profiles = await loadChatProfiles().catch(() => undefined);
     const stored = await store.read("deepseek");
@@ -1304,7 +1304,7 @@ const SKIP_DIRS = new Set([
   ".turbo",
   ".vite",
   ".cache",
-  ".tether",
+  ".casleo",
   ".build",
   "DerivedData",
   "Pods",
@@ -1436,7 +1436,7 @@ async function addSkillManifests(root: string, files: string[]): Promise<void> {
 
 app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
-  await initializeTetherHome();
+  await initializeCasleoHome();
   await loadAppPreferences();
   await loadLocale();
   protocol.handle(PREVIEW_SCHEME, servePreview);

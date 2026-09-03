@@ -255,11 +255,11 @@ export function lastTurnRestoreFiles(entries: SessionEntryLike[]): RestoreFile[]
 }
 
 function isCheckpoint(type: string | undefined): boolean {
-  return type === "tether-checkpoint";
+  return type === "casleo-checkpoint";
 }
 
 function isCheckpointUndo(type: string | undefined): boolean {
-  return type === "tether-checkpoint-undone";
+  return type === "casleo-checkpoint-undone";
 }
 
 function entryUserText(content: unknown): string {

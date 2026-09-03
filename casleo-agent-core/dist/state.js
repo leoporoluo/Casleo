@@ -2,19 +2,19 @@ import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { getTetherArchivedSessionsDir, getTetherHome, getTetherSessionsDir, partitionSessionFile, } from "./home.js";
-import { getTetherStorageSettings } from "./settings.js";
+import { getCasleoArchivedSessionsDir, getCasleoHome, getCasleoSessionsDir, partitionSessionFile, } from "./home.js";
+import { getCasleoStorageSettings } from "./settings.js";
 const require = createRequire(import.meta.url);
-export function getTetherStatePath() {
-    const sqliteHome = getTetherStorageSettings().sqliteHome ?? getTetherHome();
+export function getCasleoStatePath() {
+    const sqliteHome = getCasleoStorageSettings().sqliteHome ?? getCasleoHome();
     return path.join(sqliteHome, "state.sqlite");
 }
 /** SQLite is an index/runtime-state layer; JSONL remains the transcript source of truth. */
-export class TetherStateStore {
+export class CasleoStateStore {
     statePath;
     database;
     findByPath;
-    constructor(statePath = getTetherStatePath()) {
+    constructor(statePath = getCasleoStatePath()) {
         this.statePath = statePath;
         if (statePath !== ":memory:") {
             fsSync.mkdirSync(path.dirname(statePath), { recursive: true, mode: 0o700 });
@@ -56,12 +56,12 @@ export class TetherStateStore {
     }
     async refresh() {
         const seen = new Set();
-        for (const file of await directJsonlFiles(getTetherSessionsDir())) {
+        for (const file of await directJsonlFiles(getCasleoSessionsDir())) {
             const partitioned = await partitionSessionFile(file);
             seen.add(partitioned.storagePath);
             await this.indexFile(partitioned.runtimePath, partitioned.storagePath, false);
         }
-        for (const file of await recursiveJsonlFiles(getTetherArchivedSessionsDir())) {
+        for (const file of await recursiveJsonlFiles(getCasleoArchivedSessionsDir())) {
             seen.add(file);
             await this.indexFile(file, file, true);
         }
@@ -102,7 +102,7 @@ export class TetherStateStore {
         if (!current || current.archived)
             return current;
         const dateParts = current.createdAt.slice(0, 10).split("-");
-        const target = path.join(getTetherArchivedSessionsDir(), ...dateParts, path.basename(current.storagePath));
+        const target = path.join(getCasleoArchivedSessionsDir(), ...dateParts, path.basename(current.storagePath));
         await fs.mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
         await fs.chmod(path.dirname(target), 0o700).catch(() => undefined);
         let compatibilityLinkRemoved = false;
@@ -132,8 +132,8 @@ export class TetherStateStore {
         if (!current || !current.archived)
             return current;
         const dateParts = current.createdAt.slice(0, 10).split("-");
-        const storagePath = path.join(getTetherSessionsDir(), ...dateParts, path.basename(current.storagePath));
-        const runtimePath = path.join(getTetherSessionsDir(), path.basename(current.storagePath));
+        const storagePath = path.join(getCasleoSessionsDir(), ...dateParts, path.basename(current.storagePath));
+        const runtimePath = path.join(getCasleoSessionsDir(), path.basename(current.storagePath));
         await fs.mkdir(path.dirname(storagePath), { recursive: true, mode: 0o700 });
         await fs.rename(current.storagePath, storagePath);
         try {
@@ -194,8 +194,8 @@ export class TetherStateStore {
         return this.get(parsed.id);
     }
 }
-export async function listTetherThreads(options = {}) {
-    const store = new TetherStateStore();
+export async function listCasleoThreads(options = {}) {
+    const store = new CasleoStateStore();
     try {
         await store.refresh();
         return store.list(options);
@@ -204,8 +204,8 @@ export async function listTetherThreads(options = {}) {
         store.close();
     }
 }
-export async function indexTetherSession(file) {
-    const store = new TetherStateStore();
+export async function indexCasleoSession(file) {
+    const store = new CasleoStateStore();
     try {
         return await store.indexSession(file);
     }

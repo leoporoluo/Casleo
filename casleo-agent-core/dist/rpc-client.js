@@ -1,17 +1,17 @@
 import { fileURLToPath } from "node:url";
 import { RpcClient, } from "@earendil-works/pi-coding-agent";
 /**
- * Create a typed client backed by the bundled Tether Runtime RPC worker.
+ * Create a typed client backed by the bundled Casleo Runtime RPC worker.
  * The caller owns start/stop and can render all events in a graphical interface.
  */
-export function createTetherRpcClient(options = {}) {
+export function createCasleoRpcClient(options = {}) {
     return new RpcClient({
         ...options,
-        cliPath: getTetherRpcEntryPath(),
+        cliPath: getCasleoRpcEntryPath(),
         provider: options.provider ?? "deepseek",
     });
 }
-export function getTetherRpcEntryPath() {
+export function getCasleoRpcEntryPath() {
     return fileURLToPath(new URL("./rpc-entry.js", import.meta.url));
 }
 export { RpcClient };

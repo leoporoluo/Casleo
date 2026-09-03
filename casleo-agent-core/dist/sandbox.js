@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { tetherEnv } from "./env.js";
+import { casleoEnv } from "./env.js";
 import { trackDetachedChild, killProcessTree } from "./process-tree.js";
 import { stripModelCredentialEnvironment } from "./providers.js";
 import { hostShellCommand } from "./shell.js";
@@ -40,7 +40,7 @@ export function sandboxCommand(shellCommand, cwd, options) {
                     .map((directory) => `(subpath "${escapeSeatbelt(directory)}")`)
                     .join(" ")})))`,
             options.network ? "" : '(deny network*) (allow network* (local ip "localhost:*"))',
-            // Keep kill/pkill from reaching Electron / the Tether Vite server.
+            // Keep kill/pkill from reaching Electron / the Casleo Vite server.
             "(deny signal)",
             "(allow signal (target self))",
         ]
@@ -52,7 +52,7 @@ export function sandboxCommand(shellCommand, cwd, options) {
             description: `macOS Seatbelt (${options.mode}${options.network ? ", network" : ", no network"})`,
         };
     }
-    const image = tetherEnv("SANDBOX_IMAGE");
+    const image = casleoEnv("SANDBOX_IMAGE");
     if (image && commandExists("docker")) {
         const networkArgs = options.network ? [] : ["--network", "none"];
         const userArgs = typeof process.getuid === "function" && typeof process.getgid === "function"
@@ -90,7 +90,7 @@ export function sandboxCommand(shellCommand, cwd, options) {
         };
     }
     throw new Error(`No OS sandbox backend is available for ${options.mode}. ` +
-        "Install macOS sandbox-exec, or set TETHER_SANDBOX_IMAGE to a trusted Docker image. " +
+        "Install macOS sandbox-exec, or set CASLEO_SANDBOX_IMAGE to a trusted Docker image. " +
         "Use --sandbox danger-full-access only for a trusted workspace.");
 }
 export function sandboxDescription(options) {
@@ -101,7 +101,7 @@ export function sandboxDescription(options) {
     if (process.platform === "darwin" && fs.existsSync("/usr/bin/sandbox-exec")) {
         return `Seatbelt ${options.mode}${options.network ? " + network" : ""}`;
     }
-    if (tetherEnv("SANDBOX_IMAGE") && commandExists("docker")) {
+    if (casleoEnv("SANDBOX_IMAGE") && commandExists("docker")) {
         return `Docker ${options.mode}${options.network ? " + network" : ""}`;
     }
     return `unavailable (${options.mode})`;

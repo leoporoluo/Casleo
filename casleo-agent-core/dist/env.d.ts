@@ -1,2 +1,2 @@
-/** Read a Tether runtime environment variable. */
-export declare function tetherEnv(name: string): string | undefined;
+/** Read a Casleo runtime environment variable. */
+export declare function casleoEnv(name: string): string | undefined;

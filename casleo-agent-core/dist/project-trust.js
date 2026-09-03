@@ -1,7 +1,7 @@
 import path from "node:path";
 import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
-import { getTetherAgentDir } from "./auth.js";
-export function registerTetherProjectTrust(pi, agentDir = getTetherAgentDir()) {
+import { getCasleoAgentDir } from "./auth.js";
+export function registerCasleoProjectTrust(pi, agentDir = getCasleoAgentDir()) {
     pi.on("project_trust", async (event, ctx) => {
         const store = new ProjectTrustStore(agentDir);
         const saved = store.get(event.cwd);
@@ -19,7 +19,7 @@ export function registerTetherProjectTrust(pi, agentDir = getTetherAgentDir()) {
             "Do not trust for this session only",
         ];
         const choice = await ctx.ui.select([
-            "Trust this Tether Runtime project?",
+            "Trust this Casleo Runtime project?",
             event.cwd,
             "",
             "Trusted projects may load local settings, instructions, skills, hooks, MCP servers, packages, and extensions.",

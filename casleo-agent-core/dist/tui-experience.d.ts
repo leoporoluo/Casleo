@@ -1,12 +1,12 @@
 import { type ExtensionAPI, type ExtensionContext, type Theme } from "@earendil-works/pi-coding-agent";
 import type { PermissionMode } from "./config.js";
 import { type EditorImageAttachment } from "./image-input.js";
-import type { TetherRuntimeOptions } from "./runtime-options.js";
-export declare const EDITOR_PLACEHOLDER = "Ask Tether Runtime to change, explain, or test code";
-export declare const HIDDEN_THINKING_LABEL = "Tether Runtime is thinking";
-export declare function registerCodingTui(pi: ExtensionAPI, options: TetherRuntimeOptions, getAccess: () => {
+import type { CasleoRuntimeOptions } from "./runtime-options.js";
+export declare const EDITOR_PLACEHOLDER = "Ask Casleo Runtime to change, explain, or test code";
+export declare const HIDDEN_THINKING_LABEL = "Casleo Runtime is thinking";
+export declare function registerCodingTui(pi: ExtensionAPI, options: CasleoRuntimeOptions, getAccess: () => {
     permission: PermissionMode;
-    sandbox: TetherRuntimeOptions["sandbox"];
+    sandbox: CasleoRuntimeOptions["sandbox"];
     network: boolean;
 }): void;
 export declare function highlightImageMarkers(line: string, attachments: readonly EditorImageAttachment[], theme: Theme): string;
@@ -17,7 +17,7 @@ export interface MinimalStatusDetails {
     model: string;
     effort: string;
     permission: PermissionMode;
-    sandbox: TetherRuntimeOptions["sandbox"];
+    sandbox: CasleoRuntimeOptions["sandbox"];
     network: boolean;
     cwd: string;
     contextPercent: number | null;

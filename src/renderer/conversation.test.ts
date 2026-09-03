@@ -1029,10 +1029,10 @@ describe("conversation events", () => {
   it("restores every last-turn checkpoint, keeping the earliest before per file", () => {
     expect(lastTurnRestoreFiles([
       { type: "message", message: { role: "user", content: "先改 html" } },
-      { type: "custom", customType: "tether-checkpoint", data: { id: "old", before: [{ path: "stale.html", content: "no" }] } },
+      { type: "custom", customType: "casleo-checkpoint", data: { id: "old", before: [{ path: "stale.html", content: "no" }] } },
       { type: "message", message: { role: "user", content: "再改 css" } },
-      { type: "custom", customType: "tether-checkpoint", data: { id: "html", before: [{ path: "index.html", content: "<old>" }] } },
-      { type: "custom", customType: "tether-checkpoint", data: { id: "css", before: [{ path: "style.css", content: "body{}" }, { path: "index.html", content: "<mid>" }] } },
+      { type: "custom", customType: "casleo-checkpoint", data: { id: "html", before: [{ path: "index.html", content: "<old>" }] } },
+      { type: "custom", customType: "casleo-checkpoint", data: { id: "css", before: [{ path: "style.css", content: "body{}" }, { path: "index.html", content: "<mid>" }] } },
     ])).toEqual([
       { path: "index.html", content: "<old>" },
       { path: "style.css", content: "body{}" },
@@ -1042,17 +1042,17 @@ describe("conversation events", () => {
   it("skips undone checkpoints and does not treat /undo as a new turn", () => {
     expect(lastTurnRestoreFiles([
       { type: "message", message: { role: "user", content: "改" } },
-      { type: "custom", customType: "tether-checkpoint", data: { id: "c1", before: [{ path: "a.css", content: "x" }] } },
-      { type: "custom", customType: "tether-checkpoint-undone", data: { checkpointId: "c1" } },
+      { type: "custom", customType: "casleo-checkpoint", data: { id: "c1", before: [{ path: "a.css", content: "x" }] } },
+      { type: "custom", customType: "casleo-checkpoint-undone", data: { checkpointId: "c1" } },
       { type: "message", message: { role: "user", content: [{ type: "text", text: "/undo" }] } },
     ])).toEqual([]);
   });
 
   it("only treats a new checkpoint-undone entry as a successful undo", () => {
-    const before = [{ id: "a", type: "message" }, { id: "b", type: "custom", customType: "tether-checkpoint" }];
+    const before = [{ id: "a", type: "message" }, { id: "b", type: "custom", customType: "casleo-checkpoint" }];
     expect(hasNewCheckpointUndo(before, before)).toBe(false);
-    expect(hasNewCheckpointUndo(before, [...before, { id: "c", type: "custom", customType: "tether-checkpoint-undone" }])).toBe(true);
-    expect(hasNewCheckpointUndo(before, [...before, { id: "c", type: "custom", customType: "tether-checkpoint" }])).toBe(false);
+    expect(hasNewCheckpointUndo(before, [...before, { id: "c", type: "custom", customType: "casleo-checkpoint-undone" }])).toBe(true);
+    expect(hasNewCheckpointUndo(before, [...before, { id: "c", type: "custom", customType: "casleo-checkpoint" }])).toBe(false);
   });
 
   it("rewrites undo confirm titles to the last user turn", () => {

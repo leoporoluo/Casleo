@@ -4,7 +4,7 @@ export declare const LOGIN_PROVIDER_CHOICES: ReadonlyArray<{
     providerId: SupportedProviderId;
     label: string;
 }>;
-export type TetherLoginRoute = {
+export type CasleoLoginRoute = {
     action: "continue";
     text: string;
 } | {
@@ -17,5 +17,5 @@ export type TetherLoginRoute = {
 } | {
     action: "reject";
 };
-export declare function routeTetherLogin(text: string): TetherLoginRoute;
+export declare function routeCasleoLogin(text: string): CasleoLoginRoute;
 export declare function scopeLoginSuggestions(text: string, items: AutocompleteItem[]): AutocompleteItem[];

@@ -5,14 +5,14 @@ interface KeyringEntry {
     setPassword(password: string): void;
     deletePassword(): boolean;
 }
-export interface TetherKeyringFactory {
+export interface CasleoKeyringFactory {
     create(service: string, account: string): KeyringEntry;
 }
 export interface CreateCredentialStoreOptions {
     mode?: CredentialStoreMode;
     authPath?: string;
     metadataPath?: string;
-    keyringFactory?: TetherKeyringFactory;
+    keyringFactory?: CasleoKeyringFactory;
 }
 /** Plain JSON fallback compatible with pi's existing auth.json shape. */
 export declare class FileCredentialStore implements CredentialStore {
@@ -27,7 +27,7 @@ export declare class FileCredentialStore implements CredentialStore {
 export declare class KeyringCredentialStore implements CredentialStore {
     private readonly factory;
     readonly metadataPath: string;
-    constructor(factory: TetherKeyringFactory, metadataPath?: string);
+    constructor(factory: CasleoKeyringFactory, metadataPath?: string);
     read(providerId: string): Promise<Credential | undefined>;
     list(): Promise<readonly CredentialInfo[]>;
     modify(providerId: string, fn: (current: Credential | undefined) => Promise<Credential | undefined>): Promise<Credential | undefined>;
@@ -35,10 +35,10 @@ export declare class KeyringCredentialStore implements CredentialStore {
     private lockPath;
     private remember;
 }
-export declare function createTetherCredentialStore(options?: CreateCredentialStoreOptions): Promise<CredentialStore>;
+export declare function createCasleoCredentialStore(options?: CreateCredentialStoreOptions): Promise<CredentialStore>;
 /**
  * pi's CLI creates ModelRuntime internally. Patch its public factory once so every
- * TUI, JSON, and RPC runtime receives the same Tether Runtime-owned credential store.
+ * TUI, JSON, and RPC runtime receives the same Casleo Runtime-owned credential store.
  */
-export declare function installTetherCredentialStore(): Promise<void>;
+export declare function installCasleoCredentialStore(): Promise<void>;
 export {};

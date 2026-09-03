@@ -323,9 +323,9 @@ agent 事件通过 `agent:event` 推送，`App.tsx` 里先做副作用处理（`
 
 ### 7.2 /undo 与 checkpoint
 
-`casleo-agent-core` 在文件写入时落 `tether-checkpoint` 条目（含每个文件的 `before` 内容）。`/undo` 流程：
+`casleo-agent-core` 在文件写入时落 `casleo-checkpoint` 条目（含每个文件的 `before` 内容）。`/undo` 流程：
 
-1. `get_entries` 拉会话条目，`lastTurnRestoreFiles` 解析**最后一个真实用户轮之后**、未被 `tether-checkpoint-undone` 撤销过的最新 checkpoint 的 before 文件集。
+1. `get_entries` 拉会话条目，`lastTurnRestoreFiles` 解析**最后一个真实用户轮之后**、未被 `casleo-checkpoint-undone` 撤销过的最新 checkpoint 的 before 文件集。
 2. 弹 `ApprovalCard` 确认（`harness:undo` 特殊 id）。
 3. 确认后 `workspace:restore(files)` 写回文件（`content: null` 表示删除），并 `dropLastTurn` 移除 UI 上该轮消息。
 
@@ -378,10 +378,10 @@ shared 层 `vision-api.ts` 提供纯函数：请求构造、响应解析、结�
 | 位置                                                                        | 内容                                                                                                                                   |
 | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `appData/Casleo`（userData，旧的 `appData/DSHarness` 首次启动自动改名迁移） | `recent-workspaces.json`（最近工作区）、`vision-config.json`、`chat-profiles.json`、`uploads/`（暂存图片）、`tasks/`（无项目时的 cwd） |
-| `~/.casleo`（getCasleoHome，casleo-agent-core 管理）                        | `settings.json`（locale / 默认 provider+model）、会话索引与线程存储、凭据（`TETHER_CREDENTIALS_STORE=file` 时落文件而非系统钥匙串）    |
+| `~/.casleo`（getCasleoHome，casleo-agent-core 管理）                        | `settings.json`（locale / 默认 provider+model）、会话索引与线程存储、凭据（`CASLEO_CREDENTIALS_STORE=file` 时落文件而非系统钥匙串）    |
 | 项目内 `.agents/`                                                           | `features.json`（跨会话任务清单）、`progress.md`（进度）——由技能约定维护                                                               |
 
-环境变量约定：`TETHER_CREDENTIALS_STORE=file`（分发版避免钥匙串弹窗）；`PI_TELEMETRY=0`；`PI_SKIP_VERSION_CHECK=1`；`HARNESS_EXTRA_MODELS` / `HARNESS_VISION_CONFIG` / `HARNESS_VISION_UPLOADS` 传给 agent 子进程。
+环境变量约定：`CASLEO_CREDENTIALS_STORE=file`（分发版避免钥匙串弹窗）；`PI_TELEMETRY=0`；`PI_SKIP_VERSION_CHECK=1`；`HARNESS_EXTRA_MODELS` / `HARNESS_VISION_CONFIG` / `HARNESS_VISION_UPLOADS` 传给 agent 子进程。
 
 ## 11. 技能（Skills）系统
 
@@ -456,7 +456,7 @@ postinstall / predev 执行：检查 Electron 发行二进制是否完整，缺�
 
 ### 14.5 修改会话持久化格式
 
-先看 `casleo-agent-core` 的会话条目类型（`SessionEntryLike`：`message` / `custom` 条目）；`conversation.ts` 的解析函数与 `lastTurnRestoreFiles` 依赖 `tether-checkpoint` / `tether-checkpoint-undone` 的 customType 约定，改动需同步。
+先看 `casleo-agent-core` 的会话条目类型（`SessionEntryLike`：`message` / `custom` 条目）；`conversation.ts` 的解析函数与 `lastTurnRestoreFiles` 依赖 `casleo-checkpoint` / `casleo-checkpoint-undone` 的 customType 约定，改动需同步。
 
 ## 15. 工程约定（AGENTS.md 摘要）
 
@@ -474,7 +474,7 @@ postinstall / predev 执行：检查 Electron 发行二进制是否完整，缺�
 | agent 卡住无响应      | 查看 `AgentHost` 的请求超时（普通 45s / 长请求 30min）；子进程 stderr 会拼进错误消息             |
 | 测试报 kill EPERM     | 沙箱环境限制 tinypool 清理子进程；用 `vitest run --pool=threads`                                 |
 | skills 不加载         | frontmatter 缺 `name`/`description`；项目技能需先信任项目；路径要在标准 skill 根                 |
-| /undo 无效果          | 该轮没有写入类工具；或 checkpoint 已被撤销；`get_entries` 里应有 `tether-checkpoint` 条目        |
+| /undo 无效果          | 该轮没有写入类工具；或 checkpoint 已被撤销；`get_entries` 里应有 `casleo-checkpoint` 条目        |
 | 打开旧版本会话数据    | 首次启动会尝试把 `DSHarness` 改名迁移到 `Casleo`；迁移不可用时旧目录仅老版本可用                 |
 
 ---

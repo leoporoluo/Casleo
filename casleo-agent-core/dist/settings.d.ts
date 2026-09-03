@@ -6,15 +6,15 @@ export declare function isOfficialDeepSeekBaseUrl(baseUrl: string): boolean;
 export declare function resolveMaxTokens(baseUrl: string, configured?: number): number;
 export type CredentialStoreMode = "file" | "keyring" | "auto";
 export type HistoryPersistence = "save-all" | "none";
-export interface TetherStorageSettings {
+export interface CasleoStorageSettings {
     credentialStore: CredentialStoreMode;
     historyPersistence: HistoryPersistence;
     sqliteHome?: string;
 }
-export declare function getTetherSettingsPath(): string;
+export declare function getCasleoSettingsPath(): string;
 export declare function getStoredDeepSeekBaseUrl(settingsPath?: string): string | undefined;
 export declare function getStoredDeepSeekMaxTokens(settingsPath?: string): number | undefined;
-export declare function getTetherStorageSettings(settingsPath?: string): TetherStorageSettings;
+export declare function getCasleoStorageSettings(settingsPath?: string): CasleoStorageSettings;
 export declare function parseCredentialStoreMode(value: unknown): CredentialStoreMode;
 export declare function parseHistoryPersistence(value: unknown): HistoryPersistence;
 export declare function saveDeepSeekBaseUrl(baseUrl: string, settingsPath?: string): Promise<string>;

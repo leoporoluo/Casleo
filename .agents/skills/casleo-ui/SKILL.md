@@ -1,9 +1,9 @@
 ---
-name: tether-ui
-description: Applies Tether’s paper + ink visual language (tokens, cards, chips, buttons, composer, approvals) for the desktop workbench and marketing site. Use when adding or restyling UI, CSS, landing pages, or cloning this look.
+name: casleo-ui
+description: Applies Casleo’s paper + ink visual language (tokens, cards, chips, buttons, composer, approvals) for the desktop workbench and marketing site. Use when adding or restyling UI, CSS, landing pages, or cloning this look.
 ---
 
-# Tether UI
+# Casleo UI
 
 浅色纸面 + 墨色字。桌面工作台和营销站共用这一套，不要做成 IDE、深色终端或 Discord。
 
@@ -57,10 +57,10 @@ description: Applies Tether’s paper + ink visual language (tokens, cards, chip
 | 图标 | 24 视口描边 SVG，`strokeWidth 1.75`，`currentColor` |
 | Logo | 开口绳子 path；站点可用 `--brand`，桌面跟顶栏墨色 |
 
-工作台壳（侧栏 252、对话贴底、权限四档）只约束 **tether-ai**。营销站用 section / card / header，不要硬抄 Electron 壳。
+工作台壳（侧栏 252、对话贴底、权限四档）只约束 **casleo-ai**。营销站用 section / card / header，不要硬抄 Electron 壳。
 
-克隆同气质产品：抄色板和上表组件，不要抄 Tether 商标与绳子 Logo。
+克隆同气质产品：抄色板和上表组件，不要抄 Casleo 商标与绳子 Logo。
 
 ## 桌面改 UI 时
 
-`src/renderer/styles.css`、`ui.tsx`、`App.tsx`、`src/shared/i18n.ts`。站点：`tether-site/src/styles.css` 与 `src/components/`。
+`src/renderer/styles.css`、`ui.tsx`、`App.tsx`、`src/shared/i18n.ts`。站点：`casleo-site/src/styles.css` 与 `src/components/`。

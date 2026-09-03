@@ -1,15 +1,15 @@
 import { stat } from "node:fs/promises";
 import { CustomEditor, } from "@earendil-works/pi-coding-agent";
 import { CURSOR_MARKER, truncateToWidth, visibleWidth, } from "@earendil-works/pi-tui";
-import { getTetherAuthPath } from "./auth.js";
+import { getCasleoAuthPath } from "./auth.js";
 import { brandBlue } from "./brand.js";
 import { expandEditorImageMarkers, extractLocalImageInput, formatImageMarker, } from "./image-input.js";
-import { LOGIN_PROVIDER_CHOICES, routeTetherLogin, scopeLoginSuggestions, } from "./login-scope.js";
+import { LOGIN_PROVIDER_CHOICES, routeCasleoLogin, scopeLoginSuggestions, } from "./login-scope.js";
 import { defaultModelForProvider } from "./providers.js";
-import { TETHER_VERSION } from "./version.js";
-import { TetherWelcomeHeader, formatCwd } from "./welcome.js";
-export const EDITOR_PLACEHOLDER = "Ask Tether Runtime to change, explain, or test code";
-export const HIDDEN_THINKING_LABEL = "Tether Runtime is thinking";
+import { CASLEO_VERSION } from "./version.js";
+import { CasleoWelcomeHeader, formatCwd } from "./welcome.js";
+export const EDITOR_PLACEHOLDER = "Ask Casleo Runtime to change, explain, or test code";
+export const HIDDEN_THINKING_LABEL = "Casleo Runtime is thinking";
 const BLINKING_BLOCK_CURSOR = "\x1b[1 q";
 const DEFAULT_CURSOR_STYLE = "\x1b[0 q";
 export function registerCodingTui(pi, options, getAccess) {
@@ -24,12 +24,12 @@ export function registerCodingTui(pi, options, getAccess) {
         const modelId = model?.id ?? options.modelId;
         const modelName = model?.name;
         ctx.ui.setHiddenThinkingLabel(formatThinkingLabel(modelName ?? modelId));
-        ctx.ui.setHeader((_tui, theme) => new TetherWelcomeHeader({
+        ctx.ui.setHeader((_tui, theme) => new CasleoWelcomeHeader({
             cwd: ctx.cwd,
             modelId,
             ...(modelName ? { modelName } : {}),
             effort: pi.getThinkingLevel(),
-            version: TETHER_VERSION,
+            version: CASLEO_VERSION,
         }, theme));
     };
     const stopWorkingTimer = () => {
@@ -78,15 +78,15 @@ export function registerCodingTui(pi, options, getAccess) {
             loginAutocompleteInstalled = true;
             ctx.ui.addAutocompleteProvider((current) => providerAutocomplete(current));
         }
-        class TetherEditor extends CustomEditor {
-            tetherTui;
+        class CasleoEditor extends CustomEditor {
+            casleoTui;
             imageAttachments = [];
             imagePasteQueue = Promise.resolve();
             nextImageIndex = 1;
             pendingImagePastes = 0;
             constructor(tui, theme, keybindings) {
                 super(tui, theme, keybindings, { paddingX: 0 });
-                this.tetherTui = tui;
+                this.casleoTui = tui;
                 activeTui = tui;
                 tui.terminal.write(BLINKING_BLOCK_CURSOR);
             }
@@ -120,7 +120,7 @@ export function registerCodingTui(pi, options, getAccess) {
                     .finally(() => {
                     this.pendingImagePastes -= 1;
                     this.disableSubmit = this.pendingImagePastes > 0;
-                    this.tetherTui.requestRender();
+                    this.casleoTui.requestRender();
                 });
             }
             async insertPastedText(text, bracketed) {
@@ -165,7 +165,7 @@ export function registerCodingTui(pi, options, getAccess) {
                 const bottomIndex = autocompleteStart - 1;
                 if (bottomIndex < 2)
                     return lines;
-                const hardwareCursor = this.tetherTui.getShowHardwareCursor();
+                const hardwareCursor = this.casleoTui.getShowHardwareCursor();
                 const content = lines
                     .slice(1, bottomIndex)
                     .map((line) => (hardwareCursor ? stripFakeCursorHighlight(line) : line))
@@ -195,7 +195,7 @@ export function registerCodingTui(pi, options, getAccess) {
         }
         let editor;
         ctx.ui.setEditorComponent((tui, theme, keybindings) => {
-            editor = new TetherEditor(tui, theme, keybindings);
+            editor = new CasleoEditor(tui, theme, keybindings);
             return editor;
         });
         if (editor?.onSubmit) {
@@ -227,7 +227,7 @@ export function registerCodingTui(pi, options, getAccess) {
             editor.onSubmit = (text) => {
                 const submittedText = editor?.expandImageAttachments(text) ?? text;
                 editor?.clearImageAttachments();
-                const route = routeTetherLogin(submittedText);
+                const route = routeCasleoLogin(submittedText);
                 if (route.action === "reject") {
                     editor?.setText("");
                     ctx.ui.notify("Unsupported provider. Enter /login to choose a supported provider.", "warning");
@@ -291,7 +291,7 @@ async function switchToProviderAfterLogin(pi, ctx, providerId, previousAuthMtime
 }
 async function getAuthFileMtime() {
     try {
-        return (await stat(getTetherAuthPath())).mtimeMs;
+        return (await stat(getCasleoAuthPath())).mtimeMs;
     }
     catch {
         return undefined;

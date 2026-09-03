@@ -3,7 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 import { runProcess } from "./process.js";
 import { sandboxCommand } from "./sandbox.js";
-import { getTetherHome } from "./home.js";
+import { getCasleoHome } from "./home.js";
 const hookSchema = z.object({
     command: z.string().min(1),
     args: z.array(z.string()).default([]),
@@ -63,9 +63,9 @@ async function loadHookConfig(cwd, includeProject) {
         afterTool: [],
         agentEnd: [],
     };
-    const files = [path.join(getTetherHome(), "hooks.json")];
+    const files = [path.join(getCasleoHome(), "hooks.json")];
     if (includeProject) {
-        files.push(path.join(cwd, ".tether", "hooks.json"));
+        files.push(path.join(cwd, ".casleo", "hooks.json"));
     }
     for (const file of files) {
         try {

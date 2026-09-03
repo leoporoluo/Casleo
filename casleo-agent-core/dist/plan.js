@@ -1,7 +1,7 @@
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { brandBlue } from "./brand.js";
-export const PLAN_STATE_ENTRY = "tether-plan-state";
+export const PLAN_STATE_ENTRY = "casleo-plan-state";
 const planStepSchema = Type.Object({
     step: Type.String({ minLength: 1, maxLength: 500 }),
     status: Type.Union([
@@ -18,7 +18,7 @@ export function registerPlanTool(pi, getPlan, onUpdate) {
     pi.registerTool({
         name: "update_plan",
         label: "Update plan",
-        description: "Create or update the structured implementation plan shown in the Tether Runtime UI. Use it for multi-step work and whenever plan mode is active.",
+        description: "Create or update the structured implementation plan shown in the Casleo Runtime UI. Use it for multi-step work and whenever plan mode is active.",
         promptSnippet: "update_plan: publish implementation steps and keep their execution status current",
         promptGuidelines: [
             "Use update_plan after repository exploration when work has multiple meaningful steps.",

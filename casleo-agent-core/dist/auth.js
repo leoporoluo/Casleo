@@ -3,16 +3,16 @@ import path from "node:path";
 import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import pc from "picocolors";
-import { createTetherCredentialStore } from "./credential-store.js";
-import { getTetherHome } from "./home.js";
+import { createCasleoCredentialStore } from "./credential-store.js";
+import { getCasleoHome } from "./home.js";
 import { defaultModelForProvider, providerDisplayName, providerEnvironmentKey, SUPPORTED_PROVIDER_IDS, } from "./providers.js";
-import { getTetherSettingsPath, getTetherStorageSettings, normalizeDeepSeekBaseUrl, saveDeepSeekBaseUrl, } from "./settings.js";
+import { getCasleoSettingsPath, getCasleoStorageSettings, normalizeDeepSeekBaseUrl, saveDeepSeekBaseUrl, } from "./settings.js";
 const PROVIDER_ID = "deepseek";
-export function getTetherAgentDir() {
-    return getTetherHome();
+export function getCasleoAgentDir() {
+    return getCasleoHome();
 }
-export function getTetherAuthPath() {
-    return path.join(getTetherAgentDir(), "auth.json");
+export function getCasleoAuthPath() {
+    return path.join(getCasleoAgentDir(), "auth.json");
 }
 export async function hasStoredDeepSeekKey(authPath) {
     const credential = await (await credentialStore(authPath)).read(PROVIDER_ID);
@@ -90,7 +90,7 @@ export async function ensureFirstRunAuth(options) {
     if (configured || isInteractiveInvocation(options.piArgs))
         return;
     const environmentHint = environmentKey ? ` or set ${environmentKey}` : "";
-    throw new Error(`${providerDisplayName(options.providerId)} is not configured. Run \`tether login ${options.providerId}\`${environmentHint}.`);
+    throw new Error(`${providerDisplayName(options.providerId)} is not configured. Run \`casleo login ${options.providerId}\`${environmentHint}.`);
 }
 export async function runAuthCommand(command, options) {
     if (command === "logout") {
@@ -106,7 +106,7 @@ export async function runAuthCommand(command, options) {
         return;
     }
     if (command === "status") {
-        const store = await createTetherCredentialStore();
+        const store = await createCasleoCredentialStore();
         const storedProviders = new Set((await store.list()).map((entry) => entry.providerId));
         const providers = SUPPORTED_PROVIDER_IDS.map((providerId) => {
             const environmentKey = providerEnvironmentKey(providerId);
@@ -118,14 +118,14 @@ export async function runAuthCommand(command, options) {
             `Active provider: ${options.providerId}`,
             ...providers,
             `DeepSeek API base URL: ${options.baseUrl}`,
-            `Credential store: ${getTetherStorageSettings().credentialStore}`,
-            `Credential file fallback: ${getTetherAuthPath()}`,
-            `DeepSeek config file: ${getTetherSettingsPath()}`,
+            `Credential store: ${getCasleoStorageSettings().credentialStore}`,
+            `Credential file fallback: ${getCasleoAuthPath()}`,
+            `DeepSeek config file: ${getCasleoSettingsPath()}`,
         ].join("\n") + "\n");
         return;
     }
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
-        throw new Error("`tether login` requires an interactive terminal");
+        throw new Error("`casleo login` requires an interactive terminal");
     }
     if (options.providerId === "deepseek") {
         await promptAndStoreKey(options.baseUrl, options.modelId);
@@ -162,7 +162,7 @@ async function promptAndStoreKey(baseUrl, modelId) {
         await saveDeepSeekKey(key);
         await saveDeepSeekBaseUrl(selectedBaseUrl);
         await saveDefaultModelSelection("deepseek", modelId);
-        process.stdout.write(`${pc.green("✓")} API key saved securely. Start coding with ${pc.bold("tether")}.\n`);
+        process.stdout.write(`${pc.green("✓")} API key saved securely. Start coding with ${pc.bold("casleo")}.\n`);
         return selectedBaseUrl;
     }
 }
@@ -175,13 +175,13 @@ async function loginWithProvider(providerId) {
 export async function authenticateProvider(providerId, interaction) {
     const { ModelRuntime } = await import("@earendil-works/pi-coding-agent");
     const runtime = await ModelRuntime.create({
-        credentials: await createTetherCredentialStore(),
-        modelsPath: path.join(getTetherAgentDir(), "models.json"),
+        credentials: await createCasleoCredentialStore(),
+        modelsPath: path.join(getCasleoAgentDir(), "models.json"),
         allowModelNetwork: false,
     });
     const provider = runtime.getProvider(providerId);
     if (!provider)
-        throw new Error(`Provider ${providerId} is unavailable in this Tether Runtime build`);
+        throw new Error(`Provider ${providerId} is unavailable in this Casleo Runtime build`);
     const authType = await selectProviderAuthType(provider, interaction);
     await runtime.login(providerId, authType, interaction);
     const modelId = defaultModelForProvider(providerId);
@@ -221,7 +221,7 @@ async function selectProviderAuthType(provider, interaction) {
 }
 async function saveDefaultModelSelection(providerId, modelId) {
     const { SettingsManager } = await import("@earendil-works/pi-coding-agent");
-    const settings = SettingsManager.create(process.cwd(), getTetherAgentDir());
+    const settings = SettingsManager.create(process.cwd(), getCasleoAgentDir());
     settings.setDefaultModelAndProvider(providerId, modelId);
     await settings.flush();
 }
@@ -388,7 +388,7 @@ async function confirmLine(prompt) {
     }
 }
 async function credentialStore(authPath) {
-    return createTetherCredentialStore(authPath ? { authPath, mode: "file" } : undefined);
+    return createCasleoCredentialStore(authPath ? { authPath, mode: "file" } : undefined);
 }
 function optionValue(args, name) {
     const inline = args.find((argument) => argument.startsWith(`${name}=`));

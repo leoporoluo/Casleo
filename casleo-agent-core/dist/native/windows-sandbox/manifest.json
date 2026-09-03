@@ -2,7 +2,7 @@
   "version": 1,
   "protocol": 1,
   "files": {
-    "win32-x64/tether-windows-sandbox.exe": "4877215f580326d2784bedef3e91b838f7a3f03b4c0b9831afaf000d4b0b1b88",
-    "win32-arm64/tether-windows-sandbox.exe": "1e2e1e6c0319a383fd14b4050d3690fc935789fba1863d90e3d87988096fa578"
+    "win32-x64/casleo-windows-sandbox.exe": "4877215f580326d2784bedef3e91b838f7a3f03b4c0b9831afaf000d4b0b1b88",
+    "win32-arm64/casleo-windows-sandbox.exe": "1e2e1e6c0319a383fd14b4050d3690fc935789fba1863d90e3d87988096fa578"
   }
 }

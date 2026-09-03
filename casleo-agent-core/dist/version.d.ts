@@ -1,1 +1,1 @@
-export declare const TETHER_VERSION: string;
+export declare const CASLEO_VERSION: string;

@@ -23,7 +23,7 @@ const LOGIN_DESCRIPTIONS = {
     xai: "Grok/X account or API key",
     "opencode-go": "API key",
 };
-export function routeTetherLogin(text) {
+export function routeCasleoLogin(text) {
     const normalized = text.trim().toLocaleLowerCase("en-US");
     if (normalized === "/login") {
         return { action: "select", text: "/login" };

@@ -46,9 +46,9 @@ await saveProviderApiKey("openai", "...");
 ## Quick start
 
 ```ts
-import { createTetherRpcClient } from "casleo-agent-core/rpc";
+import { createCasleoRpcClient } from "casleo-agent-core/rpc";
 
-const agent = createTetherRpcClient({ cwd: process.cwd() });
+const agent = createCasleoRpcClient({ cwd: process.cwd() });
 
 await agent.start();
 agent.onEvent((event) => {
