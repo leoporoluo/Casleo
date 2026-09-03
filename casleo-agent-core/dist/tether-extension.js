@@ -256,13 +256,10 @@ export function createTetherExtension(options) {
                 lastAgentFailed = false;
                 const currentAccess = effectiveAccess();
                 const personalizationPrompt = await loadPersonalizationPrompt(options.personalizationFile);
-                const systemPrompt = composePersonalizedSystemPrompt(stripUnixShellCoaching(sanitizeTetherRuntimeText(event.systemPrompt)), engineeringInstructions(projectCommands, currentAccess, {
-                    provider: ctx.model?.provider ?? options.providerId,
-                    modelId: ctx.model?.id ?? options.modelId,
-                    ...(ctx.model?.name ? { modelName: ctx.model.name } : {}),
-                    transport: ctx.model?.api ?? options.transport,
-                    baseUrl: options.baseUrl,
-                }), personalizationPrompt);
+                // Keep Pi's official system prompt intact. Casleo runtime rules
+                // are enforced by the tool permissions and extension handlers,
+                // rather than appended to every model request.
+                const systemPrompt = composePersonalizedSystemPrompt(stripUnixShellCoaching(sanitizeTetherRuntimeText(event.systemPrompt)), "", personalizationPrompt);
                 if (permission !== "plan")
                     return { systemPrompt };
                 return {

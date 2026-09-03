@@ -3800,6 +3800,32 @@ textarea::selection,
   border-radius: 9px;
   background: var(--inset);
 }
+.preference-switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--hover-2);
+  box-shadow: none;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.preference-switch span {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px #00000020;
+  transition: transform 140ms ease;
+}
+.preference-switch.on {
+  border-color: var(--ink-2);
+  background: var(--ink-2);
+}
+.preference-switch.on span { transform: translateX(14px); }
 .preference-segment button {
   min-width: 42px;
   height: 26px;

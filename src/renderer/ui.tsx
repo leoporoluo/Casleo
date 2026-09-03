@@ -2407,10 +2407,14 @@ export function EffortPicker({
 
 function PreferenceSegment({ checked, onChange }: { checked: boolean; onChange(value: boolean): void }) {
   const { t } = useI18n();
-  return <div className="preference-segment" role="group" aria-label={t("settings.toggleValue")}>
-    <button type="button" className={!checked ? "on" : ""} onClick={() => onChange(false)}>{t("settings.toggleOff")}</button>
-    <button type="button" className={checked ? "on" : ""} onClick={() => onChange(true)}>{t("settings.toggleOn")}</button>
-  </div>;
+  return <button
+    type="button"
+    className={`preference-switch${checked ? " on" : ""}`}
+    role="switch"
+    aria-checked={checked}
+    aria-label={t("settings.toggleValue")}
+    onClick={() => onChange(!checked)}
+  ><span aria-hidden="true" /></button>;
 }
 
 export function Combo({
