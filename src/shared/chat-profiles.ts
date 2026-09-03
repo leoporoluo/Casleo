@@ -6,6 +6,8 @@ export const DEEPSEEK_PRESET = {
 export const DEFAULT_CONTEXT_WINDOW = 272_000;
 export const DEFAULT_MAX_TOKENS = 32_768;
 export const DEFAULT_PROFILE_EFFORT = "medium";
+export const API_TRANSPORTS = ["openai-completions", "openai-responses", "anthropic-messages", "google-generative-ai"] as const;
+export type ApiTransport = (typeof API_TRANSPORTS)[number];
 
 export type ChatKind = "deepseek" | "custom";
 
@@ -21,6 +23,7 @@ export interface CustomApiProfile {
   maxTokens: number;
   /** Default reasoning level for this profile. */
   effort: string;
+  transport: ApiTransport;
 }
 
 export interface ChatProfiles {
@@ -44,6 +47,7 @@ export function defaultCustomProfile(partial: Partial<CustomApiProfile> = {}): C
     contextWindow: normalizeTokenLimit(partial.contextWindow, DEFAULT_CONTEXT_WINDOW),
     maxTokens: normalizeTokenLimit(partial.maxTokens, DEFAULT_MAX_TOKENS),
     effort: partial.effort?.trim() || DEFAULT_PROFILE_EFFORT,
+    transport: API_TRANSPORTS.includes(partial.transport as ApiTransport) ? partial.transport as ApiTransport : "openai-responses",
   };
 }
 
@@ -176,6 +180,7 @@ function parseCustomProfile(raw: unknown): CustomApiProfile | undefined {
     ...(contextWindow ? { contextWindow } : {}),
     ...(maxTokens ? { maxTokens } : {}),
     ...(typeof value.effort === "string" ? { effort: value.effort } : {}),
+    ...(API_TRANSPORTS.includes(value.transport as ApiTransport) ? { transport: value.transport as ApiTransport } : {}),
   });
 }
 
@@ -278,6 +283,7 @@ function mergeCustomProfile(previous: CustomApiProfile | undefined, next: Custom
     contextWindow,
     maxTokens,
     effort: next.effort || previous?.effort || DEFAULT_PROFILE_EFFORT,
+    transport: next.transport || previous?.transport || "openai-responses",
   });
 }
 

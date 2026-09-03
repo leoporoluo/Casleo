@@ -28,17 +28,18 @@ describe("skills-fs", () => {
 
   it("finds plugins under Pi project and user roots", async () => {
     const projectRoot = path.join(home, "project");
-    const projectPlugin = path.join(projectRoot, ".pi/plugins/project-plugin");
-    const userPlugin = path.join(home, ".agents/plugins/user-plugin");
+    const projectPlugin = path.join(projectRoot, ".pi/extensions/project-plugin");
+    const userPlugin = path.join(home, ".pi/agent/extensions/user-plugin.ts");
     await fsp.mkdir(projectPlugin, { recursive: true });
-    await fsp.mkdir(userPlugin, { recursive: true });
-    await fsp.writeFile(path.join(projectPlugin, "plugin.json"), JSON.stringify({ name: "Project plugin" }));
+    await fsp.mkdir(path.dirname(userPlugin), { recursive: true });
+    await fsp.writeFile(path.join(projectPlugin, "index.ts"), "export default () => {}\n");
+    await fsp.writeFile(userPlugin, "export default () => {}\n");
 
     const original = process.env.HOME;
     process.env.HOME = home;
     try {
       expect(await listLocalPlugins(projectRoot)).toEqual([
-        { name: "Project plugin", path: projectPlugin },
+        { name: "project-plugin", path: projectPlugin },
         { name: "user-plugin", path: userPlugin },
       ]);
     } finally {

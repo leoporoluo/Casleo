@@ -111,7 +111,9 @@ export class AgentHost {
     if (options.baseUrl) args.push("--base-url", options.baseUrl);
     if (options.maxTokens) args.push("--max-tokens", String(options.maxTokens));
     if (options.effort) args.push("--effort", options.effort);
-    args.push("--transport", "chat");
+    // Pi 0.84.4 exposes responses/chat transports; map the selected API family
+    // to the closest wire transport while preserving the user's choice in profiles.
+    args.push("--transport", options.transport === "openai-responses" ? "responses" : "chat");
     if (options.sessionPath) args.push("--session", options.sessionPath);
     if (options.visionExtension) args.push("--extension", options.visionExtension);
 

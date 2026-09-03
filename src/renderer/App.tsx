@@ -398,7 +398,7 @@ export function App() {
   const todos = chatTodos.length ? chatTodos : featureTodos;
   const planApproval = planAwaitingApproval(permission, running, todos);
   const darwin = window.harness.platform === "darwin";
-  const connected = providers.find((item) => item.id === "deepseek");
+  const connected = providers.find((item) => item.id === "openai");
   const waiting = running && (groups.length === 0 || groups.at(-1)?.type === "user");
   const projects = useMemo(() => {
     const byPath = new Map<string, { item: WorkspaceItem; sessions: SessionSummary[] }>();
@@ -455,16 +455,9 @@ export function App() {
   const resolveSandbox = useCallback(async (asProject: boolean, mode: PermissionMode, cwd?: string) => {
     if (!asProject) return "read-only" as const;
     if (mode === "full") return "danger-full-access" as const;
-    if (window.harness.platform === "darwin" || !cwd) return "workspace-write" as const;
-    if (allowedProjects().has(cwd)) return "danger-full-access" as const;
-    const ok = await new Promise<boolean>((resolve) => {
-      sandboxWaiter.current = resolve;
-      setSandboxAsk({ cwd, message: t("confirm.unsandboxed", { cwd }) });
-    });
-    setSandboxAsk(undefined);
-    sandboxWaiter.current = undefined;
-    if (ok) rememberUnsandboxed(cwd);
-    return ok ? "danger-full-access" as const : "workspace-write" as const;
+    // Project mode remains scoped to the selected workspace on every platform.
+    // Never silently upgrade to unrestricted host access when a native backend is absent.
+    return "workspace-write" as const;
   }, [t]);
 
   const startAgent = useCallback(async (
@@ -489,7 +482,7 @@ export function App() {
     }
     if (seq !== startSeq.current) return false;
     setProviders(accounts);
-    const chat = accounts.find((item) => item.id === "deepseek");
+    const chat = accounts.find((item) => item.id === "openai");
     if (!chat?.configured) {
       setLoginOpen(true);
       setToast(t("toast.fillConfig"));
@@ -535,7 +528,7 @@ export function App() {
       const snapshot = await window.harness.agent.start({
         ...(cwd ? { cwd } : {}),
         project: asProject,
-        provider: "deepseek",
+        provider: "openai",
         ...(modelId ? { model: modelId } : {}),
         ...(chat.baseUrl ? { baseUrl: chat.baseUrl } : {}),
         effort: effortRef.current || DEFAULT_EFFORT,
@@ -546,7 +539,8 @@ export function App() {
         ...(storagePath ? { storagePath } : {}),
         ...(resume ? { resume: true } : {}),
         ...(extraModels.length ? { extraModels } : {}),
-        contextWindow: configuredContextWindow,
+      contextWindow: configuredContextWindow,
+        transport: activeProfile?.transport,
       });
       if (seq !== startSeq.current) return false;
       if (seedMessage) {
@@ -573,7 +567,7 @@ export function App() {
       agentModelIdsRef.current = agentModelsRef.current.map((item) => item.id).filter(Boolean);
       if (modelId) {
         setModel(modelId);
-        await window.harness.agent.command("set_model", { provider: "deepseek", modelId }).catch(() => undefined);
+        await window.harness.agent.command("set_model", { provider: "openai", modelId }).catch(() => undefined);
       }
       applyThinkingForModel(modelId);
       const nextEffort = effortRef.current;
@@ -616,7 +610,7 @@ export function App() {
     if (!next) return true;
     if (agentModelIdsRef.current.includes(next)) {
       try {
-        await window.harness.agent.command("set_model", { provider: "deepseek", modelId: next });
+        await window.harness.agent.command("set_model", { provider: "openai", modelId: next });
         await syncAgentThinking();
         return true;
       } catch (error) {
@@ -633,7 +627,7 @@ export function App() {
     modelRef.current = next;
     applyThinkingForModel(next);
     if (agentCwd.current && agentModelIdsRef.current.includes(next)) {
-      void window.harness.agent.command("set_model", { provider: "deepseek", modelId: next })
+      void window.harness.agent.command("set_model", { provider: "openai", modelId: next })
         .then(() => syncAgentThinking())
         .catch(() => undefined);
     }
@@ -844,7 +838,7 @@ export function App() {
     setLoading(true);
     setToast(t("toast.compacting"));
     try {
-      const result = await window.harness.agent.command<{ tokensBefore?: number; summary?: string }>("compact");
+      const result = await window.harness.agent.command<{ tokensBefore?: number; summary?: string }>("compact", { force: true });
       const [history, nextStats] = await Promise.all([
         window.harness.agent.command<{ messages: unknown[] }>("get_messages"),
         window.harness.agent.command<AgentSessionStats>("get_session_stats"),
@@ -973,17 +967,17 @@ export function App() {
 
   useEffect(() => {
     void refresh().then((status) => {
-      const current = status.find((item) => item.id === "deepseek");
+      const current = status.find((item) => item.id === "openai");
       if (current?.configured) setModel(current.defaultModel);
       if (!current?.configured) setLoginOpen(true);
     });
   }, []);
 
   useEffect(() => {
-    const chat = providers.find((item) => item.id === "deepseek");
+    const chat = providers.find((item) => item.id === "openai");
     if (!chat?.configured || !chat.baseUrl) return;
     let cancelled = false;
-    void window.harness.auth.readApiKey("deepseek").then((key) => {
+    void window.harness.auth.readApiKey("openai").then((key) => {
       if (!key.trim() || !chat.baseUrl) return;
       return window.harness.auth.listModels(chat.baseUrl, key);
     }).then((ids) => {
@@ -1481,7 +1475,7 @@ export function App() {
           onSaved={async () => {
             const status = await window.harness.auth.status();
             setProviders(status);
-            const current = status.find((item) => item.id === "deepseek");
+            const current = status.find((item) => item.id === "openai");
             if (current?.configured) {
               const nextModel = current.defaultModel;
               modelRef.current = nextModel;

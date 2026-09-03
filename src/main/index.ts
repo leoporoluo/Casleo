@@ -755,7 +755,7 @@ function registerIpc(): void {
             stored?.providerId === id && stored.modelId
               ? stored.modelId
               : defaultModelForProvider(id),
-          ...(id === "deepseek" && deepseekUrl ? { baseUrl: deepseekUrl } : {}),
+          ...(id === "openai" && deepseekUrl ? { baseUrl: deepseekUrl } : {}),
           ...(stored?.providerId === id ? { preferred: true } : {}),
         };
       },
@@ -831,12 +831,7 @@ function registerIpc(): void {
         storagePath || sessionPath,
       );
     }
-    const sandbox =
-      cwd === tasksDir
-        ? "read-only"
-        : requestedSandbox === "read-only"
-          ? "workspace-write"
-          : requestedSandbox;
+    const sandbox = cwd === tasksDir ? "read-only" : (requestedSandbox ?? "workspace-write");
     const storedUrl =
       startOptions.provider === "deepseek"
         ? getStoredDeepSeekBaseUrl()
@@ -860,6 +855,7 @@ function registerIpc(): void {
       ...(baseUrl ? { baseUrl } : {}),
       ...(maxTokens ? { maxTokens } : {}),
       ...(contextWindow ? { contextWindow } : {}),
+      ...(activeProfile?.transport ? { transport: activeProfile.transport } : {}),
     });
     activeSessionPath = sessionFileOf(snapshot);
     return { ...snapshot, cwd };
@@ -1094,9 +1090,9 @@ async function saveChatProfiles(next: ChatProfiles): Promise<void> {
     { mode: 0o600 },
   );
   const chat = activeChat(merged);
-  if (chat.apiKey) await saveProviderApiKey("deepseek", chat.apiKey);
+  if (chat.apiKey) await saveProviderApiKey("openai", chat.apiKey);
   if (chat.url) await saveDeepSeekBaseUrl(chat.url.replace(/\/+$/, ""));
-  if (chat.model) await saveDefaultModel("deepseek", chat.model);
+  if (chat.model) await saveDefaultModel("openai", chat.model);
 }
 
 function visionUploadsDir(): string {

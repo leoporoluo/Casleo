@@ -1,5 +1,6 @@
 import type { Locale } from "./i18n";
 import type { AgentSkillCommand } from "./skills";
+import type { ApiTransport } from "./chat-profiles";
 
 /** Previews load through their own origin so page storage works without reaching the app. */
 export const PREVIEW_SCHEME = "harness-preview";
@@ -77,6 +78,7 @@ export interface AgentStartOptions {
   /** UI-selected context capacity; used for model metadata and accounting. */
   contextWindow?: number;
   effort?: string;
+  transport?: ApiTransport;
   permission: PermissionMode;
   sandbox: SandboxMode;
   network?: boolean;

@@ -4,10 +4,19 @@ import path from "node:path";
 import { shell } from "electron";
 import { PROJECT_PLUGIN_ROOTS, USER_PLUGIN_ROOTS } from "../shared/skills";
 
-const SKILL_ROOTS = [
-  ".casleo/skills",
-  ".agents/skills",
-] as const;
+const SKILL_ROOTS = [".pi/agent/skills", ".agents/skills"] as const;
+
+async function projectRoots(projectRoot: string, roots: readonly string[]): Promise<string[]> {
+  const result: string[] = [];
+  let current = path.resolve(projectRoot);
+  while (true) {
+    for (const root of roots) result.push(path.join(current, root));
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return result;
+}
 
 export interface LocalSkillEntry {
   name: string;
@@ -38,9 +47,7 @@ export async function listLocalSkills(projectRoot?: string): Promise<LocalSkillE
   const home = process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir();
   const roots = SKILL_ROOTS.map((root) => path.join(home, root));
   if (projectRoot) {
-    for (const root of [".agents/skills", ".pi/skills"] as const) {
-      roots.push(path.join(projectRoot, root));
-    }
+    roots.push(...await projectRoots(projectRoot, [".pi/skills", ".agents/skills"]));
   }
   const skills = new Map<string, string>();
   for (const root of roots) {
@@ -64,9 +71,9 @@ export async function listLocalSkills(projectRoot?: string): Promise<LocalSkillE
 
 export async function listLocalPlugins(projectRoot?: string): Promise<LocalPluginEntry[]> {
   const home = process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir();
-  const roots = USER_PLUGIN_ROOTS.map((root) => path.join(expandHome(root)));
+  const roots = USER_PLUGIN_ROOTS.map((root) => expandHome(root));
   if (projectRoot) {
-    for (const root of PROJECT_PLUGIN_ROOTS) roots.push(path.join(projectRoot, root));
+    roots.push(...await projectRoots(projectRoot, PROJECT_PLUGIN_ROOTS));
   }
   const plugins = new Map<string, LocalPluginEntry>();
   for (const root of roots) {
@@ -77,8 +84,13 @@ export async function listLocalPlugins(projectRoot?: string): Promise<LocalPlugi
       continue;
     }
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+      if (!entry.isDirectory() && !(entry.isFile() && entry.name.endsWith(".ts"))) continue;
       const dir = path.join(root, entry.name);
+      if (entry.isFile()) {
+        const name = entry.name.replace(/\.ts$/, "");
+        if (!plugins.has(name)) plugins.set(name, { name, path: dir });
+        continue;
+      }
       let name = entry.name;
       let description: string | undefined;
       for (const manifestName of ["plugin.json", "package.json"]) {

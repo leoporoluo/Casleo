@@ -5,7 +5,7 @@ import remarkGfm from "remark-gfm";
 import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode } from "../shared/types";
 import { skillUserDisplay } from "../shared/skills";
 import { visibleUserText } from "../shared/vision-api";
-import { DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, DEFAULT_MAX_TOKENS, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
+import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, DEFAULT_MAX_TOKENS, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
 import { applyTheme, readStoredTheme, THEMES, type ThemeId } from "../shared/theme";
 import { effortLabelKey, pickEffortOptions, reasoningLevelsAvailable } from "../shared/thinking";
 import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThinking, delegateProgress, delegateStatusLabel, filterMentionPaths, formatCommand, isRecoverableRequestError, liveStatus, omitFinalReply, repairMarkdownTables, splitHttpUrls, splitPatch, stripEmptyMarkdown, spliceFileMention, terminalLabel, toolCommand, toolSummary, toolWritePreview, traceRows, turnWork, assistantReplyText, webSearchCard, workspaceRelative, type ChatImage, type ChatMessage, type FileChange, type SessionFile, type SessionTerminal, type SessionTodo, type ToolActivity, type TraceRow, type WorkItem } from "./conversation";
@@ -2845,6 +2845,12 @@ function ApiProfilesEditor({
               />
             </label>
             <SecretField value={active.apiKey} onChange={(apiKey) => update({ apiKey })} />
+            <label>
+              {t("settings.apiTransport")}
+              <select className="settings-select" value={active.transport} onChange={(event) => update({ transport: event.target.value as CustomApiProfile["transport"] })}>
+                {API_TRANSPORTS.map((transport) => <option key={transport} value={transport}>{{"openai-completions":"OpenAI Chat Completions","openai-responses":"OpenAI Responses","anthropic-messages":"Anthropic Messages","google-generative-ai":"Google Generative AI"}[transport]}</option>)}
+              </select>
+            </label>
             <ModelField
               value={active.model}
               onChange={(model) => update({ model })}
