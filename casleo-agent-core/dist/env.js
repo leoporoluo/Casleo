@@ -109,7 +109,7 @@ function resolvePiCli() {
     return undefined;
 }
 function ensureCommandShims(nodePath) {
-    const dir = path.join(os.homedir(), ".casleo", "shims");
+    const dir = path.join(os.homedir(), ".pi", "agent", "bin");
     try {
     fs.mkdirSync(dir, { recursive: true });
     const piCli = resolvePiCli();

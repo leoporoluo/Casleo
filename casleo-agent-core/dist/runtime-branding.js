@@ -7,7 +7,6 @@ export function sanitizeCasleoRuntimeText(text) {
     return text
         .replace(/Claude Code[-\s]?style\b/giu, "Casleo-style")
         .replace(/\bClaude Code\b/giu, "Casleo")
-        .replace(/\.pi\b/giu, ".casleo")
         .replace(/\bpi\b/giu, "Casleo Runtime")
         .replace(/π/gu, "Casleo Runtime");
 }

@@ -4,7 +4,7 @@
 
 # Casleo
 
-**基于 Pi 生态构建的本地优先 AI 编程工作台**
+**基于 Pi 生态构建的 AI 编程工作台**
 
 让兼容模型安全地阅读、修改和验证你的代码仓库。
 
@@ -23,7 +23,7 @@ Casleo 是一个面向真实代码仓库的 Electron 桌面 Agent。它把模型
 - **可见、可控**：实时展示工具调用、命令输出、文件改动和上下文用量。
 - **权限隔离**：提供仅规划、编辑时询问、工作区权限与完全访问四种模式。
 - **安全改动**：每次补丁保存文件检查点，可通过 `/undo` 恢复上一轮修改。
-- **本地优先**：设置、凭据与会话存放在 `~/.casleo`，无遥测、无 Casleo 云端代理。
+- **Pi 兼容数据**：设置、凭据与会话使用 Pi 官方的 `~/.pi/agent`，无遥测、无 Casleo 云端代理。
 - **桌面体验**：项目会话树、`@` 文件引用、生成中插话、主题（纸质 / 暗色）、Diff 预览和中英文界面。
 
 ## 基于 Pi 的哪些部分
@@ -43,7 +43,7 @@ Casleo 没有重复实现 Agent 基础设施，而是通过内置的 `casleo-age
 - 四级权限模型与 Windows sandbox helper（需安装并启用）
 - 工作区约束工具、托管命令、文件补丁与持久化 Checkpoint
 - MCP、Hooks、Skills、计划与子 Agent 集成
-- `~/.casleo` 本地数据约定和 Electron/React 桌面工作台
+- Pi 官方 `~/.pi/agent` 数据布局和 Electron/React 桌面工作台
 
 Pi 提供运行基础；Casleo 负责产品边界、安全策略和桌面交互。感谢 Pi 生态维护者提供的开源基础。
 
@@ -90,7 +90,7 @@ Skills 由 Pi 运行时加载。标准路径：
 | 范围 | 路径 |
 | --- | --- |
 | 项目（需信任） | `.agents/skills/<name>/SKILL.md`、`.pi/skills/<name>/SKILL.md` |
-| 用户全局 | `~/.casleo/skills/<name>/SKILL.md`、`~/.agents/skills/<name>/SKILL.md` |
+| 用户全局 | `~/.pi/agent/skills/<name>/SKILL.md`、`~/.agents/skills/<name>/SKILL.md` |
 
 每个 skill 目录包含 `SKILL.md`，frontmatter 需有 `name` 与 `description`。输入 `/skill:名称` 调用；设置 → Agent Skills 可查看已加载列表；输入 `/` 时也会出现在补全里。
 

@@ -1,7 +1,7 @@
 {
   "name": "casleo-agent-core",
-  "version": "0.1.18",
-  "description": "Local-first agent runtime for the Casleo desktop workbench (tools, sandbox, sessions, RPC).",
+  "version": "0.0.1",
+  "description": "Agent runtime for the Casleo desktop workbench (tools, sandbox, sessions, RPC).",
   "type": "module",
   "license": "MIT",
   "homepage": "https://github.com/leoporoluo/Casleo#readme",

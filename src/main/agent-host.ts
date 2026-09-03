@@ -32,6 +32,7 @@ export class AgentHost {
   private stderr = "";
   private requestId = 0;
   private pending = new Map<string, PendingRequest>();
+  private qrOutput = "";
   private static readonly STDERR_CAP = 200_000;
 
   constructor(
@@ -117,6 +118,7 @@ export class AgentHost {
 
     this.lineBuffer = Buffer.alloc(0);
     this.stderr = "";
+    this.qrOutput = "";
     const child = spawn(process.execPath, args, {
       cwd: options.cwd,
       env: {
@@ -143,6 +145,11 @@ export class AgentHost {
     child.stdout.on("data", (chunk: Buffer) => this.handleChunk(chunk));
     child.stderr.on("data", (chunk: Buffer) => {
       this.stderr = `${this.stderr}${chunk.toString()}`.slice(-AgentHost.STDERR_CAP);
+      const qr = extractQrOutput(this.stderr);
+      if (qr && qr !== this.qrOutput) {
+        this.qrOutput = qr;
+        this.emitEvent({ type: "agent_qr", text: qr });
+      }
     });
     child.stdin.on("error", (error) => {
       // EPIPE when the RPC worker exits mid-write must not crash the Electron main process.
@@ -264,6 +271,19 @@ export class AgentHost {
     this.pending.clear();
     this.emitError(message);
   }
+}
+
+function extractQrOutput(stderr: string): string | undefined {
+  const marker = "Scan this QR code in WeChat:";
+  const start = stderr.lastIndexOf(marker);
+  if (start < 0) return undefined;
+  const lines = stderr.slice(start).split(/\r?\n/);
+  const qrStart = lines.findIndex((line, index) => index > 0 && /[█▀▄]/u.test(line));
+  if (qrStart < 0) return undefined;
+  let end = qrStart;
+  while (end < lines.length && /[█▀▄]/u.test(lines[end] ?? "")) end += 1;
+  if (end === lines.length) return undefined;
+  return lines.slice(0, end).join("\n").trim();
 }
 
 function timeoutForRequest(type: string): number {

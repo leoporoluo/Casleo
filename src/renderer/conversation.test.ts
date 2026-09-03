@@ -27,6 +27,21 @@ describe("conversation events", () => {
     expect(messages[1]).toMatchObject({ role: "assistant", text: "Working. Done.", streaming: false });
   });
 
+  it("keeps images returned in an assistant message for rendering", () => {
+    const messages = normalizeMessages([{
+      role: "assistant",
+      content: [
+        { type: "text", text: "请扫描二维码" },
+        { type: "image", data: "QRDATA", mimeType: "image/png" },
+      ],
+    }]);
+    expect(messages[0]).toMatchObject({
+      role: "assistant",
+      text: "请扫描二维码",
+      images: [{ data: "QRDATA", mimeType: "image/png" }],
+    });
+  });
+
   it("does not append a duplicate user turn while the assistant is still empty", () => {
     const messages = applyAgentEvent([
       optimisticUserMessage("没事"),

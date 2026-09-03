@@ -53,7 +53,7 @@ describe("commandEnvironment", () => {
   it("puts a system-node pi shim first on PATH", () => {
     const env = commandEnvironment({ PATH: process.env.PATH ?? "" });
     const parts = String(env.PATH ?? "").split(path.delimiter);
-    const shim = path.join(os.homedir(), ".casleo", "shims");
+    const shim = path.join(os.homedir(), ".pi", "agent", "bin");
     expect(parts[0].toLowerCase()).toBe(shim.toLowerCase());
     if (process.platform === "win32") {
       expect(fs.existsSync(path.join(shim, "pi.cmd"))).toBe(true);

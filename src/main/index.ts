@@ -161,9 +161,9 @@ protocol.registerSchemesAsPrivileged([
 app.setName("Casleo");
 fs.mkdirSync(userDataPath, { recursive: true, mode: 0o700 });
 app.setPath("userData", userDataPath);
-// The Pi bridge reads its home from this compatibility environment variable;
-// point it at Casleo's private data directory so no legacy home is created.
-process.env.CASLEO_HOME = userDataPath;
+// Keep Pi and Casleo's runtime data in Pi's official global directory.
+process.env.CASLEO_HOME = path.join(os.homedir(), ".pi", "agent");
+process.env.CASLEO_LEGACY_SESSIONS_DIR = path.join(userDataPath, "sessions");
 
 function appPreferencesPath(): string {
   return path.join(userDataPath, "preferences.json");

@@ -6,7 +6,7 @@
 
 ## 1. 项目概览
 
-Casleo 是一个基于 Electron 的本地优先 AI 编程桌面工作台：模型调用、工作区工具、终端命令、权限确认、会话历史与 diff 审查集中在一个桌面应用里。UI 与会话数据留在本机，模型请求直连用户配置的 provider 或本地网关。
+Casleo 是一个基于 Electron 的 AI 编程桌面工作台：模型调用、工作区工具、终端命令、权限确认、会话历史与 diff 审查集中在一个桌面应用里。模型请求直连用户配置的 provider 或本地网关。
 
 **核心定位**：Casleo 不重新实现 agent 基础能力。agent 循环、沙箱、会话、工具、checkpoint、MCP、Hooks 都由 npm 包 `casleo-agent-core`（内部再封装 Pi 生态 `@earendil-works/pi-*`）提供。本仓库只负责：
 

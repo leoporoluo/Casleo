@@ -209,7 +209,7 @@ function defaultActiveTools(harness) {
         ];
 }
 export function printCasleoHelp() {
-    process.stdout.write(`Casleo Runtime ${CASLEO_VERSION} — local-first coding agent
+    process.stdout.write(`Casleo Runtime ${CASLEO_VERSION} — coding agent
 
 Usage:
   casleo [options] [prompt]

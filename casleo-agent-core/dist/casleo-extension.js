@@ -93,6 +93,11 @@ export function createCasleoExtension(options) {
             const mcp = new MCPManager();
             let permission = options.permission;
             let permissionBeforePlan = options.permission === "plan" ? "auto" : options.permission;
+            const extensionToolNames = () => pi
+                .getAllTools()
+                .filter((tool) => tool.sourceInfo?.source !== "builtin" && tool.sourceInfo?.source !== "sdk")
+                .map((tool) => tool.name);
+            const activeCasleoTools = () => [...new Set([...options.activeTools, ...extensionToolNames()])];
             const checkpoints = [];
             const undone = new Set();
             let toolsBeforePlan;
@@ -159,8 +164,7 @@ export function createCasleoExtension(options) {
             const applyPermissionTools = () => {
                 if (permission === "plan") {
                     if (toolsBeforePlan === undefined) {
-                        // Seed from Casleo's allowlist, not Pi's default builtins (bash/edit/…).
-                        toolsBeforePlan = [...options.activeTools];
+                        toolsBeforePlan = [...pi.getActiveTools()];
                     }
                     else {
                         const active = pi
@@ -215,7 +219,7 @@ export function createCasleoExtension(options) {
                     toolsBeforePlan = toolsBeforePlan?.filter((tool) => !staleMcpTools.has(tool));
                 }
                 // Activate Casleo tools first so the opening prompt is not blocked on MCP.
-                pi.setActiveTools(options.activeTools);
+                pi.setActiveTools(activeCasleoTools());
                 toolsBeforePlan = undefined;
                 applyPermissionTools();
                 await mcp.close();
@@ -224,9 +228,7 @@ export function createCasleoExtension(options) {
                     .then(() => {
                     if (options.toolsExplicit)
                         return;
-                    const intended = [
-                        ...new Set([...options.activeTools, ...mcp.toolNames()]),
-                    ];
+                    const intended = [...new Set([...activeCasleoTools(), ...mcp.toolNames()])];
                     if (permission === "plan") {
                         toolsBeforePlan = intended;
                         applyPermissionTools();

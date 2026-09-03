@@ -24,7 +24,7 @@ This package is not a from-scratch agent. It builds on the open-source
 
 On top of that, `casleo-agent-core` adds permission modes, OS
 sandboxing, workspace-scoped tools, durable patch checkpoints, MCP/Hooks/Skills wiring, and the
-`~/.casleo` local data layout.
+Pi's official `~/.pi/agent` data layout.
 
 ## Install
 
@@ -60,7 +60,7 @@ await agent.stop();
 ```
 
 By default the worker runs **permission `auto`** and **sandbox `workspace-write`**: it can edit
-files in `cwd` without prompting. Sessions and stored keys live under `~/.casleo`.
+files in `cwd` without prompting. Sessions and stored keys use Pi's official `~/.pi/agent` directory.
 
 `casleo-agent-core` exports auth/settings helpers for a GUI login flow;
 `casleo-agent-core/rpc` is the bundled worker client.
@@ -71,7 +71,7 @@ files in `cwd` without prompting. Sessions and stored keys live under `~/.casleo
 - Workspace tools with macOS Seatbelt; Windows sandbox helpers where available and enabled
 - Permission modes, patch checkpoints (`/undo`-style restore with conflict checks), Skills, MCP, hooks
 - Credential helpers and settings APIs for building a GUI login flow
-- Durable sessions under `~/.casleo` by default
+- Durable sessions under `~/.pi/agent/sessions` by default
 
 ## License
 

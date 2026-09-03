@@ -65,7 +65,7 @@ async function loadHookConfig(cwd, includeProject) {
     };
     const files = [path.join(getCasleoHome(), "hooks.json")];
     if (includeProject) {
-        files.push(path.join(cwd, ".casleo", "hooks.json"));
+        files.push(path.join(cwd, ".pi", "hooks.json"));
     }
     for (const file of files) {
         try {

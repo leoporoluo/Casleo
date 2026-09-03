@@ -1,7 +1,7 @@
 {
   "name": "casleo",
   "productName": "Casleo",
-  "version": "0.0.5",
+  "version": "0.0.1",
   "private": true,
   "description": "Casleo - a local AI coding agent powered by Pi",
   "license": "MIT",
@@ -9,9 +9,9 @@
   "main": "dist-electron/main/index.mjs",
   "scripts": {
     "postinstall": "node scripts/ensure-electron.mjs",
-    "predev": "node scripts/ensure-electron.mjs && rm -rf dist-electron && tsup",
+    "predev": "node scripts/ensure-electron.mjs && node -e \"require('node:fs').rmSync('dist-electron',{recursive:true,force:true})\" && tsup",
     "dev": "concurrently \"vite --host 127.0.0.1 --port 5177 --strictPort\" \"wait-on tcp:5177 && env -u ELECTRON_RUN_AS_NODE cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5177 electron .\"",
-    "build:electron": "rm -rf dist-electron && tsup",
+    "build:electron": "node -e \"require('node:fs').rmSync('dist-electron',{recursive:true,force:true})\" && tsup",
     "build:renderer": "vite build",
     "build": "pnpm build:electron && pnpm build:renderer",
     "typecheck": "tsc --noEmit",

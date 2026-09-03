@@ -1327,19 +1327,25 @@ textarea::selection,
   text-underline-offset: 2px;
   overflow-wrap: anywhere;
 }
-.user-images {
+.user-images,
+.assistant-images {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin: 0 0 8px;
 }
-.user-image {
+.assistant-images {
+  margin-top: 8px;
+}
+.user-image,
+.assistant-image {
   padding: 0;
   border-radius: 10px;
   line-height: 0;
   cursor: zoom-in;
 }
-.user-images img {
+.user-images img,
+.assistant-images img {
   max-width: 140px;
   max-height: 140px;
   border-radius: 10px;
@@ -2703,7 +2709,19 @@ textarea::selection,
   max-width: 100%;
 }
 .chat-main > .modal {
-  position: absolute;
+  position: fixed;
+}
+.qr-output {
+  margin: 0;
+  padding: 20px 24px;
+  max-width: min(92vw, 620px);
+  overflow: auto;
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-overlay);
+  font: 13px/1.05 var(--mono);
+  white-space: pre;
 }
 .approval strong {
   font-size: 15px;
@@ -3557,7 +3575,7 @@ textarea::selection,
   position: fixed;
   inset: 0;
   z-index: 20;
-  background: color-mix(in srgb, var(--ink) 40%, transparent);
+  background: rgb(0 0 0 / 48%);
   display: grid;
   place-items: center;
 }

@@ -6,7 +6,7 @@
 
 ## 1. Project Overview
 
-Casleo is a local-first AI coding desktop workbench built on Electron: model calls, workspace tools, terminal commands, permission prompts, session history, and diff review all live in one desktop app. The UI and session data stay on your machine; model requests go directly to the provider or local gateway you configure.
+Casleo is an AI coding desktop workbench built on Electron: model calls, workspace tools, terminal commands, permission prompts, session history, and diff review all live in one desktop app. Model requests go directly to the provider or local gateway you configure.
 
 **Core positioning**: Casleo does not reimplement agent foundations. The agent loop, sandbox, sessions, tools, checkpoints, MCP, and Hooks are all provided by the npm package `casleo-agent-core` (which wraps the Pi ecosystem `@earendil-works/pi-*`). This repository is responsible for:
 

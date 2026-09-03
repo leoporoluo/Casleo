@@ -13,7 +13,6 @@ const DEFAULT_IGNORES = [
     "**/build/**",
     "**/coverage/**",
     "**/.next/**",
-    "**/.casleo/**",
 ];
 export function createCodingTools(workspace, harness = "safe") {
     const readFileParameters = Type.Object({

@@ -131,7 +131,7 @@ async function loadMcpConfigs(cwd, includeProject) {
     const configs = {};
     const files = [path.join(getCasleoHome(), "mcp.json")];
     if (includeProject) {
-        files.push(path.join(cwd, ".casleo", "mcp.json"));
+        files.push(path.join(cwd, ".pi", "mcp.json"));
     }
     for (const file of files) {
         try {

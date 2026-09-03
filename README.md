@@ -4,7 +4,7 @@
 
 # Casleo
 
-**A local-first AI coding workbench built on the Pi ecosystem**
+**An AI coding workbench built on the Pi ecosystem**
 
 Let compatible models inspect, edit, and verify your repositories with explicit safety boundaries.
 
@@ -23,7 +23,7 @@ Casleo is an Electron desktop agent for real codebases. It brings model calls, w
 - **Visible and controllable** — inspect tool calls, command output, file changes, and context usage as work happens.
 - **Permission boundaries** — Plan, Ask, Workspace, and Full Access modes.
 - **Recoverable edits** — patch checkpoints let `/undo` restore the previous turn's file changes.
-- **Local-first state** — settings, credentials, and sessions live under `~/.casleo`; no telemetry or Casleo-hosted model proxy.
+- **Pi-compatible state** — settings, credentials, and sessions use Pi's official `~/.pi/agent` directory; no telemetry or Casleo-hosted model proxy.
 - **Desktop workflow** — project threads, `@` file mentions, steer-while-generating, themes (paper / dark), diff previews, and Chinese/English UI.
 
 ## What Casleo uses from Pi
@@ -43,7 +43,7 @@ Casleo adds:
 - Four permission modes and a Windows sandbox helper (install + enable)
 - Workspace-scoped tools, managed commands, file patches, and durable checkpoints
 - MCP, Hooks, Skills, planning, and subagent integration
-- The `~/.casleo` local data conventions and Electron/React desktop workbench
+- The official `~/.pi/agent` data layout and Electron/React desktop workbench
 
 Pi provides the runtime foundations; Casleo defines the product boundary, safety policy, and desktop experience. We are grateful to the Pi maintainers for the open-source foundation.
 
@@ -90,7 +90,7 @@ Skills are loaded by the Pi runtime (Casleo does not ship a separate loader). St
 | Scope | Path |
 | --- | --- |
 | Project (trusted) | `.agents/skills/<name>/SKILL.md`, `.pi/skills/<name>/SKILL.md` |
-| User-global | `~/.casleo/skills/<name>/SKILL.md`, `~/.agents/skills/<name>/SKILL.md` |
+| User-global | `~/.pi/agent/skills/<name>/SKILL.md`, `~/.agents/skills/<name>/SKILL.md` |
 
 Each skill is a directory with a `SKILL.md` file. Frontmatter must include `name` and `description` (Pi validates; invalid skills are skipped).
 

@@ -192,6 +192,7 @@ const zh = {
   "approval.hostTitle": "允许访问本机",
   "approval.applyFile": "允许改 {file}",
   "approval.allowTool": "允许调用 {tool}",
+  "approval.toolAction": "将调用该工具。",
 
   "context.monitor": "对话上下文与用量监控",
   "context.label": "上下文",
@@ -319,7 +320,7 @@ const zh = {
   "settings.searchTavily": "Tavily API Key",
   "settings.searchJina": "Jina API Key",
   "settings.searchExa": "Exa API Key",
-  "settings.mcpHint": "用户级 MCP（Casleo 数据目录/mcp.json）。命令填 npx …，或填 https 地址。改完后开新对话生效。",
+  "settings.mcpHint": "用户级 MCP（~/.pi/agent/mcp.json）。命令填 npx …，或填 https 地址。改完后开新对话生效。",
   "settings.mcpEmpty": "还没有 MCP 服务器",
   "settings.mcpAdd": "添加",
   "settings.mcpName": "名称",
@@ -638,6 +639,7 @@ const en: Record<MessageKey, string> = {
   "approval.hostTitle": "Allow host access",
   "approval.applyFile": "Allow editing {file}",
   "approval.allowTool": "Allow {tool}",
+  "approval.toolAction": "This tool will be called.",
 
   "context.monitor": "Context & usage",
   "context.label": "Context",
@@ -765,7 +767,7 @@ const en: Record<MessageKey, string> = {
   "settings.searchTavily": "Tavily API key",
   "settings.searchJina": "Jina API key",
   "settings.searchExa": "Exa API key",
-  "settings.mcpHint": "User-level MCP (Casleo data directory/mcp.json). Paste an npx command or an https URL. New threads pick up changes.",
+  "settings.mcpHint": "User-level MCP (~/.pi/agent/mcp.json). Paste an npx command or an https URL. New threads pick up changes.",
   "settings.mcpEmpty": "No MCP servers yet",
   "settings.mcpAdd": "Add",
   "settings.mcpName": "Name",

@@ -293,6 +293,7 @@ export function App() {
     return () => window.clearTimeout(id);
   }, [toast]);
   const [uiRequest, setUiRequest] = useState<ExtensionUiRequest>();
+  const [qrOutput, setQrOutput] = useState<string>();
   const [fullscreen, setFullscreen] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
@@ -448,6 +449,7 @@ export function App() {
   ) => {
     const seq = ++startSeq.current;
     setLoading(true);
+    setQrOutput(undefined);
     setUiRequest(undefined);
     let accounts: ProviderStatus[];
     try {
@@ -576,6 +578,16 @@ export function App() {
       if (seq === startSeq.current) setLoading(false);
     }
   }, [applyThinkingForModel, permission, refreshAgentSkills, resolveSandbox, t]);
+
+  const reloadAgentResources = useCallback(async () => {
+    const cwd = agentCwd.current;
+    if (!cwd) return;
+    const sessionPath = sessionRef.current;
+    live.current = false;
+    await window.harness.agent.stop().catch(() => undefined);
+    agentCwd.current = undefined;
+    await startAgent(cwd, sessionPath, Boolean(workspace), false, permission);
+  }, [permission, startAgent, workspace]);
 
   const openSession = useCallback((session: SessionSummary) => {
     // Allow re-open when the row is highlighted but the transcript failed to load.
@@ -970,6 +982,7 @@ export function App() {
     const offEvent = window.harness.agent.onEvent((event) => {
       if (!live.current) return;
       if (event.type === "agent_start") setRunning(true);
+      if (event.type === "agent_qr" && typeof event.text === "string") setQrOutput(event.text);
       if (event.type === "desktop_snapshot_meta") {
         if (Array.isArray(event.models)) {
           agentModelsRef.current = event.models as typeof agentModelsRef.current;
@@ -1270,7 +1283,7 @@ export function App() {
       </SidebarNav>
 
       <Chat
-        overlay={(uiRequest || sandboxAsk) ? (
+        overlay={(uiRequest || sandboxAsk || qrOutput) ? (
           <>
             {uiRequest ? (
               <ApprovalCard
@@ -1308,6 +1321,11 @@ export function App() {
                     <button type="button" className="primary" onClick={() => sandboxWaiter.current?.(true)}>{t("common.allow")}</button>
                   </div>
                 </div>
+              </div>
+            ) : null}
+            {qrOutput ? (
+              <div className="modal qr-modal" onClick={(event) => { if (event.target === event.currentTarget) setQrOutput(undefined); }}>
+                <pre className="qr-output">{qrOutput}</pre>
               </div>
             ) : null}
           </>
@@ -1477,6 +1495,7 @@ export function App() {
           agentPlugins={agentPlugins}
           onRefreshSkills={() => void refreshAgentSkills()}
           onRefreshPlugins={() => void refreshAgentPlugins()}
+          onResourcesChanged={reloadAgentResources}
           onClose={() => setLoginOpen(false)}
           onSaved={async () => {
             const status = await window.harness.auth.status();

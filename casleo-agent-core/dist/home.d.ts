@@ -4,9 +4,9 @@ export declare function getCasleoArchivedSessionsDir(): string;
 /** Configure the underlying runtime to use Casleo Runtime-owned paths only. */
 export declare function initializeCasleoHome(): Promise<string>;
 export interface PartitionedSessionPath {
-    /** Flat hard-link retained for pi's current --resume/session-dir implementation. */
+    /** Session path used directly by Pi's official session manager. */
     runtimePath: string;
-    /** Canonical transcript path partitioned as sessions/YYYY/MM/DD/*.jsonl. */
+    /** Same path; retained for the desktop session index contract. */
     storagePath: string;
 }
 /**

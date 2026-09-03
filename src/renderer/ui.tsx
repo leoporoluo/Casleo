@@ -78,34 +78,49 @@ function UserText({ text }: { text: string }) {
 export function UserTurn({ text, images = [], anchor }: { text: string; images?: ChatImage[]; anchor?: string }) {
   const skill = skillUserDisplay(text);
   const shown = skill ? skill.command : visibleUserText(text);
-  const [view, setView] = useState<string>();
   return (
     <div className="user-turn" id={anchor}>
       <article className="user">
-        {images.length > 0 && (
-          <div className="user-images">
-            {images.map((image, index) => {
-              const src = image.src ?? `data:${image.mimeType};base64,${image.data}`;
-              return (
-                <button key={`${image.mimeType}-${index}`} type="button" className="user-image" onClick={() => setView(src)}>
-                  <img src={src} alt="" />
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <MessageImages images={images} className="user-images" imageClassName="user-image" />
         {skill ? <code className="user-skill-tag">{shown}</code> : <UserText text={shown} />}
       </article>
       <div className="bubble-actions">
         <CopyAction text={shown} />
       </div>
+    </div>
+  );
+}
+
+function MessageImages({
+  images,
+  className,
+  imageClassName,
+}: {
+  images: ChatImage[];
+  className: string;
+  imageClassName: string;
+}) {
+  const [view, setView] = useState<string>();
+  if (images.length === 0) return null;
+  return (
+    <>
+      <div className={className}>
+        {images.map((image, index) => {
+          const src = image.src ?? `data:${image.mimeType};base64,${image.data}`;
+          return (
+            <button key={`${image.mimeType}-${image.src ?? image.data}-${index}`} type="button" className={imageClassName} onClick={() => setView(src)}>
+              <img src={src} alt="" />
+            </button>
+          );
+        })}
+      </div>
       {view && createPortal(
-        <div className="modal" onClick={() => setView(undefined)} onKeyDown={(event) => { if (event.key === "Escape") setView(undefined); }}>
+        <div className="modal" role="dialog" aria-modal="true" onClick={() => setView(undefined)} onKeyDown={(event) => { if (event.key === "Escape") setView(undefined); }}>
           <img className="lightbox" src={view} alt="" />
         </div>,
         document.body,
       )}
-    </div>
+    </>
   );
 }
 
@@ -1113,6 +1128,7 @@ export const AssistantTurn = memo(function AssistantTurn({
 }) {
   const thinking = collapseThinking(...messages.map((item) => item.thinking));
   const tools = [...new Map(messages.flatMap((item) => item.tools).map((tool) => [tool.id, tool])).values()];
+  const images = [...new Map(messages.flatMap((item) => item.images).map((image) => [`${image.mimeType}:${image.src ?? image.data}`, image])).values()];
   const work = turnWork(messages);
   const text = assistantReplyText(messages);
   const rawError = messages.map((item) => item.error).find(Boolean);
@@ -1149,6 +1165,7 @@ export const AssistantTurn = memo(function AssistantTurn({
         </div>
       )}
       <ChangeSummary files={changes} onOpen={onOpenFile} />
+      <MessageImages images={images} className="assistant-images" imageClassName="assistant-image" />
       <StreamingText text={text} streaming={live} workspace={workspace} />
       {!live && text.trim() && (
         <div className="bubble-actions assistant">
@@ -2604,6 +2621,23 @@ function splitApprovalCopy(title: string, message?: string) {
   };
 }
 
+function compactApprovalMessage(heading: string, message: string, fallback: string): string {
+  const trimmed = message.trim();
+  if (!trimmed || !/^[\[{]/u.test(trimmed)) return trimmed;
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
+    const record = parsed as Record<string, unknown>;
+    const query = [record.query, record.search_query, record.q].find((value): value is string => typeof value === "string" && Boolean(value.trim()));
+    if (query && /search|搜索/u.test(heading)) return query.trim().slice(0, 160);
+    const url = [record.url, record.uri, record.link].find((value): value is string => typeof value === "string" && Boolean(value.trim()));
+    if (url) return url.trim().slice(0, 180);
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function ApprovalCard({
   request,
   lastTurn,
@@ -2633,12 +2667,13 @@ export function ApprovalCard({
     request.message,
   );
   const title = copy.destructive ? t("approval.destructiveTitle") : approvalTitle(copy.heading, lastTurn);
+  const message = compactApprovalMessage(copy.heading, copy.message, t("approval.toolAction"));
   const folded = copy.command || copy.detail;
   return (
     <div className="approval">
       <strong>{title}</strong>
       {copy.destructive && <p>{t("approval.destructiveBody")}</p>}
-      {!copy.destructive && copy.message && <p>{copy.message}</p>}
+      {!copy.destructive && message && <p>{message}</p>}
       {folded && (
         <details className="approval-cmd">
           <summary>{t("approval.showCommand")}</summary>
@@ -3032,6 +3067,7 @@ export function Login({
   agentPlugins = [],
   onRefreshSkills,
   onRefreshPlugins,
+  onResourcesChanged,
   onClose,
   onSaved,
 }: {
@@ -3042,6 +3078,7 @@ export function Login({
   agentPlugins?: LocalPluginEntry[];
   onRefreshSkills?: () => void;
   onRefreshPlugins?: () => void;
+  onResourcesChanged?: () => Promise<void>;
   onClose(): void;
   onSaved(): Promise<void>;
 }) {
@@ -3154,6 +3191,7 @@ export function Login({
     setResourceBusy(key);
     try {
       await window.harness.app.setResourceEnabled(kind, resourcePath, enabled);
+      await onResourcesChanged?.();
       if (kind === "skill") onRefreshSkills?.();
       else onRefreshPlugins?.();
     } catch (error) {
@@ -3168,6 +3206,7 @@ export function Login({
     setResourceBusy(key);
     try {
       await window.harness.app.deleteResource(kind, resourcePath);
+      await onResourcesChanged?.();
       if (kind === "skill") onRefreshSkills?.();
       else onRefreshPlugins?.();
     } catch (error) {
@@ -3420,6 +3459,7 @@ export function Login({
                               setResourceBusy(key);
                               try {
                                 await window.harness.app.setPackageEnabled(item.source, item.scope, enabled);
+                                await onResourcesChanged?.();
                                 setPackages(await window.harness.app.listPackages());
                               } catch (error) {
                                 setPromptStatus(error instanceof Error ? error.message : String(error));
@@ -3540,6 +3580,7 @@ export function Login({
                   setResourceBusy(key);
                   try {
                     await window.harness.app.deletePackage(target.source, target.scope);
+                    await onResourcesChanged?.();
                     setPackages(await window.harness.app.listPackages());
                   } catch (error) {
                     setPromptStatus(error instanceof Error ? error.message : String(error));

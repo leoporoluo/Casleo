@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { getCasleoArchivedSessionsDir, getCasleoHome, getCasleoSessionsDir, partitionSessionFile, } from "./home.js";
 import { getCasleoStorageSettings } from "./settings.js";
+import { casleoEnv } from "./env.js";
 const require = createRequire(import.meta.url);
 export function getCasleoStatePath() {
     const sqliteHome = getCasleoStorageSettings().sqliteHome ?? getCasleoHome();
@@ -56,7 +57,14 @@ export class CasleoStateStore {
     }
     async refresh() {
         const seen = new Set();
-        for (const file of await directJsonlFiles(getCasleoSessionsDir())) {
+        const legacySessions = casleoEnv("LEGACY_SESSIONS_DIR");
+        if (legacySessions) {
+            for (const file of await recursiveJsonlFiles(legacySessions)) {
+                seen.add(file);
+                await this.indexFile(file, file, false);
+            }
+        }
+        for (const file of await recursiveJsonlFiles(getCasleoSessionsDir())) {
             const partitioned = await partitionSessionFile(file);
             seen.add(partitioned.storagePath);
             await this.indexFile(partitioned.runtimePath, partitioned.storagePath, false);

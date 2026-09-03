@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { casleoEnv } from "./env.js";
 export function getCasleoHome() {
-    return resolveHomePath(casleoEnv("HOME") ?? path.join(os.homedir(), ".casleo"));
+    return resolveHomePath(casleoEnv("HOME") ?? path.join(os.homedir(), ".pi", "agent"));
 }
 export function getCasleoSessionsDir() {
     return resolveHomePath(casleoEnv("SESSIONS_DIR") ?? path.join(getCasleoHome(), "sessions"));
@@ -16,10 +16,10 @@ export function getCasleoArchivedSessionsDir() {
 export async function initializeCasleoHome() {
     const home = getCasleoHome();
     const sessions = getCasleoSessionsDir();
-    // Pi resources remain in their official global location while Casleo keeps
-    // its own sessions and credentials in the application data directory.
-    process.env.PI_CODING_AGENT_DIR = path.join(os.homedir(), ".pi", "agent");
-    process.env.PI_CODING_AGENT_SESSION_DIR = sessions;
+    // Use Pi's official agent directory and let Pi derive its per-project
+    // session directory. Casleo does not replace Pi's session layout.
+    process.env.PI_CODING_AGENT_DIR = home;
+    delete process.env.PI_CODING_AGENT_SESSION_DIR;
     const piAgent = process.env.PI_CODING_AGENT_DIR;
     // Keep Pi's standard global resource roots ready for first launch. Pi owns
     // discovery and settings; Casleo only ensures the documented roots exist.
@@ -34,7 +34,6 @@ export async function initializeCasleoHome() {
     await fs.mkdir(getCasleoArchivedSessionsDir(), { recursive: true, mode: 0o700 });
     await fs.chmod(getCasleoArchivedSessionsDir(), 0o700).catch(() => undefined);
     await ensureWebSearchDefaults(home);
-    await partitionExistingSessions(sessions);
     return home;
 }
 /** Skip the TUI curator in desktop/RPC; do not overwrite an existing config. */
@@ -47,71 +46,12 @@ async function ensureWebSearchDefaults(home) {
         await fs.writeFile(file, `${JSON.stringify({ workflow: "auto-summary" }, null, 2)}\n`, { mode: 0o600 });
     }
 }
-/**
- * Move a flat pi transcript into a date partition, then retain a flat hard-link.
- * Both names address the same inode, so the runtime remains fully compatible and
- * no transcript content is duplicated.
- */
 export async function partitionSessionFile(file) {
-    const sessions = getCasleoSessionsDir();
     const runtimePath = path.resolve(file);
-    const relative = path.relative(sessions, runtimePath);
-    if (relative.startsWith("..") || path.isAbsolute(relative)) {
-        return { runtimePath, storagePath: runtimePath };
-    }
-    if (path.dirname(relative) !== ".") {
-        return { runtimePath: path.join(sessions, path.basename(file)), storagePath: runtimePath };
-    }
-    const stat = await fs.stat(runtimePath);
-    const timestamp = await sessionTimestamp(runtimePath, stat.mtime);
-    const date = timestamp.toISOString().slice(0, 10).split("-");
-    const storagePath = path.join(sessions, ...date, path.basename(runtimePath));
-    await fs.mkdir(path.dirname(storagePath), { recursive: true, mode: 0o700 });
-    await fs.chmod(path.dirname(storagePath), 0o700).catch(() => undefined);
-    const existing = await statOrUndefined(storagePath);
-    if (existing) {
-        if (sameFile(stat, existing)) {
-            await fs.chmod(runtimePath, 0o600).catch(() => undefined);
-            return { runtimePath, storagePath };
-        }
-        // Never overwrite a different transcript on a path collision.
-        return { runtimePath, storagePath: runtimePath };
-    }
-    try {
-        await fs.rename(runtimePath, storagePath);
-        try {
-            await fs.link(storagePath, runtimePath);
-        }
-        catch (error) {
-            await fs.rename(storagePath, runtimePath).catch(() => undefined);
-            throw error;
-        }
-        await fs.chmod(storagePath, 0o600).catch(() => undefined);
-        return { runtimePath, storagePath };
-    }
-    catch {
-        // Hard links can be unavailable on unusual/network filesystems. Keeping the
-        // original flat file is safer than copying or breaking resume semantics.
-        return { runtimePath, storagePath: runtimePath };
-    }
+    return { runtimePath, storagePath: runtimePath };
 }
 export async function partitionExistingSessions(sessions = getCasleoSessionsDir()) {
-    let entries;
-    try {
-        entries = await fs.readdir(sessions, { withFileTypes: true });
-    }
-    catch (error) {
-        if (isNodeError(error) && error.code === "ENOENT")
-            return [];
-        throw error;
-    }
-    const partitioned = [];
-    for (const entry of entries) {
-        if (!entry.isFile() || !entry.name.endsWith(".jsonl"))
-            continue;
-        partitioned.push(await partitionSessionFile(path.join(sessions, entry.name)));
-    }
-    return partitioned;
+    return [];
 }
 /**
  * Pi resumes via the flat runtime path. If that hard-link was lost, recreate it
