@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type Keyboa
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode } from "../shared/types";
+import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode, type PromptTemplate } from "../shared/types";
 import { skillUserDisplay } from "../shared/skills";
 import { visibleUserText } from "../shared/vision-api";
 import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, DEFAULT_MAX_TOKENS, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
@@ -2910,7 +2910,7 @@ function ApiProfilesEditor({
   );
 }
 
-type SettingsPane = "chat" | "appearance" | "shortcuts" | "skills" | "plugins";
+type SettingsPane = "chat" | "appearance" | "shortcuts" | "skills" | "plugins" | "prompts";
 
 const THEME_LABEL: Record<ThemeId, MessageKey> = {
   paper: "settings.themePaper",
@@ -2954,6 +2954,11 @@ function settingsNav(t: ReturnType<typeof useI18n>["t"]): Array<{ label: string;
         label: t("settings.shortcuts"),
         icon: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z\nM6 8h.01\nM10 8h.01\nM14 8h.01\nM18 8h.01\nM8 12h.01\nM12 12h.01\nM16 12h.01\nM7 16h10",
       },
+      {
+        id: "prompts",
+        label: "自定义指令",
+        icon: "M4 5h16M4 12h16M4 19h10",
+      },
     ],
   },
   ];
@@ -2991,6 +2996,10 @@ export function Login({
   const [skillRevealError, setSkillRevealError] = useState<string>();
   const [testStatus, setTestStatus] = useState<{ target: "chat"; ok: boolean; message: string } | null>(null);
   const [preferences, setPreferences] = useState<AppPreferences>({ minimizeToTray: true, openAtLogin: false });
+  const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
+  const [activePromptName, setActivePromptName] = useState("casleo");
+  const [promptContent, setPromptContent] = useState("");
+  const [promptStatus, setPromptStatus] = useState("");
 
   const activeCustom = customProfiles.find((item) => item.id === activeCustomId) ?? customProfiles[0];
   const chatUrl = activeCustom?.url ?? "";
@@ -3051,6 +3060,15 @@ export function Login({
   useEffect(() => {
     if (pane === "plugins") onRefreshPlugins?.();
   }, [pane, onRefreshPlugins]);
+
+  useEffect(() => {
+    if (pane !== "prompts") return;
+    void window.harness.app.listPromptTemplates().then((items) => {
+      setPromptTemplates(items);
+      const selected = items.find((item) => item.name === activePromptName) ?? items[0];
+      if (selected) { setActivePromptName(selected.name); setPromptContent(selected.content); }
+    }).catch(() => undefined);
+  }, [pane]);
 
   return (
     <div className="settings-route" onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
@@ -3119,7 +3137,7 @@ export function Login({
                         ? t("settings.plugins")
                         : pane === "shortcuts"
                         ? t("settings.shortcuts")
-                        : t("settings.shortcuts")}
+                        : pane === "prompts" ? "自定义指令" : t("settings.shortcuts")}
             </h2>
             <button type="button" className="settings-close" aria-label={t("common.close")} onClick={onClose}>
               <Icon path="M6 6l12 12M18 6L6 18" />
@@ -3368,6 +3386,25 @@ export function Login({
                   <span className="shortcut-label">{t("shortcut.escape")}</span>
                   <kbd>Esc</kbd>
                 </div>
+              </div>
+            )}
+
+            {pane === "prompts" && (
+              <div className="prompt-templates-page">
+                <p className="settings-hint">全局提示模板目录：<code>~/.pi/agent/prompts/*.md</code>。保存后可在输入框使用 <code>/{activePromptName}</code> 调用。</p>
+                <div className="prompt-template-toolbar">
+                  <select className="settings-select" value={activePromptName} onChange={(event) => {
+                    const next = promptTemplates.find((item) => item.name === event.target.value);
+                    if (next) { setActivePromptName(next.name); setPromptContent(next.content); setPromptStatus(""); }
+                  }}>
+                    {promptTemplates.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+                    {promptTemplates.length === 0 && <option value="casleo">casleo</option>}
+                  </select>
+                  <button type="button" className="ghost" onClick={() => { setActivePromptName(`template-${promptTemplates.length + 1}`); setPromptContent(""); setPromptStatus(""); }}>新建模板</button>
+                  <button type="button" className="ghost" onClick={async () => { try { const saved = await window.harness.app.savePromptTemplate(activePromptName, promptContent); setPromptTemplates((items) => [...items.filter((item) => item.name !== saved.name), saved].sort((a, b) => a.name.localeCompare(b.name))); setPromptStatus("已保存"); } catch (error) { setPromptStatus(error instanceof Error ? error.message : String(error)); } }}>保存</button>
+                </div>
+                <textarea className="prompt-template-editor" value={promptContent} onChange={(event) => setPromptContent(event.target.value)} placeholder="输入可复用的提示模板内容…" spellCheck={false} />
+                {promptStatus && <p className="settings-hint">{promptStatus}</p>}
               </div>
             )}
 

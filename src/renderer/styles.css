@@ -4182,6 +4182,32 @@ kbd {
   display: flex;
   flex-direction: column;
 }
+.prompt-templates-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+.prompt-template-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.prompt-template-toolbar .settings-select {
+  min-width: 180px;
+}
+.prompt-template-editor {
+  width: 100%;
+  min-height: 300px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--inset);
+  color: var(--ink);
+  font: 13px/1.55 var(--mono);
+}
 .skills-section:last-child {
   flex: 1;
 }

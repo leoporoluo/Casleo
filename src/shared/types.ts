@@ -68,6 +68,12 @@ export interface AppPreferences {
   openAtLogin: boolean;
 }
 
+export interface PromptTemplate {
+  name: string;
+  path: string;
+  content: string;
+}
+
 export interface AgentStartOptions {
   cwd?: string;
   project?: boolean;
@@ -152,6 +158,8 @@ export interface DesktopApi {
     setLocale(locale: Locale): Promise<void>;
     preferences(): Promise<AppPreferences>;
     savePreferences(preferences: AppPreferences): Promise<void>;
+    listPromptTemplates(): Promise<PromptTemplate[]>;
+    savePromptTemplate(name: string, content: string): Promise<PromptTemplate>;
   };
   /** Frameless windows off macOS need the renderer to drive the caption buttons. */
   window: {

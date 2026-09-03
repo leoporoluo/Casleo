@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import fsp from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -84,6 +85,7 @@ import {
   type AgentSnapshot,
   type AgentStartOptions,
   type AppPreferences,
+  type PromptTemplate,
   type ProviderStatus,
   type SessionSummary,
   type WorkspaceItem,
@@ -165,6 +167,36 @@ process.env.TETHER_HOME = userDataPath;
 
 function appPreferencesPath(): string {
   return path.join(userDataPath, "preferences.json");
+}
+
+function promptTemplatesPath(): string {
+  const home = process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir();
+  return path.join(home, ".pi", "agent", "prompts");
+}
+
+async function listPromptTemplates(): Promise<PromptTemplate[]> {
+  const root = promptTemplatesPath();
+  let entries: fs.Dirent[];
+  try { entries = await fsp.readdir(root, { withFileTypes: true }); } catch { return []; }
+  const result: PromptTemplate[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) continue;
+    const file = path.join(root, entry.name);
+    try {
+      result.push({ name: entry.name.slice(0, -3), path: file, content: await fsp.readFile(file, "utf8") });
+    } catch { /* ignore unreadable templates */ }
+  }
+  return result.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function savePromptTemplate(name: string, content: string): Promise<PromptTemplate> {
+  const clean = name.trim().replace(/[^a-zA-Z0-9_-]/g, "-").replace(/^-+|-+$/g, "");
+  if (!clean) throw new Error("Invalid prompt template name");
+  const root = promptTemplatesPath();
+  await fsp.mkdir(root, { recursive: true, mode: 0o700 });
+  const file = path.join(root, `${clean}.md`);
+  await fsp.writeFile(file, content, { encoding: "utf8", mode: 0o600 });
+  return { name: clean, path: file, content };
 }
 
 async function loadAppPreferences(): Promise<void> {
@@ -400,6 +432,11 @@ function registerIpc(): void {
       minimizeToTray: next?.minimizeToTray === true,
       openAtLogin: next?.openAtLogin === true,
     });
+  });
+  ipcMain.handle("app:list-prompt-templates", () => listPromptTemplates());
+  ipcMain.handle("app:save-prompt-template", (_event, name: unknown, content: unknown) => {
+    if (typeof name !== "string" || typeof content !== "string") throw new Error("Invalid prompt template");
+    return savePromptTemplate(name, content);
   });
   ipcMain.handle("app:open-external", async (_event, url: string) => {
     if (!isSafeExternalUrl(url))

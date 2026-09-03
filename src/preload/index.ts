@@ -21,6 +21,8 @@ const api: DesktopApi = {
     setLocale: (locale: Locale) => ipcRenderer.invoke("app:set-locale", locale),
     preferences: () => ipcRenderer.invoke("app:preferences"),
     savePreferences: (preferences) => ipcRenderer.invoke("app:save-preferences", preferences),
+    listPromptTemplates: () => ipcRenderer.invoke("app:list-prompt-templates"),
+    savePromptTemplate: (name, content) => ipcRenderer.invoke("app:save-prompt-template", name, content),
   },
   window: {
     minimize: () => ipcRenderer.invoke("window:minimize"),
