@@ -901,6 +901,8 @@ export function App() {
       return;
     }
     if (!text || loading || sending.current) return;
+    // A newly submitted turn should always follow the conversation tail.
+    stick.current = true;
     if (running) {
       if (text.startsWith("/")) return;
       const followup = text;
@@ -1091,6 +1093,17 @@ export function App() {
     pin();
     return () => ro.disconnect();
   }, [home, steering.length]);
+
+  // Streaming updates can change text without changing the observed layout
+  // node's dimensions synchronously. Re-pin after each render while following.
+  useLayoutEffect(() => {
+    const node = scroller.current;
+    if (!node || home || !stick.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      if (stick.current) node.scrollTop = node.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [messages, running, uiRequest, home]);
 
   const homeRecents = (
     workspace
