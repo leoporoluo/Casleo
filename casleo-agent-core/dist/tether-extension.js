@@ -902,7 +902,7 @@ function registerCommandTools(pi, registry, checkpoints, getPermission, accessCo
                         // ask before falling back to host execution. Previously
                         // this surfaced as an immediate "cwd/backend" failure.
                         const message = error instanceof Error ? error.message : String(error);
-                        if (!/No OS sandbox backend is available/i.test(message))
+                        if (!/No OS sandbox backend is available|working directory|current directory|cwd|ENOENT/i.test(message))
                             throw error;
                         commandAccess = await requestCommandAccess("host", params.cmd, ctx, getPermission(), commandAccess, accessController, onAccessChanged);
                         currentResult = await run(commandAccess);

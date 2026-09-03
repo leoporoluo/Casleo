@@ -460,7 +460,6 @@ export function ContextStats({
               </svg>
               <div className="context-ring-label">
                 <strong>{displayPercent !== undefined ? `${Math.round(displayPercent * 10) / 10}%` : "—"}</strong>
-                <small>{displayPercent !== undefined ? t("context.used") : t("context.untracked")}</small>
               </div>
             </div>
             <div className="context-capacity-info">
