@@ -1,10 +1,10 @@
 :root {
-  --page: #f6f4f0;
-  --canvas: #efece7;
-  --surface: #fffcf8;
-  --inset: #f3f0eb;
-  --hover: #ece8e2;
-  --hover-2: #e3ded6;
+  --page: #fafafa;
+  --canvas: #f5f5f5;
+  --surface: #ffffff;
+  --inset: #f4f4f5;
+  --hover: #eeeeef;
+  --hover-2: #e4e4e7;
   --ink: #1c1917;
   --ink-2: #5c574f;
   --ink-3: #9a948b;
@@ -1059,16 +1059,6 @@ textarea::selection,
   font-size: 11.5px;
 }
 
-.context-cost-val {
-  font: 12px/1.2 var(--mono);
-  font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap;
-}
-
-.context-foot-item-cost {
-  margin-left: auto;
-}
 .chat-body {
   min-width: 0;
   min-height: 0;
@@ -1811,17 +1801,10 @@ textarea::selection,
   color: inherit;
   text-align: left;
 }
-.trace-toggle .trace-logo,
 .trace-toggle .dots {
   flex: none;
   width: 16px;
   color: var(--ink-3);
-}
-.trace-toggle .trace-logo {
-  height: auto;
-  display: block;
-  object-fit: contain;
-  opacity: 0.72;
 }
 .trace-toggle span {
   min-width: 0;
@@ -4114,24 +4097,6 @@ textarea::selection,
 .theme-pick.on {
   color: var(--ink);
   background: var(--hover);
-}
-.theme-swatch {
-  width: 28px;
-  height: 28px;
-  flex: none;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--page);
-  box-shadow: inset 0 0 0 6px var(--surface);
-}
-.theme-pick-dark .theme-swatch {
-  background: #171717;
-  border-color: #4a4a4a;
-  box-shadow: inset 0 0 0 6px #242424;
-}
-.theme-pick-system .theme-swatch {
-  background: var(--hover-2);
-  box-shadow: inset 8px 0 0 var(--surface);
 }
 .theme-pick-meta {
   min-width: 0;

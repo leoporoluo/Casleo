@@ -994,7 +994,7 @@ export function App() {
       }
       if (event.type === "agent_settled") {
         setRunning(false);
-        setUiRequest(undefined);
+        // Keep a pending extension approval visible until the user responds.
         void window.harness.agent.command<AgentSessionStats>("get_session_stats").then((nextStats) => {
           if (!live.current) return;
           setStats(nextStats);

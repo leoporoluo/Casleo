@@ -540,12 +540,6 @@ export function ContextStats({
                   <span className="context-effort-val">{t(effortLabelKey(effort))}</span>
                 </div>
               )}
-              <div className="context-foot-item context-foot-item-cost">
-                <span className="context-foot-label">{t("context.cost")}</span>
-                <span className="context-cost-val">
-                  {stats?.cost ? `$${stats.cost.toFixed(4)}` : "—"}
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -673,7 +667,7 @@ export function Thinking({
   return (
     <div className={live ? (open ? "trace live open" : "trace live") : open ? "trace open" : "trace"}>
       <button type="button" className="trace-toggle" onClick={() => expandable && setOpen((value) => !value)}>
-        {live ? <Dots /> : <img className="trace-logo" src={logo} alt="" width={18} height={10} />}
+        {live ? <Dots /> : null}
         <span className={live ? "shimmer trace-label" : "trace-label"}>
           {header}
         </span>
@@ -3195,7 +3189,6 @@ export function Login({
                       aria-checked={theme === id}
                       onClick={() => setTheme(applyTheme(id))}
                     >
-                      <span className="theme-swatch" aria-hidden />
                       <span className="theme-pick-meta">
                         <b>{t(THEME_LABEL[id])}</b>
                         <small>{t(THEME_DESC[id])}</small>
@@ -3395,11 +3388,11 @@ export function Login({
 
             {pane === "prompts" && (
               <div className="prompt-templates-page">
-                <p className="settings-hint">全局自定义指令保存在 <code>~/.pi/agent/prompts/</code>。</p>
+                <p className="settings-hint">全局自定义指令保存在 <code>~/.pi/agent/prompts/</code>，在输入框中用 <code>/{activePromptName.replace(/\.md$/i, "")}</code> 调用。</p>
                 <div className="prompt-template-toolbar">
                   <input aria-label="文件名" value={activePromptName} onChange={(event) => { setActivePromptName(event.target.value); setPromptStatus(""); }} placeholder="AGENTS.md" />
                   <button type="button" className="ghost" onClick={() => void window.harness.app.openPromptTemplatesFolder().catch((error) => setPromptStatus(error instanceof Error ? error.message : String(error)))}>打开文件夹</button>
-                  <button type="button" className="primary" onClick={async () => { try { const saved = await window.harness.app.savePromptTemplate(activePromptName, promptContent); setActivePromptName(saved.name); setPromptStatus("已保存"); } catch (error) { setPromptStatus(error instanceof Error ? error.message : String(error)); } }}>保存</button>
+                  <button type="button" className="primary" onClick={async () => { try { const saved = await window.harness.app.savePromptTemplate(activePromptName, promptContent); setActivePromptName(saved.name); setPromptStatus("已保存"); window.setTimeout(() => setPromptStatus(""), 1600); } catch (error) { setPromptStatus(error instanceof Error ? error.message : String(error)); } }}>保存</button>
                 </div>
                 <textarea className="prompt-template-editor" value={promptContent} onChange={(event) => setPromptContent(event.target.value)} placeholder="输入可复用的提示模板内容…" spellCheck={false} />
                 {promptStatus && <p className="settings-hint">{promptStatus}</p>}
