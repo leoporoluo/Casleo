@@ -2,19 +2,21 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { BoundedOutput } from "./process.js";
 import { killProcessTree, trackDetachedChild } from "./process-tree.js";
-import { commandEnvironment } from "./env.js";
+import { commandEnvironment, resolveCommandCwd } from "./env.js";
 import { stripModelCredentialEnvironment } from "./providers.js";
 import { sandboxCommand } from "./sandbox.js";
 export class ManagedProcessRegistry {
     records = new Map();
     async start(command, options) {
-        const invocation = sandboxCommand(command, options.cwd, options.sandbox);
+        const cwd = resolveCommandCwd(options.cwd);
+        const invocation = sandboxCommand(command, cwd, options.sandbox);
         const env = stripModelCredentialEnvironment(commandEnvironment());
         const child = spawn(invocation.command, invocation.args, {
-            cwd: options.cwd,
+            cwd,
             env,
             shell: false,
             detached: process.platform !== "win32",
+            windowsHide: true,
             stdio: ["pipe", "pipe", "pipe"],
         });
         trackDetachedChild(child);
@@ -50,6 +52,7 @@ export class ManagedProcessRegistry {
         child.stdout.on("data", (chunk) => append("", chunk));
         child.stderr.on("data", (chunk) => append("[stderr] ", chunk));
         child.once("error", (error) => {
+            record.exitCode = 1;
             append("[error] ", Buffer.from(error.message));
         });
         child.once("close", (exitCode) => {

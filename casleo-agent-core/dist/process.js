@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { killProcessTree, trackDetachedChild } from "./process-tree.js";
-import { commandEnvironment } from "./env.js";
+import { commandEnvironment, resolveCommandCwd } from "./env.js";
 import { stripModelCredentialEnvironment } from "./providers.js";
 export function runProcess(command, args, options) {
     const maxOutputBytes = options.maxOutputBytes ?? 200_000;
@@ -8,10 +8,11 @@ export function runProcess(command, args, options) {
     return new Promise((resolve, reject) => {
         const env = stripModelCredentialEnvironment(commandEnvironment());
         const child = spawn(command, args, {
-            cwd: options.cwd,
+            cwd: resolveCommandCwd(options.cwd),
             env,
             shell: options.shell ?? false,
             detached: process.platform !== "win32",
+            windowsHide: true,
             stdio: ["ignore", "pipe", "pipe"],
         });
         trackDetachedChild(child);

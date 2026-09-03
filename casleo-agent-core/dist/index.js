@@ -12,5 +12,5 @@ export { parseRuntimeArgs, printCasleoHelp, sandboxModeSchema, } from "./runtime
 export { PERSONALIZATION_TONE_IDS, buildPersonalizationPrompt, composePersonalizedSystemPrompt, loadPersonalizationPrompt, } from "./personalization.js";
 export { CASLEO_VERSION } from "./version.js";
 export { modelSupportsVision } from "./model-vision.js";
-export { casleoEnv, commandEnvironment } from "./env.js";
+export { casleoEnv, commandEnvironment, resolveCommandCwd } from "./env.js";
 //# sourceMappingURL=index.js.map

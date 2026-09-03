@@ -1,7 +1,38 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 /** Read a Casleo runtime environment variable. */
 export function casleoEnv(name) {
     return process.env[`CASLEO_${name}`];
+}
+function isDirectory(candidate) {
+    try {
+        return Boolean(candidate) && fs.statSync(candidate).isDirectory();
+    }
+    catch {
+        return false;
+    }
+}
+/**
+ * Spawn cwd must exist. Node reports ENOENT when the directory was deleted
+ * (temp unpack folders, moved projects), even for absolute commands.
+ */
+export function resolveCommandCwd(cwd) {
+    const candidates = [];
+    if (typeof cwd === "string" && cwd.trim())
+        candidates.push(path.resolve(cwd));
+    try {
+        candidates.push(process.cwd());
+    }
+    catch {
+        // process.cwd() itself throws if the worker directory vanished.
+    }
+    candidates.push(os.homedir(), os.tmpdir());
+    for (const candidate of candidates) {
+        if (isDirectory(candidate))
+            return candidate;
+    }
+    return os.tmpdir();
 }
 const ELECTRON_CHILD_ENV_KEYS = [
     "ELECTRON_RUN_AS_NODE",

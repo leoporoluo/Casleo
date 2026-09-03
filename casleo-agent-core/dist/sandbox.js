@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { casleoEnv, commandEnvironment } from "./env.js";
+import { casleoEnv, commandEnvironment, resolveCommandCwd } from "./env.js";
 import { trackDetachedChild, killProcessTree } from "./process-tree.js";
 import { stripModelCredentialEnvironment } from "./providers.js";
 import { hostShellCommand } from "./shell.js";
@@ -111,10 +111,11 @@ export function executeSandboxedCommand(shellCommand, cwd, sandbox, options) {
     return new Promise((resolve, reject) => {
         const environment = stripModelCredentialEnvironment(commandEnvironment(options.env ?? process.env));
         const child = spawn(invocation.command, invocation.args, {
-            cwd,
+            cwd: resolveCommandCwd(cwd),
             env: environment,
             shell: false,
             detached: process.platform !== "win32",
+            windowsHide: true,
             stdio: ["ignore", "pipe", "pipe"],
         });
         trackDetachedChild(child);

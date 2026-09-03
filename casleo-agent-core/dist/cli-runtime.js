@@ -1,5 +1,7 @@
 import process from "node:process";
+import fs from "node:fs";
 import pc from "picocolors";
+import { resolveCommandCwd } from "./env.js";
 import { ensureFirstRunAuth, runAuthCommand } from "./auth.js";
 import { installCasleoCredentialStore } from "./credential-store.js";
 import { createCasleoExtension } from "./casleo-extension.js";
@@ -28,7 +30,13 @@ export async function runCasleo(argv) {
         process.stdout.write(`${CASLEO_VERSION}\n`);
         return;
     }
-    process.chdir(parsed.options.cwd);
+    try {
+        fs.mkdirSync(parsed.options.cwd, { recursive: true });
+        process.chdir(parsed.options.cwd);
+    }
+    catch {
+        process.chdir(resolveCommandCwd(parsed.options.cwd));
+    }
     const agentDirectory = await initializeCasleoHome();
     process.env.PI_TELEMETRY ??= "0";
     process.env.PI_SKIP_VERSION_CHECK ??= "1";

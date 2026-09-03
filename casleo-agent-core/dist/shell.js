@@ -55,7 +55,8 @@ function resolveWindowsPowerShell() {
         if (resolved)
             return resolved;
     }
-    return "powershell.exe";
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR || "C:\\Windows";
+    return path.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
 }
 function findExecutableOnPath(executable) {
     const pathValue = process.env.PATH ?? "";
