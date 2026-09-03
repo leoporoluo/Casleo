@@ -5,7 +5,6 @@ import { classifyCommand } from "./approval.js";
 import { brandBlue } from "./brand.js";
 import { capturePatchCheckpoint, captureWorkspaceCheckpoint, restoreCheckpoint, } from "./checkpoint.js";
 import { permissionSchema } from "./config.js";
-import { optimizeDeepSeekResponsesPayload } from "./deepseek.js";
 import { DEEPSEEK_CONTEXT_WINDOW, isOfficialDeepSeekBaseUrl, resolveMaxTokens, } from "./settings.js";
 import { modelSupportsVision } from "./model-vision.js";
 import { registerDiagnosticsTool } from "./diagnostics.js";

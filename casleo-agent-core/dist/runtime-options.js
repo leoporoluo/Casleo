@@ -30,11 +30,11 @@ export function parseRuntimeArgs(argv) {
     const forwarded = [];
     const storedSelection = getStoredModelSelection();
     let cwd = process.cwd();
-    let baseUrl = process.env.DEEPSEEK_BASE_URL ??
+    let baseUrl = process.env.OPENAI_BASE_URL ??
         getStoredDeepSeekBaseUrl() ??
         DEFAULT_DEEPSEEK_BASE_URL;
     let maxTokens = getStoredDeepSeekMaxTokens();
-    let providerId = parseSupportedProviderId(tetherEnv("PROVIDER") ?? storedSelection?.providerId ?? "deepseek");
+    let providerId = parseSupportedProviderId(tetherEnv("PROVIDER") ?? storedSelection?.providerId ?? "openai");
     let modelExplicit = tetherEnv("MODEL") !== undefined;
     let modelId = tetherEnv("MODEL") ??
         (storedSelection?.providerId === providerId ? storedSelection.modelId : undefined);

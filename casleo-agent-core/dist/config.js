@@ -14,7 +14,7 @@ export const harnessSchema = z.enum(["minimal", "safe"]);
 export const permissionSchema = z.enum(["plan", "ask", "auto", "full"]);
 export function loadConfig(options) {
     const workspace = path.resolve(options.cwd ?? process.cwd());
-    const apiKey = process.env.DEEPSEEK_API_KEY?.trim() ?? "";
+    const apiKey = process.env.OPENAI_API_KEY?.trim() ?? "";
     const effort = effortSchema.parse(options.effort ?? tetherEnv("EFFORT") ?? "max");
     const transport = transportSchema.parse(options.transport ?? tetherEnv("TRANSPORT") ?? "openai-responses");
     const harness = harnessSchema.parse(options.harness ?? tetherEnv("HARNESS") ?? "minimal");
@@ -22,15 +22,15 @@ export function loadConfig(options) {
         ? "full"
         : permissionSchema.parse(options.permission ?? tetherEnv("PERMISSION") ?? "auto");
     const baseUrl = normalizeDeepSeekBaseUrl(options.baseUrl ??
-        process.env.DEEPSEEK_BASE_URL ??
+        process.env.OPENAI_BASE_URL ??
         getStoredDeepSeekBaseUrl() ??
-        DEFAULT_DEEPSEEK_BASE_URL);
+        "https://api.openai.com/v1");
     return {
         workspace,
         apiKey,
         baseUrl,
         maxTokens: resolveMaxTokens(baseUrl, getStoredDeepSeekMaxTokens()),
-        modelId: options.model ?? tetherEnv("MODEL") ?? "deepseek-v4-flash",
+        modelId: options.model ?? tetherEnv("MODEL") ?? "gpt-5.6-sol",
         effort,
         transport,
         harness,
