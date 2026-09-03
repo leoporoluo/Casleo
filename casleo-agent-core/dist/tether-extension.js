@@ -890,7 +890,20 @@ function registerCommandTools(pi, registry, checkpoints, getPermission, accessCo
             try {
                 const workspace = new Workspace(ctx.cwd);
                 const { checkpoint, result } = await captureWorkspaceCheckpoint(workspace, params.cmd, async () => {
-                    let currentResult = await run(commandAccess);
+                    let currentResult;
+                    try {
+                        currentResult = await run(commandAccess);
+                    }
+                    catch (error) {
+                        // Windows installations without the native sandbox must
+                        // ask before falling back to host execution. Previously
+                        // this surfaced as an immediate "cwd/backend" failure.
+                        const message = error instanceof Error ? error.message : String(error);
+                        if (!/No OS sandbox backend is available/i.test(message))
+                            throw error;
+                        commandAccess = await requestCommandAccess("host", params.cmd, ctx, getPermission(), commandAccess, accessController, onAccessChanged);
+                        currentResult = await run(commandAccess);
+                    }
                     const boundary = detectSandboxBoundary(params.cmd, currentResult, commandAccess);
                     if (boundary &&
                         !(getPermission() === "plan" && boundary === "host")) {
