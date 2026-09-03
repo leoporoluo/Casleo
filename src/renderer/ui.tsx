@@ -926,12 +926,7 @@ function TerminalBlock({ command, tool }: { command: string; tool: ToolActivity 
   return (
     <div className={`terminal-box ${tool.status}`}>
       <div className="terminal-bar">
-        <div className="terminal-dots">
-          <span className="terminal-dot red" />
-          <span className="terminal-dot yellow" />
-          <span className="terminal-dot green" />
-          <span className="terminal-title">{tool.title || t("terminal.command")}</span>
-        </div>
+        <div className="terminal-title">{tool.title || t("terminal.command")}</div>
         <div className="terminal-actions">
           {isRunning && <span className="terminal-badge running"><i />{t("terminal.running")}</span>}
           {isError && <span className="terminal-badge error">{t("terminal.failed")}</span>}
@@ -2915,7 +2910,7 @@ function ApiProfilesEditor({
   );
 }
 
-type SettingsPane = "chat" | "appearance" | "shortcuts" | "skills" | "plugins" | "about";
+type SettingsPane = "chat" | "appearance" | "shortcuts" | "skills" | "plugins";
 
 const THEME_LABEL: Record<ThemeId, MessageKey> = {
   paper: "settings.themePaper",
@@ -2959,11 +2954,6 @@ function settingsNav(t: ReturnType<typeof useI18n>["t"]): Array<{ label: string;
         label: t("settings.shortcuts"),
         icon: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z\nM6 8h.01\nM10 8h.01\nM14 8h.01\nM18 8h.01\nM8 12h.01\nM12 12h.01\nM16 12h.01\nM7 16h10",
       },
-      {
-        id: "about",
-        label: t("settings.about"),
-        icon: "M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20z\nM12 16v-4\nM12 8h.01",
-      },
     ],
   },
   ];
@@ -2998,7 +2988,6 @@ export function Login({
   const [busy, setBusy] = useState(false);
   const [chatModels, setChatModels] = useState<string[]>([]);
   const [listing, setListing] = useState<"chat" | null>(null);
-  const [appVersion, setAppVersion] = useState("");
   const [skillRevealError, setSkillRevealError] = useState<string>();
   const [testStatus, setTestStatus] = useState<{ target: "chat"; ok: boolean; message: string } | null>(null);
   const [preferences, setPreferences] = useState<AppPreferences>({ minimizeToTray: true, openAtLogin: false });
@@ -3042,12 +3031,10 @@ export function Login({
     void Promise.all([
       window.harness.auth.profiles(),
       window.harness.app.preferences(),
-      window.harness.app.version().catch(() => "0.1.0"),
-    ]).then(async ([profiles, nextPreferences, ver]) => {
+    ]).then(async ([profiles, nextPreferences]) => {
       setCustomProfiles(profiles.customProfiles);
       setActiveCustomId(profiles.activeCustomId);
       setPreferences(nextPreferences);
-      if (ver) setAppVersion(ver);
       const url = activeCustomProfile(profiles)?.url ?? "";
       const key = activeCustomProfile(profiles)?.apiKey ?? "";
       if (url.trim() && key.trim()) {
@@ -3132,7 +3119,7 @@ export function Login({
                         ? t("settings.plugins")
                         : pane === "shortcuts"
                         ? t("settings.shortcuts")
-                        : t("settings.about")}
+                        : t("settings.shortcuts")}
             </h2>
             <button type="button" className="settings-close" aria-label={t("common.close")} onClick={onClose}>
               <Icon path="M6 6l12 12M18 6L6 18" />
@@ -3384,19 +3371,6 @@ export function Login({
               </div>
             )}
 
-            {pane === "about" && (
-              <div className="about-body">
-                <div className="about-hero">
-                  <img src={logo} alt="" className="about-logo" width={40} height={23} />
-                  <h3>
-                    {t("about.title")}
-                    <span className="about-version">v{appVersion || "0.1.3"}</span>
-                  </h3>
-                  <p className="about-tagline">{t("about.subtitle")}</p>
-                </div>
-                <p className="about-intro">{t("about.intro")}</p>
-              </div>
-            )}
           </div>
           <footer className="settings-foot">
             {configured && pane === "chat" && (
@@ -3410,18 +3384,6 @@ export function Login({
               >
                 {t("settings.clearConfig")}
               </button>
-            )}
-            {pane === "about" && (
-              <>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => void window.harness.app.checkUpdate()}
-                >
-                  <Icon path="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" size={14} />
-                  <span>{t("about.checkUpdate")}</span>
-                </button>
-              </>
             )}
             {pane !== "chat" ? (
               <button type="button" className="primary" onClick={onClose}>

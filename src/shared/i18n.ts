@@ -283,8 +283,7 @@ const zh = {
   "settings.themeDarkDesc": "One Dark 风格",
   "settings.groupHelp": "帮助与系统",
   "settings.shortcuts": "快捷键指南",
-  "settings.skills": "Agent Skills",
-  "settings.about": "关于应用",
+  "settings.skills": "Skills",
   "settings.skillsTitle": "已加载的 Skills",
   "settings.skillsHint":
     "Skills 由 Pi 运行时加载。项目目录下的 skill 需要先信任该项目；用户目录下的 skill 全局可用。",
@@ -298,7 +297,7 @@ const zh = {
   "settings.skillsUse": "输入 /skill:名称，或点击下方条目在文件夹中打开",
   "settings.skillsCopy": "复制命令",
   "settings.skillsCopied": "已复制",
-  "settings.plugins": "Plugins",
+  "settings.plugins": "Extensions",
   "settings.pluginsUse": "插件来自 Casleo 与当前项目的本地插件目录。点击条目可打开插件目录。",
   "settings.pluginsPaths": "标准存放路径",
   "settings.pluginsPathProject": "项目",
@@ -391,11 +390,6 @@ const zh = {
   "shortcut.open": "打开项目文件夹",
   "shortcut.escape": "关闭弹窗与抽屉",
 
-  "about.title": "Casleo",
-  "about.subtitle": "本地优先的 AI 编程工作台",
-  "about.intro":
-    "基于 Pi Agent 生态构建，把 DeepSeek 与兼容模型的推理变成可见、可控、可撤销的代码改动。会话与工作区数据留在本机，模型请求直达你配置的端点。",
-  "about.checkUpdate": "检查更新",
   "settings.back": "返回应用",
 
   "trace.think": "思考",
@@ -729,8 +723,7 @@ const en: Record<MessageKey, string> = {
   "settings.themeDarkDesc": "One Dark style",
   "settings.groupHelp": "Help & system",
   "settings.shortcuts": "Keyboard shortcuts",
-  "settings.skills": "Agent Skills",
-  "settings.about": "About",
+  "settings.skills": "Skills",
   "settings.skillsTitle": "Loaded skills",
   "settings.skillsHint":
     "Skills are loaded by the Pi runtime. Project skills require trusting the workspace; user skills are always available.",
@@ -744,7 +737,7 @@ const en: Record<MessageKey, string> = {
   "settings.skillsUse": "Type /skill:name, or click an entry below to reveal it in the file manager",
   "settings.skillsCopy": "Copy command",
   "settings.skillsCopied": "Copied",
-  "settings.plugins": "Plugins",
+  "settings.plugins": "Extensions",
   "settings.pluginsUse": "Plugins are discovered from Casleo and the current project's local plugin folders. Click an item to reveal its directory.",
   "settings.pluginsPaths": "Standard locations",
   "settings.pluginsPathProject": "Project",
@@ -838,11 +831,6 @@ const en: Record<MessageKey, string> = {
   "shortcut.open": "Open project folder",
   "shortcut.escape": "Close dialogs & drawers",
 
-  "about.title": "Casleo",
-  "about.subtitle": "Local-first AI coding workbench",
-  "about.intro":
-    "Built on the Pi Agent ecosystem. Turns DeepSeek and compatible-model inference into visible, controllable, undoable code changes. Sessions and workspace data stay on your machine; model requests go straight to the endpoint you configure.",
-  "about.checkUpdate": "Check for updates",
   "settings.back": "Back to app",
 
   "trace.think": "Thinking",
