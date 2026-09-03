@@ -41,8 +41,7 @@ import { apiBaseUrl, listOpenAiModels } from "../shared/openai-models";
 import {
   activeChat,
   activeCustomProfile,
-  DEFAULT_CONTEXT_WINDOW,
-  DEFAULT_MAX_TOKENS,
+  clampMaxTokens,
   isDeepSeekUrl,
   mergeChatProfiles,
   migrateChatProfiles,
@@ -394,7 +393,6 @@ function createWindow(): void {
           frame: false,
           roundedCorners: true,
           hasShadow: true,
-          backgroundMaterial: "mica" as const,
         }),
     webPreferences: {
       preload: path.join(currentDirectory, "../preload/index.cjs"),
@@ -970,7 +968,7 @@ function registerIpc(): void {
         storagePath || sessionPath,
       );
     }
-    const sandbox = cwd === tasksDir ? "read-only" : (requestedSandbox ?? "workspace-write");
+    const sandbox = requestedSandbox ?? "workspace-write";
     const storedUrl =
       startOptions.provider === "deepseek"
         ? getStoredDeepSeekBaseUrl()
@@ -980,8 +978,8 @@ function registerIpc(): void {
     await syncDeepSeekVisionConfig().catch(() => undefined);
     const profiles = await loadChatProfiles();
     const activeProfile = activeCustomProfile(profiles);
-    const maxTokens = activeProfile?.maxTokens ?? DEFAULT_MAX_TOKENS;
-    const contextWindow = activeProfile?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
+    const contextWindow = activeProfile?.contextWindow;
+    const maxTokens = clampMaxTokens(activeProfile?.maxTokens, contextWindow);
     const baseUrl = rawUrl ? apiBaseUrl(rawUrl) : undefined;
     const snapshot = await agentHost!.start({
       ...startOptions,

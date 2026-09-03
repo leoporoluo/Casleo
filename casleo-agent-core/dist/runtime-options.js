@@ -155,6 +155,7 @@ export function parseRuntimeArgs(argv) {
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
+    const contextWindow = parseMaxTokens(casleoEnv("CONTEXT_WINDOW"));
     forwarded.unshift("--provider", providerId);
     if (!hasFlag(forwarded, "--model"))
         forwarded.unshift("--model", modelId);
@@ -170,6 +171,7 @@ export function parseRuntimeArgs(argv) {
             providerId,
             baseUrl: normalizeDeepSeekBaseUrl(baseUrl),
             maxTokens: resolveMaxTokens(baseUrl, maxTokens),
+            ...(contextWindow ? { contextWindow } : {}),
             modelId,
             transport,
             harness,

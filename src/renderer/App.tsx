@@ -19,7 +19,7 @@ import {
   readStoredEffort,
   writeStoredEffort,
 } from "../shared/thinking";
-import { DEFAULT_CONTEXT_WINDOW, activeCustomProfile } from "../shared/chat-profiles";
+import { activeCustomProfile, clampMaxTokens } from "../shared/chat-profiles";
 import {
   applyAgentEvent,
   baseName,
@@ -269,7 +269,7 @@ export function App() {
   const [workspace, setWorkspace] = useState<string>();
   const [activeSession, setActiveSession] = useState<string>();
   const [model, setModel] = useState("");
-  const [contextWindow, setContextWindow] = useState(DEFAULT_CONTEXT_WINDOW);
+  const [contextWindow, setContextWindow] = useState<number | undefined>();
   const [chatModels, setChatModels] = useState<string[]>([]);
   const [effort, setEffort] = useState(readStoredEffort);
   const [thinkingLevels, setThinkingLevels] = useState<string[]>(["low", "medium", "high", "max"]);
@@ -432,10 +432,8 @@ export function App() {
   }, [refreshAgentPlugins]);
 
   const resolveSandbox = useCallback(async (asProject: boolean, mode: PermissionMode, cwd?: string) => {
-    if (!asProject) return "read-only" as const;
     if (mode === "full") return "danger-full-access" as const;
-    // Project mode remains scoped to the selected workspace on every platform.
-    // Never silently upgrade to unrestricted host access when a native backend is absent.
+    if (!asProject) return "workspace-write" as const;
     return "workspace-write" as const;
   }, [t]);
 
@@ -479,7 +477,8 @@ export function App() {
     }
     const profiles = await window.harness.auth.profiles().catch(() => undefined);
     const activeProfile = profiles ? activeCustomProfile(profiles) : undefined;
-    const configuredContextWindow = activeProfile?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
+    const configuredContextWindow = activeProfile?.contextWindow;
+    const startMaxTokens = clampMaxTokens(activeProfile?.maxTokens, configuredContextWindow);
     setContextWindow(configuredContextWindow);
     if (activeProfile?.effort) {
       effortRef.current = activeProfile.effort;
@@ -513,7 +512,8 @@ export function App() {
         ...(storagePath ? { storagePath } : {}),
         ...(resume ? { resume: true } : {}),
         ...(extraModels.length ? { extraModels } : {}),
-      contextWindow: configuredContextWindow,
+        ...(configuredContextWindow ? { contextWindow: configuredContextWindow } : {}),
+        ...(startMaxTokens ? { maxTokens: startMaxTokens } : {}),
         transport: activeProfile?.transport,
       });
       if (seq !== startSeq.current) return false;
@@ -538,6 +538,11 @@ export function App() {
       live.current = true;
       agentCwd.current = snapshot.cwd ?? cwd ?? agentCwd.current;
       agentModelsRef.current = snapshot.models ?? [];
+      if (!configuredContextWindow) {
+        const fromPi = snapshot.stats?.contextUsage?.contextWindow
+          ?? snapshot.models.find((item) => item.id === modelId)?.contextWindow;
+        if (fromPi) setContextWindow(fromPi);
+      }
       agentModelIdsRef.current = agentModelsRef.current.map((item) => item.id).filter(Boolean);
       if (modelId) {
         setModel(modelId);
@@ -1265,6 +1270,48 @@ export function App() {
       </SidebarNav>
 
       <Chat
+        overlay={(uiRequest || sandboxAsk) ? (
+          <>
+            {uiRequest ? (
+              <ApprovalCard
+                request={uiRequest}
+                lastTurn={[...messages].reverse().find((item) => item.role === "user" && item.text.trim() !== "/undo")?.text}
+                onRespond={uiRequest.id === "harness:undo" ? async (response) => {
+                  if (response.confirmed !== true) {
+                    pendingUndo.current = undefined;
+                    return;
+                  }
+                  const pending = pendingUndo.current;
+                  if (!pending) return;
+                  await applyUndo(pending.files);
+                  pendingUndo.current = undefined;
+                } : undefined}
+                onDone={() => {
+                  setUiRequest(undefined);
+                }}
+                onError={setToast}
+              />
+            ) : null}
+            {sandboxAsk ? (
+              <div
+                className="modal"
+                onClick={(event) => {
+                  if (event.target !== event.currentTarget) return;
+                  sandboxWaiter.current?.(false);
+                }}
+              >
+                <div className="panel" role="dialog">
+                  <h2>{t("confirm.unsandboxedTitle")}</h2>
+                  <p>{sandboxAsk.message}</p>
+                  <div className="row-actions">
+                    <button type="button" className="ghost" onClick={() => sandboxWaiter.current?.(false)}>{t("common.cancel")}</button>
+                    <button type="button" className="primary" onClick={() => sandboxWaiter.current?.(true)}>{t("common.allow")}</button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : undefined}
         home={home}
         title={sessions.find((session) => isSameSession(session, activeSession))?.title || (workspace ? baseName(workspace) : undefined)}
         composer={home ? undefined : composer}
@@ -1408,26 +1455,7 @@ export function App() {
                   </div>
                 </article>
               )}
-              {uiRequest && (
-                <ApprovalCard
-                  request={uiRequest}
-                  lastTurn={[...messages].reverse().find((item) => item.role === "user" && item.text.trim() !== "/undo")?.text}
-                  onRespond={uiRequest.id === "harness:undo" ? async (response) => {
-                    if (response.confirmed !== true) {
-                      pendingUndo.current = undefined;
-                      return;
-                    }
-                    const pending = pendingUndo.current;
-                    if (!pending) return;
-                    await applyUndo(pending.files);
-                    pendingUndo.current = undefined;
-                  } : undefined}
-                  onDone={() => {
-                    setUiRequest(undefined);
-                  }}
-                  onError={setToast}
-                />
-              )}
+
             </div>
           )}
         </div>
@@ -1440,24 +1468,6 @@ export function App() {
       </Chat>
       {preview && <FileDrawer file={preview} workspace={workspace} onClose={() => setPreview(undefined)} />}
 
-      {sandboxAsk && (
-        <div
-          className="modal"
-          onClick={(event) => {
-            if (event.target !== event.currentTarget) return;
-            sandboxWaiter.current?.(false);
-          }}
-        >
-          <div className="panel" role="dialog">
-            <h2>{t("confirm.unsandboxedTitle")}</h2>
-            <p>{sandboxAsk.message}</p>
-            <div className="row-actions">
-              <button type="button" className="ghost" onClick={() => sandboxWaiter.current?.(false)}>{t("common.cancel")}</button>
-              <button type="button" className="primary" onClick={() => sandboxWaiter.current?.(true)}>{t("common.allow")}</button>
-            </div>
-          </div>
-        </div>
-      )}
       {loginOpen && (
         <Login
           configured={Boolean(connected?.configured)}

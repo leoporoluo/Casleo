@@ -14,6 +14,7 @@ export interface CasleoRuntimeOptions {
     providerId: SupportedProviderId;
     baseUrl: string;
     maxTokens?: number;
+    contextWindow?: number;
     modelId: string;
     transport: ModelTransport;
     harness: HarnessMode;

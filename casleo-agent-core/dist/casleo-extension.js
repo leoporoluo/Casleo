@@ -1,6 +1,5 @@
 import { Text } from "@earendil-works/pi-tui";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { Type } from "typebox";
 import { commandNeedsNetwork, detectSandboxBoundary, SessionAccessController, } from "./access.js";
@@ -8,7 +7,6 @@ import { classifyCommand } from "./approval.js";
 import { brandBlue } from "./brand.js";
 import { capturePatchCheckpoint, captureWorkspaceCheckpoint, restoreCheckpoint, } from "./checkpoint.js";
 import { permissionSchema } from "./config.js";
-import { DEEPSEEK_CONTEXT_WINDOW, isOfficialDeepSeekBaseUrl, resolveMaxTokens, } from "./settings.js";
 import { modelSupportsVision } from "./model-vision.js";
 import { registerDiagnosticsTool } from "./diagnostics.js";
 import { registerNaturalExit } from "./exit.js";
@@ -23,6 +21,8 @@ import { discoverProjectCommands } from "./project-profile.js";
 import { registerCasleoProjectTrust } from "./project-trust.js";
 import { defaultModelForProvider } from "./providers.js";
 import { executeSandboxedCommand, sandboxDescription } from "./sandbox.js";
+import { applyCasleoSystemPrompt } from "./prompt.js";
+import { resolveRegisteredLimits } from "./pi-model-limits.js";
 import { execCommandParameterDescription, shellPromptRules, } from "./shell.js";
 import { registerSessionCommands } from "./session-commands.js";
 import { formatStatusReport } from "./status.js";
@@ -253,15 +253,15 @@ export function createCasleoExtension(options) {
             pi.on("before_agent_start", async (event, ctx) => {
                 lastAgentFailed = false;
                 const currentAccess = effectiveAccess();
-                // Casleo's original prompt is the complete prompt for each
-                // request. Do not prepend or append Pi's prompt a second time.
-                const systemPrompt = `${engineeringInstructions(projectCommands, currentAccess, {
-                    provider: ctx.model?.provider ?? options.providerId,
-                    modelId: ctx.model?.id ?? options.modelId,
-                    ...(ctx.model?.name ? { modelName: ctx.model.name } : {}),
-                    transport: ctx.model?.api ?? options.transport,
-                    baseUrl: options.baseUrl,
-                })}${await loadGlobalInstructions()}`;
+                const systemPrompt = applyCasleoSystemPrompt(event.systemPrompt, {
+                    sandbox: currentAccess.sandbox,
+                    sandboxLabel: sandboxDescription({
+                        mode: currentAccess.sandbox,
+                        network: currentAccess.network,
+                    }),
+                    network: currentAccess.network,
+                    projectCommands,
+                });
                 if (permission !== "plan")
                     return { systemPrompt };
                 return {
@@ -816,8 +816,10 @@ function registerCasleoProvider(pi, options) {
                 reasoning: true,
                 input: ["text"],
                 cost: model.cost,
-                contextWindow: DEEPSEEK_CONTEXT_WINDOW,
-                maxTokens: options.maxTokens ?? 32_768,
+                ...resolveRegisteredLimits(model.id, {
+                    contextWindow: options.contextWindow,
+                    maxTokens: options.maxTokens,
+                }),
                 thinkingLevelMap: {
                     off: null,
                     minimal: "minimal",
@@ -1242,55 +1244,6 @@ function formatManagedResult(result, live = false) {
         ...(result.timedOut ? ["timed_out: true"] : []),
         `sandbox: ${result.sandbox}`,
     ].join("\n");
-}
-function engineeringInstructions(projectCommands, access, runtime) {
-    const commandSandbox = sandboxDescription({
-        mode: access.sandbox,
-        network: access.network,
-    });
-    const instructions = [
-        "# Casleo engineering contract",
-        "- You are Casleo, the coding assistant in this workspace.",
-        "- Access modes: ask requests approval for each mutation, auto approves routine workspace work and asks for detected risks (the default), and full allows unrestricted host access. /plan is a temporary read-only planning mode.",
-        "- Work to a verified repository outcome: inspect first, make focused changes, run the narrowest relevant checks, then broaden validation in proportion to risk.",
-        "- When a check fails, diagnose the evidence and keep repairing while a safe in-scope next step remains. Never hide, truncate in prose, or reinterpret a failing exit code as success.",
-        "- Before changing files below nested directories, discover applicable AGENTS.md and CLAUDE.md files and obey them from broadest to most specific scope.",
-        "- Preserve user changes and unrelated dirty-worktree edits. Never use destructive Git recovery commands unless explicitly requested.",
-        ...shellPromptRules(),
-        "- Use apply_patch for focused writes so changes are checkpointed and undoable.",
-        "- Use update_plan for complex multi-step work. Keep at most one step in_progress and update statuses as verified work advances.",
-        "- Use delegate only when 2+ independent subtasks each need a long read-only or isolated implement pass; never delegate a single repo walk or one directory.",
-        "- Prefer read_file/list_files/search_files for one-path exploration; delegate explorers only for parallel modules.",
-        `- Commands execute locally in ${commandSandbox}; this is the Casleo OS sandbox, not a model-provider cloud sandbox.`,
-        `- Command network access is ${access.network ? "enabled" : "disabled until the user grants scoped access"}; do not work around this boundary.`,
-        ...(access.network
-            ? []
-            : [
-                "- Loopback preview servers (127.0.0.1 / localhost) are allowed inside the sandbox so the user can open them in a browser. Do not tell the user a preview URL works unless the process is actually listening. Outbound internet still needs a network grant.",
-                "- Casleo handles recognized network and sandbox denials with an allow-once / allow-for-session / deny prompt and retries approved commands automatically. If the user denies access, report that decision; do not suggest bypassing the sandbox.",
-            ]),
-        "- Keep the final answer evidence-based: changed files, checks actually run, failures or limitations, and the shortest useful next action.",
-    ];
-    if (projectCommands.length > 0) {
-        instructions.push("- Detected project commands (inspect their definitions before relying on them):", ...projectCommands.map((command) => `  - ${command}`));
-    }
-    return instructions.join("\n");
-}
-async function loadGlobalInstructions() {
-    const root = path.join(os.homedir(), ".pi", "agent");
-    try {
-        const entries = await fs.readdir(root, { withFileTypes: true });
-        const files = entries.filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"));
-        const contents = [];
-        for (const entry of files) {
-            const content = (await fs.readFile(path.join(root, entry.name), "utf8")).trim();
-            if (content) contents.push(`## ${entry.name}\n${content}`);
-        }
-        return contents.length ? `\n\n# 全局自定义指令\n${contents.join("\n\n")}` : "";
-    }
-    catch {
-        return "";
-    }
 }
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);

@@ -17,8 +17,45 @@ describe("commandEnvironment", () => {
     expect(env.ELECTRON_RUN_AS_NODE).toBeUndefined();
     expect(env.ELECTRON_NO_ASAR).toBeUndefined();
     const parts = String(env.PATH ?? "").split(path.delimiter);
-    expect(parts.some((item) => item.toLowerCase() === electronDir.toLowerCase())).toBe(false);
+    const runningAsElectron = /^(electron|casleo)(\.exe)?$/i.test(path.basename(process.execPath));
+    if (runningAsElectron) {
+      expect(parts.some((item) => item.toLowerCase() === electronDir.toLowerCase())).toBe(false);
+    }
     expect(parts).toContain("C:\\Program Files\\nodejs");
+  });
+
+  it("does not treat the current Node binary as Electron", () => {
+    const env = commandEnvironment({
+      npm_node_execpath: process.execPath,
+      PATH: process.env.PATH ?? "",
+    });
+    if (path.basename(process.execPath).toLowerCase().includes("electron") || path.basename(process.execPath).toLowerCase().includes("casleo")) {
+      expect(env.npm_node_execpath?.toLowerCase()).not.toBe(process.execPath.toLowerCase());
+    } else if (env.npm_node_execpath) {
+      expect(path.basename(env.npm_node_execpath).toLowerCase()).toMatch(/^node(\.exe)?$/);
+    }
+  });
+
+  it("falls back when cwd is a file rather than a directory", () => {
+    const file = path.join(os.tmpdir(), `casleo-asar-${Date.now()}`);
+    fs.writeFileSync(file, "asar");
+    try {
+      const resolved = resolveCommandCwd(file);
+      expect(fs.statSync(resolved).isDirectory()).toBe(true);
+      expect(resolved).not.toBe(path.resolve(file));
+    } finally {
+      fs.unlinkSync(file);
+    }
+  });
+
+  it("puts a system-node pi shim first on PATH", () => {
+    const env = commandEnvironment({ PATH: process.env.PATH ?? "" });
+    const parts = String(env.PATH ?? "").split(path.delimiter);
+    const shim = path.join(os.homedir(), ".casleo", "shims");
+    expect(parts[0].toLowerCase()).toBe(shim.toLowerCase());
+    if (process.platform === "win32") {
+      expect(fs.existsSync(path.join(shim, "pi.cmd"))).toBe(true);
+    }
   });
 });
 

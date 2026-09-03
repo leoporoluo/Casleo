@@ -1,49 +1,34 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { shellPromptRules } from "./shell.js";
-export async function buildSystemPrompt(workspace, harness = "safe") {
-    const projectInstructions = await readProjectInstructions(workspace);
-    const toolInstructions = harness === "minimal"
-        ? `- You have two primary tools: exec_command for inspection/testing and apply_patch for every file change.
-- Read only the relevant ranges of large files.
-- apply_patch input must start with "*** Begin Patch" and end with "*** End Patch".
-- Keep patches focused. After applying one, inspect or test the result before expanding the change.`
-        : `- Prefer search_files and list_files over broad shell commands.
-- Use edit_file for focused changes and write_file for new files or complete rewrites.`;
-    return `You are Casleo, a local-first coding agent, working inside this workspace:
-${workspace}
+import { stripUnixShellCoaching } from "./shell.js";
 
-Your job is to solve software-engineering tasks by inspecting the repository, making focused edits, and verifying the result.
-
-Operating rules:
-- If asked who you are, answer that you are Casleo. When asked what model or API is in use, report the active provider and model from runtime context.
-- Use tools to inspect relevant files before changing them. Never invent file contents or command results.
-- Keep all file operations inside the workspace.
-${shellPromptRules().join("\n")}
-${toolInstructions}
-- Before finishing, run the smallest relevant checks when practical.
-- Preserve unrelated user changes. Do not delete or overwrite unrelated work.
-- Do not expose secrets, tokens, or environment variables.
-- Continue until the requested outcome is genuinely handled; do not stop after merely describing a change.
-- For complex work, briefly state the plan, then execute it and update the user when the plan changes.
-- Explain the outcome concisely, including files changed and checks run.
-- If a tool is denied, continue with safe alternatives or explain what remains blocked.
-
-${projectInstructions}`;
-}
-async function readProjectInstructions(workspace) {
-    for (const name of ["AGENTS.md", "CLAUDE.md"]) {
-        const candidate = path.join(workspace, name);
-        try {
-            const content = await fs.readFile(candidate, "utf8");
-            return `Project instructions from ${name}:\n\n${content.slice(0, 32_000)}`;
-        }
-        catch (error) {
-            if (error.code !== "ENOENT") {
-                return `Project instruction file ${name} could not be read.`;
-            }
-        }
+/** Stable Casleo rules. Dynamic sandbox/network/project commands are appended after. */
+export function casleoPromptSuffix(options) {
+    const sandbox = options.sandbox ?? "workspace-write";
+    const network = Boolean(options.network);
+    const projectCommands = Array.isArray(options.projectCommands) ? options.projectCommands : [];
+    const stable = [
+        "# Casleo",
+        "- You are Casleo, a local coding workbench built on pi. Keep pi's tools, skills, and project instructions; do not restate them.",
+        "- Permission modes: ask (approve each mutation), auto (routine workspace work, ask on detected risk), full (unrestricted host), plan (temporary read-only).",
+        "- Use apply_patch for focused writes so changes stay checkpointed and undoable.",
+        "- Do not work around sandbox, network, or permission denials. If the user denies access, report that and continue with a safe alternative.",
+    ];
+    const dynamic = [
+        `- Commands run in ${options.sandboxLabel ?? sandbox}; this is Casleo's OS sandbox, not a model-provider cloud sandbox.`,
+        `- Command network is ${network ? "enabled" : "disabled until the user grants scoped access"}.`,
+    ];
+    if (!network) {
+        dynamic.push("- Loopback preview servers (127.0.0.1 / localhost) can listen inside the sandbox. Do not tell the user a preview URL works unless the process is actually listening.");
     }
-    return "No AGENTS.md or CLAUDE.md was found at the workspace root.";
+    if (projectCommands.length > 0) {
+        dynamic.push("- Detected project commands (inspect their definitions before relying on them):");
+        for (const command of projectCommands)
+            dynamic.push(`  - ${command}`);
+    }
+    return `\n\n${stable.join("\n")}\n${dynamic.join("\n")}`;
 }
-//# sourceMappingURL=prompt.js.map
+
+/** Keep Pi's official prompt as the prefix. Casleo only appends a short contract. */
+export function applyCasleoSystemPrompt(piPrompt, options = {}) {
+    const base = stripUnixShellCoaching(String(piPrompt ?? "").trimEnd());
+    return `${base}${casleoPromptSuffix(options)}`;
+}

@@ -2,7 +2,8 @@ import { createModels, createProvider, envApiKeyAuth, } from "@earendil-works/pi
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { openAIResponsesApi } from "@earendil-works/pi-ai/api/openai-responses.lazy";
 import { modelSupportsVision } from "./model-vision.js";
-import { DEEPSEEK_CONTEXT_WINDOW, isOfficialDeepSeekBaseUrl, resolveMaxTokens, } from "./settings.js";
+import { isOfficialDeepSeekBaseUrl, resolveMaxTokens, } from "./settings.js";
+import { resolveRegisteredLimits } from "./pi-model-limits.js";
 export function createDeepSeekModels(config) {
     if (config.transport === "responses") {
         return createResponsesModels(config);
@@ -62,8 +63,10 @@ function baseModel(config) {
             cacheRead: 0.0028,
             cacheWrite: 0,
         },
-        contextWindow: DEEPSEEK_CONTEXT_WINDOW,
-        maxTokens: resolveMaxTokens(config.baseUrl, config.maxTokens),
+        ...resolveRegisteredLimits(config.modelId, {
+            contextWindow: config.contextWindow,
+            maxTokens: resolveMaxTokens(config.baseUrl, config.maxTokens),
+        }),
         thinkingLevelMap: {
             off: null,
             minimal: null,

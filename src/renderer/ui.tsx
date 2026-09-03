@@ -5,7 +5,7 @@ import remarkGfm from "remark-gfm";
 import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode } from "../shared/types";
 import { skillUserDisplay } from "../shared/skills";
 import { visibleUserText } from "../shared/vision-api";
-import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, DEFAULT_MAX_TOKENS, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
+import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
 import { applyTheme, readStoredTheme, THEMES, type ThemeId } from "../shared/theme";
 import { effortLabelKey, pickEffortOptions, reasoningLevelsAvailable } from "../shared/thinking";
 import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThinking, delegateProgress, delegateStatusLabel, filterMentionPaths, formatCommand, isRecoverableRequestError, liveStatus, omitFinalReply, repairMarkdownTables, splitHttpUrls, splitPatch, stripEmptyMarkdown, spliceFileMention, terminalLabel, toolCommand, toolSummary, toolWritePreview, traceRows, turnWork, assistantReplyText, webSearchCard, workspaceRelative, type ChatImage, type ChatMessage, type FileChange, type SessionFile, type SessionTerminal, type SessionTodo, type ToolActivity, type TraceRow, type WorkItem } from "./conversation";
@@ -215,6 +215,7 @@ export function Chat({
   home,
   inspect,
   nav,
+  overlay,
   title,
   tools,
 }: {
@@ -223,6 +224,7 @@ export function Chat({
   home?: boolean;
   inspect?: ReactNode;
   nav?: ReactNode;
+  overlay?: ReactNode;
   title?: string;
   tools?: ReactNode;
 }) {
@@ -280,6 +282,7 @@ export function Chat({
         <div className="chat-main">
           {children}
           {composer}
+          {overlay}
         </div>
         {drawer && inspect && (
           <div className="inspect-shell" style={{ width: inspectWidth }}>
@@ -355,7 +358,7 @@ export function ContextStats({
   model,
   effort,
   effortLevels,
-  contextWindow = DEFAULT_CONTEXT_WINDOW,
+  contextWindow,
   up,
   running = false,
   busy = false,
@@ -389,7 +392,7 @@ export function ContextStats({
     : undefined;
   const contextTokens = stats?.contextUsage?.tokens ?? (stats?.tokens?.total ? stats.tokens.total : undefined);
   // The active profile is authoritative. A restored session can carry the old model limit.
-  const effectiveContextWindow = contextWindow;
+  const effectiveContextWindow = contextWindow ?? stats?.contextUsage?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
   const measuredPercent = contextTokens !== undefined && effectiveContextWindow > 0
     ? Math.min(100, (contextTokens / effectiveContextWindow) * 100)
     : undefined;
@@ -529,13 +532,13 @@ export function ContextStats({
           </div>
 
           <div className="context-popover-foot">
-            <div className="context-foot-item context-foot-item-model">
-              <span className="context-foot-label">{t("common.model")}</span>
-              <code className="context-model-tag">{model || t("context.defaultModel")}</code>
-            </div>
             <div className="context-foot-row">
+              <div className="context-foot-item context-foot-item-model">
+                <span className="context-foot-label">{t("common.model")}</span>
+                <code className="context-model-tag">{model || t("context.defaultModel")}</code>
+              </div>
               {reasoningLevelsAvailable(effortLevels ?? []) && effort && (
-                <div className="context-foot-item">
+                <div className="context-foot-item context-foot-item-effort">
                   <span className="context-foot-label">{t("composer.effort")}</span>
                   <span className="context-effort-val">{t(effortLabelKey(effort))}</span>
                 </div>
@@ -2784,7 +2787,14 @@ function ApiProfilesEditor({
   const active = profiles.find((item) => item.id === activeId) ?? profiles[0];
   const update = (fields: Partial<CustomApiProfile>) => {
     if (!active) return;
-    onProfiles(profiles.map((item) => (item.id === active.id ? { ...item, ...fields } : item)));
+    onProfiles(profiles.map((item) => {
+      if (item.id !== active.id) return item;
+      const next = { ...item, ...fields };
+      if ("contextWindow" in fields && !fields.contextWindow) delete next.contextWindow;
+      if ("maxTokens" in fields && !fields.maxTokens) delete next.maxTokens;
+      if (next.maxTokens && next.contextWindow) next.maxTokens = Math.min(next.maxTokens, next.contextWindow);
+      return next;
+    }));
   };
   return (
     <div className="custom-api-layout">
@@ -2894,24 +2904,24 @@ function ApiProfilesEditor({
                   {t("settings.contextWindow")}
                   <input
                     inputMode="numeric"
-                    value={active.contextWindow ? String(active.contextWindow) : String(DEFAULT_CONTEXT_WINDOW)}
+                    value={active.contextWindow ? String(active.contextWindow) : ""}
                     onChange={(event) => {
                       const digits = event.target.value.replace(/[^\d]/g, "");
-                      update({ contextWindow: digits ? Number(digits) : DEFAULT_CONTEXT_WINDOW });
+                      update({ contextWindow: digits ? Number(digits) : undefined });
                     }}
-                    placeholder={String(DEFAULT_CONTEXT_WINDOW)}
+                    placeholder={t("settings.modelDefault")}
                   />
                 </label>
                 <label>
                   {t("settings.maxTokens")}
                   <input
                     inputMode="numeric"
-                    value={active.maxTokens ? String(active.maxTokens) : String(DEFAULT_MAX_TOKENS)}
+                    value={active.maxTokens ? String(active.maxTokens) : ""}
                     onChange={(event) => {
                       const digits = event.target.value.replace(/[^\d]/g, "");
-                      update({ maxTokens: digits ? Number(digits) : DEFAULT_MAX_TOKENS });
+                      update({ maxTokens: digits ? Number(digits) : undefined });
                     }}
-                    placeholder={String(DEFAULT_MAX_TOKENS)}
+                    placeholder={t("settings.modelDefault")}
                   />
                 </label>
                 <label>
@@ -3049,6 +3059,7 @@ export function Login({
   const [activePromptName, setActivePromptName] = useState("AGENTS.md");
   const [promptContent, setPromptContent] = useState("");
   const [promptStatus, setPromptStatus] = useState("");
+  const promptEditorRef = useRef<HTMLTextAreaElement>(null);
   const [packages, setPackages] = useState<PiPackageEntry[]>([]);
   const [resourceBusy, setResourceBusy] = useState<string>();
   const [pendingDelete, setPendingDelete] = useState<
@@ -3120,7 +3131,16 @@ export function Login({
     if (pane !== "prompts") return;
     void window.harness.app.listPromptTemplates().then((items) => {
       const selected = items.find((item) => item.name.toLowerCase() === "agents.md") ?? items[0];
-      if (selected) { setActivePromptName(selected.name); setPromptContent(selected.content); }
+      if (selected) {
+        setActivePromptName(selected.name);
+        setPromptContent(selected.content);
+        requestAnimationFrame(() => {
+          const editor = promptEditorRef.current;
+          if (!editor) return;
+          editor.scrollTop = 0;
+          editor.setSelectionRange(0, 0);
+        });
+      }
     }).catch(() => undefined);
   }, [pane]);
 
@@ -3464,7 +3484,7 @@ export function Login({
                   <button type="button" className="ghost" onClick={() => void window.harness.app.openPromptTemplatesFolder().catch((error) => setPromptStatus(error instanceof Error ? error.message : String(error)))}>打开文件夹</button>
                   <button type="button" className="primary" onClick={async () => { try { const saved = await window.harness.app.savePromptTemplate(activePromptName, promptContent); setActivePromptName(saved.name); setPromptStatus("已保存"); window.setTimeout(() => setPromptStatus(""), 1600); } catch (error) { setPromptStatus(error instanceof Error ? error.message : String(error)); } }}>保存</button>
                 </div>
-                <textarea className="prompt-template-editor" value={promptContent} onChange={(event) => setPromptContent(event.target.value)} placeholder="输入可复用的提示模板内容…" spellCheck={false} />
+                <textarea ref={promptEditorRef} className="prompt-template-editor" value={promptContent} onChange={(event) => setPromptContent(event.target.value)} placeholder="输入可复用的提示模板内容…" spellCheck={false} />
                 {promptStatus && <p className="settings-hint">{promptStatus}</p>}
               </div>
             )}

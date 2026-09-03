@@ -98,14 +98,14 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: transparent;
+  background: var(--page);
 }
 html {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 body {
-  background: transparent;
+  background: var(--page);
   color: var(--ink);
   font: 14px/1.5 var(--sans);
   letter-spacing: -0.011em;
@@ -1040,11 +1040,17 @@ textarea::selection,
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
   min-width: 0;
 }
 
 .context-foot-item-model {
-  width: 100%;
+  min-width: 0;
+  flex: 1;
+}
+.context-foot-item-effort {
+  margin-left: auto;
+  flex: none;
 }
 
 .context-foot-label {
@@ -2679,12 +2685,12 @@ textarea::selection,
 }
 
 .approval {
-  position: fixed;
-  left: calc(252px + (100vw - 252px) / 2);
+  position: absolute;
+  left: 50%;
   bottom: clamp(136px, 14vh, 168px);
   transform: translateX(-50%);
   z-index: 70;
-  width: min(620px, calc(100vw - 300px));
+  width: min(620px, calc(100% - 48px));
   margin: 0;
   padding: 16px;
   border-radius: 14px;
@@ -2696,11 +2702,8 @@ textarea::selection,
   min-width: 0;
   max-width: 100%;
 }
-@media (max-width: 1100px) {
-  .approval {
-    left: 50%;
-    width: min(620px, calc(100vw - 32px));
-  }
+.chat-main > .modal {
+  position: absolute;
 }
 .approval strong {
   font-size: 15px;

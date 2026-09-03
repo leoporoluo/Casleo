@@ -7,10 +7,12 @@ export { createCasleoCredentialStore, FileCredentialStore, installCasleoCredenti
 export { getCasleoArchivedSessionsDir, getCasleoHome, getCasleoSessionsDir, initializeCasleoHome, partitionExistingSessions, partitionSessionFile, ensureSessionRuntimeLink, type PartitionedSessionPath, } from "./home.js";
 export { killProcessTree, listChildPids, trackDetachedChild, wipeTrackedChildren, } from "./process-tree.js";
 export { CasleoStateStore, getCasleoStatePath, indexCasleoSession, listCasleoThreads, type CasleoThread, type ListThreadOptions, } from "./state.js";
-export { DEFAULT_DEEPSEEK_BASE_URL, DEEPSEEK_MAX_TOKENS, DEEPSEEK_CONTEXT_WINDOW, getCasleoStorageSettings, getCasleoSettingsPath, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, parseMaxTokens, resolveMaxTokens, saveDeepSeekBaseUrl, saveDeepSeekMaxTokens, type CredentialStoreMode, type CasleoStorageSettings, type HistoryPersistence, } from "./settings.js";
+export { DEFAULT_DEEPSEEK_BASE_URL, DEEPSEEK_MAX_TOKENS, getCasleoStorageSettings, getCasleoSettingsPath, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, parseMaxTokens, resolveMaxTokens, saveDeepSeekBaseUrl, saveDeepSeekMaxTokens, type CredentialStoreMode, type CasleoStorageSettings, type HistoryPersistence, } from "./settings.js";
 export { MODEL_CREDENTIAL_ENV_KEYS, SUPPORTED_PROVIDER_IDS, defaultEffortForProvider, defaultModelForProvider, getStoredModelSelection, isSupportedProviderId, parseSupportedProviderId, providerDisplayName, providerEnvironmentKey, stripModelCredentialEnvironment, type StoredModelSelection, type SupportedProviderId, } from "./providers.js";
 export { parseRuntimeArgs, printCasleoHelp, sandboxModeSchema, type CasleoRuntimeOptions, type ParsedRuntimeArgs, type SandboxMode, } from "./runtime-options.js";
 export { PERSONALIZATION_TONE_IDS, buildPersonalizationPrompt, composePersonalizedSystemPrompt, loadPersonalizationPrompt, type PersonalizationPreferences, type PersonalizationTone, } from "./personalization.js";
 export { CASLEO_VERSION } from "./version.js";
 export { modelSupportsVision } from "./model-vision.js";
 export { casleoEnv, commandEnvironment, resolveCommandCwd } from "./env.js";
+export { applyCasleoSystemPrompt, casleoPromptSuffix, type CasleoPromptOptions } from "./prompt.js";
+export { FALLBACK_CONTEXT_WINDOW, FALLBACK_MAX_TOKENS, findPiModel, resolveRegisteredLimits } from "./pi-model-limits.js";

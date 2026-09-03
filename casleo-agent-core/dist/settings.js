@@ -7,10 +7,6 @@ import { getCasleoHome } from "./home.js";
 import { casleoEnv } from "./env.js";
 export const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 export const DEEPSEEK_MAX_TOKENS = 384_000;
-const configuredContextWindow = Number.parseInt(process.env.CASLEO_CONTEXT_WINDOW ?? "", 10);
-export const DEEPSEEK_CONTEXT_WINDOW = Number.isFinite(configuredContextWindow) && configuredContextWindow > 0
-    ? configuredContextWindow
-    : 272_000;
 export function parseMaxTokens(value) {
     const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value.trim()) : Number.NaN;
     if (!Number.isFinite(n) || n < 1)
@@ -26,9 +22,10 @@ export function isOfficialDeepSeekBaseUrl(baseUrl) {
     }
 }
 export function resolveMaxTokens(baseUrl, configured) {
+    const parsed = parseMaxTokens(configured);
     if (isOfficialDeepSeekBaseUrl(baseUrl))
-        return DEEPSEEK_MAX_TOKENS;
-    return parseMaxTokens(configured) ?? DEEPSEEK_MAX_TOKENS;
+        return parsed ?? DEEPSEEK_MAX_TOKENS;
+    return parsed;
 }
 export function getCasleoSettingsPath() {
     return casleoEnv("CONFIG_PATH") ?? path.join(getCasleoHome(), "config.json");
