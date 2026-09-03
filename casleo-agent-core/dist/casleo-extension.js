@@ -333,7 +333,7 @@ export function createCasleoExtension(options) {
                     // The scoped network selector in exec_command is the approval UI for this action.
                     return;
                 }
-                if (!ctx.hasUI) {
+                if (!ctx.hasUI && typeof ctx.ui?.confirm !== "function") {
                     return {
                         block: true,
                         reason: "This action requires an interactive approval UI. Use --permission full for an explicitly trusted non-interactive run.",
@@ -902,7 +902,7 @@ function registerCommandTools(pi, registry, checkpoints, getPermission, accessCo
                         // ask before falling back to host execution. Previously
                         // this surfaced as an immediate "cwd/backend" failure.
                         const message = error instanceof Error ? error.message : String(error);
-                        if (!/No OS sandbox backend is available|working directory|current directory|cwd|ENOENT/i.test(message))
+                        if (!/No OS sandbox backend is available|Windows sandbox helper|native sandbox|working directory|current directory|cwd|ENOENT/i.test(message))
                             throw error;
                         commandAccess = await requestCommandAccess("host", params.cmd, ctx, getPermission(), commandAccess, accessController, onAccessChanged);
                         currentResult = await run(commandAccess);
@@ -1003,7 +1003,7 @@ async function requestCommandAccess(boundary, command, ctx, permission, current,
     const boundaryLabel = boundary === "network"
         ? "network access"
         : "unrestricted host filesystem and network access";
-    if (!ctx.hasUI) {
+    if (!ctx.hasUI && typeof ctx.ui?.select !== "function") {
         throw new Error(`Command requires ${boundaryLabel}. Re-run with ${boundary === "network" ? "--network" : "--permission full"} for an explicitly trusted non-interactive task.`);
     }
     const sandbox = sandboxDescription({

@@ -15,7 +15,6 @@ import type { LocalPluginEntry } from "../shared/types";
 import { PROJECT_PLUGIN_ROOTS, PROJECT_SKILL_ROOTS, USER_PLUGIN_ROOTS, USER_SKILL_ROOTS, skillSlashCommand } from "../shared/skills";
 import { useI18n } from "./i18n";
 import type { MessageKey } from "../shared/i18n";
-import logo from "./logo.svg";
 
 const PATH_MIME = "text/casleo-path";
 let treeDragPath = "";
@@ -191,7 +190,6 @@ export function SidebarNav({
     <aside className="sidebar">
       <header className="sidebar-titlebar">
         <div className="sidebar-brand">
-          <img className="brand-mark" src={logo} alt="" width={24} height={14} />
           <strong>Casleo</strong>
         </div>
       </header>
@@ -2088,40 +2086,9 @@ export function PromptBar({
     });
   };
   const hero = placement === "hero";
-  const folder = workspace ? baseName(workspace) : undefined;
   return (
     <div ref={rootRef} className={hero ? "prompt-wrap hero" : "prompt-wrap"}>
       <div className="prompt-shell">
-        {((!hero && Boolean(folder)) || Boolean(steering && steering.length > 0)) && (
-          <div className="prompt-topbar">
-            <div className="prompt-topbar-row">
-              {!hero && folder && <button
-                type="button"
-                className="prompt-folder on"
-                onClick={() => void onPickWorkspace()}
-                title={workspace ?? t("composer.selectOrOpen")}
-              >
-                <Icon path="M3 7h6l2 2h10v10H3z" size={13} />
-                <span>{folder}</span>
-              </button>}
-              {steering && steering.length > 0 && (
-                <div className="prompt-queue-meta">
-                  <span className="prompt-steer-count">{t("composer.steering", { n: steering.length })}</span>
-                </div>
-              )}
-            </div>
-            {steering && steering.length > 0 && (
-              <div className="prompt-steer">
-                {steering.map((item, index) => (
-                  <div key={`${index}-${item}`} className="prompt-steer-row">
-                    <Icon path="M12 19V5M5 12l7-7 7 7" size={12} />
-                    <p className="prompt-steer-text">{item}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
         {reference && referenceMatches.length > 0 && (
           <div className="prompt-references" role="listbox" aria-label={reference.trigger === "/" ? "Skills" : "Plugins"}>
             {referenceMatches.map((item, index) => (
@@ -2640,7 +2607,7 @@ export function ApprovalCard({
           </>
         )}
         {(request.method === "input" || request.method === "editor") && (
-          <button type="button" className="primary" onClick={() => void respond({ value })}>{t("common.continue")}</button>
+          <button type="button" className="primary" onClick={() => void respond({ value, confirmed: true })}>{t("common.continue")}</button>
         )}
       </div>
     </div>
@@ -2897,7 +2864,7 @@ function ApiProfilesEditor({
                     <Combo
                       value={active.effort}
                       down
-                      options={["off", "minimal", "low", "medium", "high", "xhigh", "max"].map((level) => ({ value: level, label: t(effortLabelKey(level)) }))}
+                      options={pickEffortOptions(["low", "medium", "high", "xhigh"]).map((level) => ({ value: level, label: t(effortLabelKey(level)) }))}
                       onChange={(effort) => update({ effort })}
                     />
                   </div>

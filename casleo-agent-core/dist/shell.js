@@ -45,8 +45,11 @@ export function hostShellCommand(shellCommand) {
 }
 function resolveWindowsPowerShell() {
     const configured = casleoEnv("SHELL")?.trim();
-    if (configured)
-        return configured;
+    if (configured) {
+        const name = path.basename(configured).toLowerCase();
+        if ((name === "pwsh.exe" || name === "powershell.exe") && fs.existsSync(configured))
+            return configured;
+    }
     for (const executable of ["pwsh.exe", "powershell.exe"]) {
         const resolved = findExecutableOnPath(executable);
         if (resolved)
