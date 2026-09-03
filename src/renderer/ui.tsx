@@ -2678,7 +2678,7 @@ function ModelField({
   const options = [...new Set([value, ...models].filter(Boolean))].map((id) => ({ value: id, label: id }));
   return (
     <label>
-      {t("common.model")}
+      {t("settings.defaultModel")}
       <span className="settings-model">
         <Combo
           value={value}

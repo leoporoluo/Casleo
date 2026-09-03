@@ -42,7 +42,7 @@ export function levelsFromThinkingMap(map?: ThinkingLevelMap): string[] {
 
 export function inferModelReasoning(modelId: string): boolean {
   const id = modelId.toLowerCase();
-  if (!/deepseek|reasoner|\br1\b|v4-flash|v4-pro/.test(id)) return false;
+  if (!/deepseek|reasoner|\br1\b|v4-flash|v4-pro|(?:^|[-_])gpt-5(?:[.-]|$)|(?:^|[-_])o[134](?:[-_.]|$)/.test(id)) return false;
   if (/deepseek-chat|deepseek-coder/.test(id)) return false;
   if (/(?:^|[-_])(chat|coder|lite|distill|embed|vision|ocr|instruct)(?:$|[-_])/.test(id)) {
     return false;
@@ -72,10 +72,14 @@ export function levelsForModel(
 ): string[] {
   const entry = catalog?.find((item) => item.id === modelId);
   if (entry?.reasoning === false) return ["off"];
+  if (/deepseek-chat|deepseek-coder|(?:^|[-_.])gpt-4(?:[-_.a-z0-9]|$)/i.test(modelId)) return ["off"];
   if (entry?.reasoning === true || inferModelReasoning(modelId)) {
     return levelsFromThinkingMap(thinkingMapForModelId(modelId));
   }
-  return ["off"];
+  // Custom gateways often omit the reasoning capability flag. Keep the picker
+  // available for those models; an explicit `reasoning: false` above is the
+  // only case where it should be hidden.
+  return ["low", "medium", "high", "max"];
 }
 
 /** UI order: 轻度 / 中 / 高 / 极高 (xhigh or max). */
