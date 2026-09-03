@@ -20,9 +20,6 @@ export async function initializeTetherHome() {
     // its own sessions and credentials in the application data directory.
     process.env.PI_CODING_AGENT_DIR = path.join(os.homedir(), ".pi", "agent");
     process.env.PI_CODING_AGENT_SESSION_DIR = sessions;
-    // Prompt templates are no longer used by Casleo. Remove the legacy
-    // directory so installations converge on ~/.pi/agent/*.md.
-    await fs.rm(path.join(os.homedir(), ".pi", "agent", "prompts"), { recursive: true, force: true }).catch(() => undefined);
     await fs.mkdir(home, { recursive: true, mode: 0o700 });
     await fs.chmod(home, 0o700).catch(() => undefined);
     await fs.mkdir(sessions, { recursive: true, mode: 0o700 });
