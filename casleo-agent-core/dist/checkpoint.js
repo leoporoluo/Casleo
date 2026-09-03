@@ -148,10 +148,17 @@ async function scanDirectory(workspace, relativeDirectory, snapshots) {
     }
 }
 async function readTextFile(file) {
-    const buffer = await fs.readFile(file);
-    if (buffer.includes(0))
+    if (file.toLowerCase().endsWith(".asar"))
         return undefined;
-    return buffer.toString("utf8");
+    try {
+        const buffer = await fs.readFile(file);
+        if (buffer.includes(0))
+            return undefined;
+        return buffer.toString("utf8");
+    }
+    catch {
+        return undefined;
+    }
 }
 function missingSnapshot(file) {
     return { path: file, content: null, hash: hash(null) };

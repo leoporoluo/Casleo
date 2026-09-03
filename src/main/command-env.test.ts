@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { commandEnvironment, resolveCommandCwd } from "casleo-agent-core";
+import { captureWorkspaceCheckpoint } from "../../casleo-agent-core/dist/checkpoint.js";
+import { Workspace } from "../../casleo-agent-core/dist/workspace.js";
 import { hostShellCommand } from "../../casleo-agent-core/dist/shell.js";
 
 describe("commandEnvironment", () => {
@@ -79,5 +81,29 @@ describe("hostShellCommand", () => {
     const invocation = hostShellCommand("Get-Date");
     expect(fs.existsSync(invocation.command)).toBe(true);
     expect(path.basename(invocation.command).toLowerCase()).toMatch(/powershell\.exe|pwsh\.exe/);
+  });
+});
+
+describe("workspace checkpoints", () => {
+  it("ignores packaged asar files while capturing command changes", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "casleo-checkpoint-"));
+    const asar = path.join(root, "old-release", "resources", "default_app.asar");
+    const marker = path.join(root, "marker.txt");
+    fs.mkdirSync(path.dirname(asar), { recursive: true });
+    fs.writeFileSync(asar, "not a real archive");
+    try {
+      const result = await captureWorkspaceCheckpoint(
+        new Workspace(root),
+        "create marker",
+        async () => {
+          fs.writeFileSync(marker, "created");
+          return { exitCode: 0 };
+        },
+      );
+
+      expect(result.checkpoint?.before.map((file) => file.path)).toEqual(["marker.txt"]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });
