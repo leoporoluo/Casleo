@@ -19,10 +19,8 @@ import { formatPlanForExecution, PLAN_STATE_ENTRY, planWidgetLines, registerPlan
 import { discoverProjectCommands } from "./project-profile.js";
 import { registerTetherProjectTrust } from "./project-trust.js";
 import { defaultModelForProvider } from "./providers.js";
-import { composePersonalizedSystemPrompt, loadPersonalizationPrompt, } from "./personalization.js";
-import { sanitizeTetherRuntimeText } from "./runtime-branding.js";
 import { executeSandboxedCommand, sandboxDescription } from "./sandbox.js";
-import { execCommandParameterDescription, shellPromptRules, stripUnixShellCoaching, } from "./shell.js";
+import { execCommandParameterDescription, shellPromptRules, } from "./shell.js";
 import { registerSessionCommands } from "./session-commands.js";
 import { formatStatusReport } from "./status.js";
 import { normalizeDeepSeekBaseUrl, saveDeepSeekBaseUrl } from "./settings.js";
@@ -255,11 +253,15 @@ export function createTetherExtension(options) {
             pi.on("before_agent_start", async (event, ctx) => {
                 lastAgentFailed = false;
                 const currentAccess = effectiveAccess();
-                const personalizationPrompt = await loadPersonalizationPrompt(options.personalizationFile);
-                // Keep Pi's official system prompt intact. Casleo runtime rules
-                // are enforced by the tool permissions and extension handlers,
-                // rather than appended to every model request.
-                const systemPrompt = composePersonalizedSystemPrompt(stripUnixShellCoaching(sanitizeTetherRuntimeText(event.systemPrompt)), "", personalizationPrompt);
+                // Casleo's original prompt is the complete prompt for each
+                // request. Do not prepend or append Pi's prompt a second time.
+                const systemPrompt = engineeringInstructions(projectCommands, currentAccess, {
+                    provider: ctx.model?.provider ?? options.providerId,
+                    modelId: ctx.model?.id ?? options.modelId,
+                    ...(ctx.model?.name ? { modelName: ctx.model.name } : {}),
+                    transport: ctx.model?.api ?? options.transport,
+                    baseUrl: options.baseUrl,
+                });
                 if (permission !== "plan")
                     return { systemPrompt };
                 return {
