@@ -3807,6 +3807,26 @@ textarea::selection,
   position: relative;
   cursor: pointer;
 }
+.preference-segment {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--inset);
+}
+.preference-segment button {
+  min-width: 42px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 7px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.preference-segment button:hover { color: var(--ink-2); background: var(--hover); }
+.preference-segment button.on { color: var(--ink); background: var(--surface); box-shadow: 0 0 0 1px var(--line-strong); font-weight: 500; }
 .settings-toggle-row input[type="checkbox"]::after {
   content: "";
   position: absolute;

@@ -2411,6 +2411,14 @@ export function EffortPicker({
   );
 }
 
+function PreferenceSegment({ checked, onChange }: { checked: boolean; onChange(value: boolean): void }) {
+  const { t } = useI18n();
+  return <div className="preference-segment" role="group" aria-label={t("settings.toggleValue")}>
+    <button type="button" className={!checked ? "on" : ""} onClick={() => onChange(false)}>{t("settings.toggleOff")}</button>
+    <button type="button" className={checked ? "on" : ""} onClick={() => onChange(true)}>{t("settings.toggleOn")}</button>
+  </div>;
+}
+
 export function Combo({
   value,
   options,
@@ -3202,22 +3210,14 @@ export function Login({
                       <b>{t("settings.closeToTray")}</b>
                       <small>{t("settings.closeToTrayHint")}</small>
                     </span>
-                    <input
-                      type="checkbox"
-                      checked={preferences.minimizeToTray}
-                      onChange={(event) => setPreferences((current) => ({ ...current, minimizeToTray: event.target.checked }))}
-                    />
+                    <PreferenceSegment checked={preferences.minimizeToTray} onChange={(minimizeToTray) => setPreferences((current) => ({ ...current, minimizeToTray }))} />
                   </label>
                   <label className="settings-toggle-row">
                     <span>
                       <b>{t("settings.startup")}</b>
                       <small>{t("settings.startupHint")}</small>
                     </span>
-                    <input
-                      type="checkbox"
-                      checked={preferences.openAtLogin}
-                      onChange={(event) => setPreferences((current) => ({ ...current, openAtLogin: event.target.checked }))}
-                    />
+                    <PreferenceSegment checked={preferences.openAtLogin} onChange={(openAtLogin) => setPreferences((current) => ({ ...current, openAtLogin }))} />
                   </label>
                 </div>
               </div>
