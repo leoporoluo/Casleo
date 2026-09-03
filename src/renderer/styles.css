@@ -60,10 +60,10 @@
   --line: #383838;
   --line-strong: #4a4a4a;
   --field: #202020;
-  --accent: #f2f2f2;
-  --accent-ink: #ffffff;
+  --accent: #d4d4d4;
+  --accent-ink: #e5e5e5;
   --accent-tint: #2c2c2c;
-  --brand: #f2f2f2;
+  --brand: #555555;
   --green: #7fc58a;
   --green-tint: #243428;
   --red: #f07c78;
@@ -131,8 +131,8 @@ button:disabled {
   opacity: 0.4;
 }
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 1px solid var(--line-strong);
+  outline-offset: 1px;
 }
 ::selection {
   background: var(--brand);
@@ -141,15 +141,15 @@ button:disabled {
 input::selection,
 textarea::selection,
 .combo-input::selection {
-  background: var(--ink);
-  color: var(--surface);
+  background: var(--hover-2);
+  color: var(--ink);
 }
 
 .app {
   display: flex;
   width: 100%;
   height: 100%;
-  background: var(--page);
+  background: transparent;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -170,15 +170,15 @@ textarea::selection,
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--page) 76%, transparent);
-  -webkit-backdrop-filter: blur(24px) saturate(125%);
-  backdrop-filter: blur(24px) saturate(125%);
+  background: color-mix(in srgb, var(--page) 62%, transparent);
+  -webkit-backdrop-filter: blur(36px) saturate(138%);
+  backdrop-filter: blur(36px) saturate(138%);
   border-right: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
   box-shadow: inset -1px 0 0 color-mix(in srgb, var(--surface) 12%, transparent);
   isolation: isolate;
 }
 [data-theme="dark"] .sidebar {
-  background: color-mix(in srgb, #171717 72%, transparent);
+  background: rgba(25, 25, 25, 0.72);
   border-right-color: rgba(255, 255, 255, 0.08);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.035);
 }
@@ -2743,6 +2743,14 @@ textarea::selection,
 .primary:hover:not(:disabled) {
   background: var(--accent-ink);
 }
+[data-theme="dark"] .primary {
+  color: var(--ink);
+  background: var(--hover-2);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+[data-theme="dark"] .primary:hover:not(:disabled) {
+  background: #414141;
+}
 .ghost.danger {
   color: var(--red);
 }
@@ -3567,9 +3575,10 @@ textarea::selection,
 }
 .panel input:focus-visible,
 .settings input:focus-visible,
+.settings textarea:focus-visible,
 .approval textarea:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 1.5px var(--brand);
+  box-shadow: inset 0 0 0 1px var(--line-strong), 0 0 0 2px color-mix(in srgb, var(--ink) 6%, transparent);
 }
 .panel input::placeholder,
 .settings input::placeholder,
@@ -3612,9 +3621,9 @@ textarea::selection,
 .settings-back:hover { color: var(--ink); }
 
 .settings {
-  width: min(1120px, calc(100% - 48px));
-  height: min(720px, calc(100% - 28px));
-  margin: 14px auto;
+  width: min(980px, calc(100% - 64px));
+  height: min(650px, calc(100% - 40px));
+  margin: 20px auto;
   min-height: 0;
   background: var(--surface);
   border-radius: 16px;
@@ -3738,6 +3747,23 @@ textarea::selection,
   background: var(--surface);
   color: var(--ink);
 }
+.settings-combo,
+.settings-combo .combo,
+.settings-combo .combo-trigger {
+  width: 100%;
+}
+.settings-combo .combo-trigger {
+  height: 34px;
+  padding: 0 10px;
+  justify-content: space-between;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.settings-combo .combo-trigger:hover,
+.settings-combo .combo.open .combo-trigger {
+  background: var(--hover);
+}
 .settings-field-hint {
   color: var(--ink-3);
   font-size: 11px;
@@ -3772,8 +3798,8 @@ textarea::selection,
 .settings-toggle-row input[type="checkbox"] {
   appearance: none;
   padding: 0;
-  width: 38px;
-  height: 22px;
+  width: 36px;
+  height: 20px;
   flex: none;
   border-radius: 999px;
   background: var(--hover-2);
@@ -3784,18 +3810,18 @@ textarea::selection,
 .settings-toggle-row input[type="checkbox"]::after {
   content: "";
   position: absolute;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   top: 2px;
   left: 2px;
   border-radius: 50%;
-  background: var(--ink-3);
+  background: var(--ink-2);
   transition: transform .15s ease, background .15s ease;
 }
-.settings-toggle-row input[type="checkbox"]:checked { background: var(--accent); }
+.settings-toggle-row input[type="checkbox"]:checked { background: var(--line-strong); }
 .settings-toggle-row input[type="checkbox"]:checked::after {
   transform: translateX(16px);
-  background: var(--page);
+  background: var(--ink);
 }
 .settings-hint {
   margin: 0;
@@ -3922,7 +3948,7 @@ textarea::selection,
 .custom-api-card-use {
   flex: none;
   font-size: 10px;
-  color: var(--green);
+  color: var(--ink-3);
 }
 .custom-api-card-del {
   opacity: 0;
@@ -4067,7 +4093,7 @@ textarea::selection,
 }
 .theme-pick.on {
   color: var(--ink);
-  background: var(--accent-tint);
+  background: var(--hover);
 }
 .theme-swatch {
   width: 28px;
@@ -4082,6 +4108,10 @@ textarea::selection,
   background: #171717;
   border-color: #4a4a4a;
   box-shadow: inset 0 0 0 6px #242424;
+}
+.theme-pick-system .theme-swatch {
+  background: var(--hover-2);
+  box-shadow: inset 8px 0 0 var(--surface);
 }
 .theme-pick-meta {
   min-width: 0;
@@ -4101,7 +4131,7 @@ textarea::selection,
 }
 .theme-pick-check {
   flex: none;
-  color: var(--ink);
+  color: var(--ink-2);
 }
 .settings-badge {
   font-size: 11px;
@@ -4144,7 +4174,7 @@ textarea::selection,
   min-height: 18px;
 }
 .settings-feedback.ok {
-  color: var(--green);
+  color: var(--ink-2);
 }
 .settings-feedback.err {
   color: var(--red);
@@ -4207,8 +4237,9 @@ kbd {
   align-items: center;
   gap: 8px;
 }
-.prompt-template-toolbar .settings-select {
-  min-width: 180px;
+.prompt-template-toolbar input {
+  width: min(260px, 45%);
+  min-width: 150px;
 }
 .prompt-template-editor {
   width: 100%;

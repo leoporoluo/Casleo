@@ -1,6 +1,6 @@
-export const THEMES = ["paper", "dark"] as const;
+export const THEMES = ["system", "paper", "dark"] as const;
 export type ThemeId = (typeof THEMES)[number];
-export const DEFAULT_THEME: ThemeId = "paper";
+export const DEFAULT_THEME: ThemeId = "system";
 export const THEME_STORAGE_KEY = "casleo.theme";
 
 export function parseTheme(value: unknown): ThemeId {
@@ -17,8 +17,9 @@ export function readStoredTheme(): ThemeId {
 
 export function applyTheme(theme: ThemeId): ThemeId {
   const next = parseTheme(theme);
-  document.documentElement.dataset.theme = next;
-  document.documentElement.style.colorScheme = next === "dark" ? "dark" : "light";
+  const resolved = next === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : next === "system" ? "paper" : next;
+  document.documentElement.dataset.theme = resolved;
+  document.documentElement.style.colorScheme = resolved === "dark" ? "dark" : "light";
   try {
     localStorage.setItem(THEME_STORAGE_KEY, next);
   } catch {

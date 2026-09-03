@@ -3,14 +3,20 @@ import { z } from "zod";
 import { tetherEnv } from "./env.js";
 import { DEFAULT_DEEPSEEK_BASE_URL, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, resolveMaxTokens, } from "./settings.js";
 export const effortSchema = z.enum(["low", "high", "max"]);
-export const transportSchema = z.enum(["responses", "chat"]);
+export const transportSchema = z.enum([
+    "openai-responses",
+    "openai-completions",
+    "anthropic-messages",
+    "responses",
+    "chat",
+]);
 export const harnessSchema = z.enum(["minimal", "safe"]);
 export const permissionSchema = z.enum(["plan", "ask", "auto", "full"]);
 export function loadConfig(options) {
     const workspace = path.resolve(options.cwd ?? process.cwd());
     const apiKey = process.env.DEEPSEEK_API_KEY?.trim() ?? "";
     const effort = effortSchema.parse(options.effort ?? tetherEnv("EFFORT") ?? "max");
-    const transport = transportSchema.parse(options.transport ?? tetherEnv("TRANSPORT") ?? "responses");
+    const transport = transportSchema.parse(options.transport ?? tetherEnv("TRANSPORT") ?? "openai-responses");
     const harness = harnessSchema.parse(options.harness ?? tetherEnv("HARNESS") ?? "minimal");
     const permission = options.yes
         ? "full"

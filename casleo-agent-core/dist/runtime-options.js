@@ -40,7 +40,7 @@ export function parseRuntimeArgs(argv) {
         (storedSelection?.providerId === providerId ? storedSelection.modelId : undefined);
     let effortExplicit = tetherEnv("EFFORT") !== undefined;
     let effort = tetherEnv("EFFORT");
-    let transport = transportSchema.parse(tetherEnv("TRANSPORT") ?? "responses");
+    let transport = transportSchema.parse(tetherEnv("TRANSPORT") ?? "openai-responses");
     let harness = harnessSchema.parse(tetherEnv("HARNESS") ?? "minimal");
     let permission = permissionSchema.parse(tetherEnv("PERMISSION") ?? "auto");
     let sandbox = sandboxModeSchema.parse(tetherEnv("SANDBOX") ?? "workspace-write");
@@ -223,7 +223,7 @@ Tether Runtime options:
   --base-url <url>                 DeepSeek API base URL
   --model <id>                     Model ID (provider default when omitted)
   --effort <level>                 Alias for --thinking; defaults by provider
-  --transport <responses|chat>     API transport (default: responses)
+  --transport <api>                openai-responses|openai-completions|anthropic-messages
   --harness <minimal|safe>         Tool harness (default: minimal)
   --permission <mode>              plan|ask|auto|full (full grants host + network)
   --sandbox <mode>                 read-only|workspace-write|danger-full-access

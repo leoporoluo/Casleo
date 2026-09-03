@@ -23,6 +23,7 @@ const api: DesktopApi = {
     savePreferences: (preferences) => ipcRenderer.invoke("app:save-preferences", preferences),
     listPromptTemplates: () => ipcRenderer.invoke("app:list-prompt-templates"),
     savePromptTemplate: (name, content) => ipcRenderer.invoke("app:save-prompt-template", name, content),
+    openPromptTemplatesFolder: () => ipcRenderer.invoke("app:open-prompt-templates-folder"),
   },
   window: {
     minimize: () => ipcRenderer.invoke("window:minimize"),

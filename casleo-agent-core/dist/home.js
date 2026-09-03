@@ -16,7 +16,9 @@ export function getTetherArchivedSessionsDir() {
 export async function initializeTetherHome() {
     const home = getTetherHome();
     const sessions = getTetherSessionsDir();
-    process.env.PI_CODING_AGENT_DIR = home;
+    // Pi resources remain in their official global location while Casleo keeps
+    // its own sessions and credentials in the application data directory.
+    process.env.PI_CODING_AGENT_DIR = path.join(os.homedir(), ".pi", "agent");
     process.env.PI_CODING_AGENT_SESSION_DIR = sessions;
     await fs.mkdir(home, { recursive: true, mode: 0o700 });
     await fs.chmod(home, 0o700).catch(() => undefined);

@@ -183,20 +183,28 @@ async function listPromptTemplates(): Promise<PromptTemplate[]> {
     if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) continue;
     const file = path.join(root, entry.name);
     try {
-      result.push({ name: entry.name.slice(0, -3), path: file, content: await fsp.readFile(file, "utf8") });
+      result.push({ name: entry.name, path: file, content: await fsp.readFile(file, "utf8") });
     } catch { /* ignore unreadable templates */ }
   }
   return result.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function savePromptTemplate(name: string, content: string): Promise<PromptTemplate> {
-  const clean = name.trim().replace(/[^a-zA-Z0-9_-]/g, "-").replace(/^-+|-+$/g, "");
+  const requested = path.basename(name.trim()).replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-");
+  const clean = requested.replace(/\.md$/i, "").replace(/[. ]+$/g, "");
   if (!clean) throw new Error("Invalid prompt template name");
   const root = promptTemplatesPath();
   await fsp.mkdir(root, { recursive: true, mode: 0o700 });
   const file = path.join(root, `${clean}.md`);
   await fsp.writeFile(file, content, { encoding: "utf8", mode: 0o600 });
-  return { name: clean, path: file, content };
+  return { name: `${clean}.md`, path: file, content };
+}
+
+async function openPromptTemplatesFolder(): Promise<void> {
+  const root = promptTemplatesPath();
+  await fsp.mkdir(root, { recursive: true, mode: 0o700 });
+  const error = await shell.openPath(root);
+  if (error) throw new Error(error);
 }
 
 async function loadAppPreferences(): Promise<void> {
@@ -295,10 +303,10 @@ async function checkForUpdates(manual = false): Promise<void> {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
-    minWidth: 960,
-    minHeight: 640,
+    width: 1280,
+    height: 800,
+    minWidth: 880,
+    minHeight: 560,
     show: false,
     // An opaque surface avoids the first-paint composition flash on Windows.
     transparent: false,
@@ -315,6 +323,7 @@ function createWindow(): void {
           frame: false,
           roundedCorners: true,
           hasShadow: true,
+          backgroundMaterial: "mica" as const,
         }),
     webPreferences: {
       preload: path.join(currentDirectory, "../preload/index.cjs"),
@@ -438,6 +447,7 @@ function registerIpc(): void {
     if (typeof name !== "string" || typeof content !== "string") throw new Error("Invalid prompt template");
     return savePromptTemplate(name, content);
   });
+  ipcMain.handle("app:open-prompt-templates-folder", () => openPromptTemplatesFolder());
   ipcMain.handle("app:open-external", async (_event, url: string) => {
     if (!isSafeExternalUrl(url))
       throw new Error("Only http(s) links can be opened");

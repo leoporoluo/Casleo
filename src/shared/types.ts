@@ -160,6 +160,7 @@ export interface DesktopApi {
     savePreferences(preferences: AppPreferences): Promise<void>;
     listPromptTemplates(): Promise<PromptTemplate[]>;
     savePromptTemplate(name: string, content: string): Promise<PromptTemplate>;
+    openPromptTemplatesFolder(): Promise<void>;
   };
   /** Frameless windows off macOS need the renderer to drive the caption buttons. */
   window: {

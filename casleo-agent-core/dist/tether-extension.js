@@ -138,7 +138,7 @@ export function createTetherExtension(options) {
                 ctx.ui.setTitle(`Casleo — ${ctx.cwd}`);
                 ctx.ui.setWidget("tether-plan", planWidgetLines(planState, ctx));
             };
-            registerDeepSeekProvider(pi, options);
+            registerCasleoProvider(pi, options);
             registerLocalImageInput(pi);
             registerNaturalExit(pi);
             registerSessionCommands(pi);
@@ -201,12 +201,6 @@ export function createTetherExtension(options) {
                         contextWarningLevel = "none";
                     }
                 }
-                if (ctx.model?.provider !== "deepseek" ||
-                    options.transport !== "responses")
-                    return;
-                return optimizeDeepSeekResponsesPayload(event.payload, {
-                    webSearch: options.webSearch,
-                });
             });
             pi.on("session_start", async (_event, ctx) => {
                 checkpoints.length = 0;
@@ -790,89 +784,61 @@ function deepSeekThinkingLevelMap(modelId) {
     }
     return { ...base, xhigh: "high", max: "max" };
 }
-function registerDeepSeekProvider(pi, options) {
-    const api = options.transport === "responses"
+function registerCasleoProvider(pi, options) {
+    const api = options.transport === "responses" || options.transport === "openai-responses"
         ? "openai-responses"
-        : "openai-completions";
-    const models = [
-        {
-            id: "deepseek-v4-flash",
-            name: "DeepSeek V4 Flash",
-            cost: { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0 },
-        },
-        {
-            id: "deepseek-v4-pro",
-            name: "DeepSeek V4 Pro",
-            cost: { input: 0.435, output: 0.87, cacheRead: 0.003625, cacheWrite: 0 },
-        },
-        {
-            id: "deepseek-v4-flash-vision-exp",
-            name: "DeepSeek V4 Flash Vision Exp",
-            cost: { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0 },
-        },
-    ];
-    if (options.providerId === "deepseek" &&
-        !models.some((model) => model.id === options.modelId)) {
-        const defaultCost = models.find((model) => model.id === defaultModelForProvider("deepseek"))?.cost;
-        models.push({
+        : options.transport === "chat" || options.transport === "openai-completions"
+            ? "openai-completions"
+            : options.transport;
+    const models = [{
             id: options.modelId,
             name: options.modelId,
-            cost: defaultCost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-        });
-    }
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        }];
     for (const id of options.extraModelIds ?? []) {
         if (models.some((model) => model.id === id))
             continue;
-        const defaultCost = models.find((model) => model.id === defaultModelForProvider("deepseek"))?.cost;
         models.push({
             id,
             name: id,
-            cost: defaultCost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         });
     }
-    pi.registerProvider("deepseek", {
-        name: "DeepSeek",
+    pi.registerProvider("openai", {
+        name: "Casleo API",
         baseUrl: options.baseUrl,
-        apiKey: "$DEEPSEEK_API_KEY",
+        apiKey: "$OPENAI_API_KEY",
         api,
-        authHeader: true,
+        authHeader: api === "openai-responses" || api === "openai-completions",
         models: models.map((model) => {
-            const reasoning = inferDeepSeekReasoning(model.id);
-            const thinkingLevelMap = deepSeekThinkingLevelMap(model.id);
-            const native = isDeepSeekNativeModel(model.id);
             return {
                 id: model.id,
                 name: model.name,
                 api,
-                reasoning,
-                input: modelSupportsVision(model.id)
-                    ? ["text", "image"]
-                    : ["text"],
+                reasoning: true,
+                input: ["text"],
                 cost: model.cost,
                 contextWindow: DEEPSEEK_CONTEXT_WINDOW,
-                maxTokens: resolveMaxTokens(options.baseUrl, options.maxTokens),
-                ...(thinkingLevelMap ? { thinkingLevelMap } : {}),
-                compat: options.transport === "responses"
-                    ? {
+                maxTokens: options.maxTokens ?? 32_768,
+                thinkingLevelMap: {
+                    off: null,
+                    minimal: "minimal",
+                    low: "low",
+                    medium: "medium",
+                    high: "high",
+                    xhigh: "xhigh",
+                    max: "max",
+                },
+                ...(api === "openai-responses" ? { compat: {
                         supportsDeveloperRole: true,
                         supportsLongCacheRetention: false,
                         supportsStrictMode: false,
                         supportsOpenAIGrammarTools: true,
                         sessionAffinityFormat: "openai-nosession",
-                    }
-                    : {
+                    } } : api === "openai-completions" ? { compat: {
                         supportsStore: false,
                         supportsDeveloperRole: false,
-                        ...(reasoning && native
-                            ? {
-                                requiresReasoningContentOnAssistantMessages: true,
-                                // Must set openai explicitly: provider id "deepseek" auto-detects thinkingFormat.
-                                thinkingFormat: isOfficialDeepSeekBaseUrl(options.baseUrl)
-                                    ? "deepseek"
-                                    : "openai",
-                            }
-                            : {}),
-                    },
+                    } } : {}),
             };
         }),
     });

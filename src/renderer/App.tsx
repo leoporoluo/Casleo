@@ -519,11 +519,6 @@ export function App() {
     }
     const sandbox = await resolveSandbox(asProject, mode, cwd);
     if (seq !== startSeq.current) return false;
-    if (asProject && sandbox !== "danger-full-access" && window.harness.platform !== "darwin") {
-      setLoading(false);
-      setToast(t("toast.sandboxCancelled"));
-      return false;
-    }
     try {
       const snapshot = await window.harness.agent.start({
         ...(cwd ? { cwd } : {}),
@@ -969,7 +964,6 @@ export function App() {
     void refresh().then((status) => {
       const current = status.find((item) => item.id === "openai");
       if (current?.configured) setModel(current.defaultModel);
-      if (!current?.configured) setLoginOpen(true);
     });
   }, []);
 

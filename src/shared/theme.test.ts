@@ -5,10 +5,11 @@ describe("parseTheme", () => {
   it("accepts the paper and dark themes", () => {
     expect(parseTheme("paper")).toBe("paper");
     expect(parseTheme("dark")).toBe("dark");
+    expect(parseTheme("system")).toBe("system");
   });
 
   it("falls back to paper", () => {
     expect(parseTheme(null)).toBe(DEFAULT_THEME);
-    expect(parseTheme("solarized")).toBe("paper");
+    expect(parseTheme("solarized")).toBe("system");
   });
 });

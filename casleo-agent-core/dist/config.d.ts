@@ -6,6 +6,9 @@ export declare const effortSchema: z.ZodEnum<{
 }>;
 export type Effort = z.infer<typeof effortSchema>;
 export declare const transportSchema: z.ZodEnum<{
+    "openai-responses": "openai-responses";
+    "openai-completions": "openai-completions";
+    "anthropic-messages": "anthropic-messages";
     responses: "responses";
     chat: "chat";
 }>;

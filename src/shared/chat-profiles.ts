@@ -6,7 +6,7 @@ export const DEEPSEEK_PRESET = {
 export const DEFAULT_CONTEXT_WINDOW = 272_000;
 export const DEFAULT_MAX_TOKENS = 32_768;
 export const DEFAULT_PROFILE_EFFORT = "medium";
-export const API_TRANSPORTS = ["openai-completions", "openai-responses", "anthropic-messages", "google-generative-ai"] as const;
+export const API_TRANSPORTS = ["openai-responses", "openai-completions", "anthropic-messages"] as const;
 export type ApiTransport = (typeof API_TRANSPORTS)[number];
 
 export type ChatKind = "deepseek" | "custom";

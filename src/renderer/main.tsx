@@ -8,6 +8,9 @@ import "@fontsource-variable/inter/wght.css";
 import "./styles.css";
 
 applyTheme(readStoredTheme());
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (readStoredTheme() === "system") applyTheme("system");
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

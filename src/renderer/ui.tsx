@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type Keyboa
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode, type PromptTemplate } from "../shared/types";
+import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode } from "../shared/types";
 import { skillUserDisplay } from "../shared/skills";
 import { visibleUserText } from "../shared/vision-api";
 import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, DEFAULT_MAX_TOKENS, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
@@ -2842,9 +2842,14 @@ function ApiProfilesEditor({
             <SecretField value={active.apiKey} onChange={(apiKey) => update({ apiKey })} />
             <label>
               {t("settings.apiTransport")}
-              <select className="settings-select" value={active.transport} onChange={(event) => update({ transport: event.target.value as CustomApiProfile["transport"] })}>
-                {API_TRANSPORTS.map((transport) => <option key={transport} value={transport}>{{"openai-completions":"OpenAI Chat Completions","openai-responses":"OpenAI Responses","anthropic-messages":"Anthropic Messages","google-generative-ai":"Google Generative AI"}[transport]}</option>)}
-              </select>
+              <div className="settings-combo">
+                <Combo
+                  value={active.transport}
+                  down
+                  options={API_TRANSPORTS.map((transport) => ({ value: transport, label: {"openai-completions":"OpenAI Chat Completions","openai-responses":"OpenAI Responses","anthropic-messages":"Anthropic Messages"}[transport] }))}
+                  onChange={(transport) => update({ transport: transport as CustomApiProfile["transport"] })}
+                />
+              </div>
             </label>
             <ModelField
               value={active.model}
@@ -2883,15 +2888,14 @@ function ApiProfilesEditor({
                 </label>
                 <label>
                   {t("settings.profileEffort")}
-                  <select
-                    className="settings-select"
-                    value={active.effort}
-                    onChange={(event) => update({ effort: event.target.value })}
-                  >
-                    {["off", "minimal", "low", "medium", "high", "xhigh", "max"].map((level) => (
-                      <option key={level} value={level}>{level}</option>
-                    ))}
-                  </select>
+                  <div className="settings-combo">
+                    <Combo
+                      value={active.effort}
+                      down
+                      options={["off", "minimal", "low", "medium", "high", "xhigh", "max"].map((level) => ({ value: level, label: t(effortLabelKey(level)) }))}
+                      onChange={(effort) => update({ effort })}
+                    />
+                  </div>
                 </label>
               </details>
             )}
@@ -2913,11 +2917,13 @@ function ApiProfilesEditor({
 type SettingsPane = "chat" | "appearance" | "shortcuts" | "skills" | "plugins" | "prompts";
 
 const THEME_LABEL: Record<ThemeId, MessageKey> = {
+  system: "settings.themeSystem",
   paper: "settings.themePaper",
   dark: "settings.themeDark",
 };
 
 const THEME_DESC: Record<ThemeId, MessageKey> = {
+  system: "settings.themeSystemDesc",
   paper: "settings.themePaperDesc",
   dark: "settings.themeDarkDesc",
 };
@@ -2996,8 +3002,7 @@ export function Login({
   const [skillRevealError, setSkillRevealError] = useState<string>();
   const [testStatus, setTestStatus] = useState<{ target: "chat"; ok: boolean; message: string } | null>(null);
   const [preferences, setPreferences] = useState<AppPreferences>({ minimizeToTray: true, openAtLogin: false });
-  const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
-  const [activePromptName, setActivePromptName] = useState("casleo");
+  const [activePromptName, setActivePromptName] = useState("AGENTS.md");
   const [promptContent, setPromptContent] = useState("");
   const [promptStatus, setPromptStatus] = useState("");
 
@@ -3064,8 +3069,7 @@ export function Login({
   useEffect(() => {
     if (pane !== "prompts") return;
     void window.harness.app.listPromptTemplates().then((items) => {
-      setPromptTemplates(items);
-      const selected = items.find((item) => item.name === activePromptName) ?? items[0];
+      const selected = items.find((item) => item.name.toLowerCase() === "agents.md") ?? items[0];
       if (selected) { setActivePromptName(selected.name); setPromptContent(selected.content); }
     }).catch(() => undefined);
   }, [pane]);
@@ -3391,17 +3395,11 @@ export function Login({
 
             {pane === "prompts" && (
               <div className="prompt-templates-page">
-                <p className="settings-hint">全局提示模板目录：<code>~/.pi/agent/prompts/*.md</code>。保存后可在输入框使用 <code>/{activePromptName}</code> 调用。</p>
+                <p className="settings-hint">全局自定义指令保存在 <code>~/.pi/agent/prompts/</code>。</p>
                 <div className="prompt-template-toolbar">
-                  <select className="settings-select" value={activePromptName} onChange={(event) => {
-                    const next = promptTemplates.find((item) => item.name === event.target.value);
-                    if (next) { setActivePromptName(next.name); setPromptContent(next.content); setPromptStatus(""); }
-                  }}>
-                    {promptTemplates.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
-                    {promptTemplates.length === 0 && <option value="casleo">casleo</option>}
-                  </select>
-                  <button type="button" className="ghost" onClick={() => { setActivePromptName(`template-${promptTemplates.length + 1}`); setPromptContent(""); setPromptStatus(""); }}>新建模板</button>
-                  <button type="button" className="ghost" onClick={async () => { try { const saved = await window.harness.app.savePromptTemplate(activePromptName, promptContent); setPromptTemplates((items) => [...items.filter((item) => item.name !== saved.name), saved].sort((a, b) => a.name.localeCompare(b.name))); setPromptStatus("已保存"); } catch (error) { setPromptStatus(error instanceof Error ? error.message : String(error)); } }}>保存</button>
+                  <input aria-label="文件名" value={activePromptName} onChange={(event) => { setActivePromptName(event.target.value); setPromptStatus(""); }} placeholder="AGENTS.md" />
+                  <button type="button" className="ghost" onClick={() => void window.harness.app.openPromptTemplatesFolder().catch((error) => setPromptStatus(error instanceof Error ? error.message : String(error)))}>打开文件夹</button>
+                  <button type="button" className="primary" onClick={async () => { try { const saved = await window.harness.app.savePromptTemplate(activePromptName, promptContent); setActivePromptName(saved.name); setPromptStatus("已保存"); } catch (error) { setPromptStatus(error instanceof Error ? error.message : String(error)); } }}>保存</button>
                 </div>
                 <textarea className="prompt-template-editor" value={promptContent} onChange={(event) => setPromptContent(event.target.value)} placeholder="输入可复用的提示模板内容…" spellCheck={false} />
                 {promptStatus && <p className="settings-hint">{promptStatus}</p>}
