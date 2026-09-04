@@ -162,6 +162,7 @@ export interface DesktopApi {
     version(): Promise<string>;
     openExternal(url: string): Promise<void>;
     revealPath(skillName: string, hint?: string): Promise<void>;
+    revealPackagePath(source: string, scope: "global" | "project"): Promise<void>;
     listSkills(): Promise<Array<{ name: string; path: string }>>;
     listPlugins(): Promise<LocalPluginEntry[]>;
     listPackages(): Promise<PiPackageEntry[]>;

@@ -176,6 +176,8 @@ textarea::selection,
   border-right: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
   box-shadow: inset -1px 0 0 color-mix(in srgb, var(--surface) 12%, transparent);
   isolation: isolate;
+  -webkit-user-select: none;
+  user-select: none;
 }
 [data-theme="dark"] .sidebar {
   background: rgba(25, 25, 25, 0.72);
@@ -191,6 +193,8 @@ textarea::selection,
   padding: 0 20px;
   padding-bottom: 15px;
   -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
 }
 /* macOS traffic lights own the top-left, so the brand drops below them and keeps the nav's left edge. */
 .darwin .sidebar-titlebar {
@@ -693,6 +697,8 @@ textarea::selection,
   gap: 8px;
   padding: 0 0 0 16px;
   -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .win-controls {
   flex: none;
@@ -738,8 +744,12 @@ textarea::selection,
 .session-model-controls {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0;
   min-width: 0;
+}
+.session-model-controls .combo-trigger {
+  padding-left: 4px;
+  padding-right: 4px;
 }
 .context-stats-wrap {
   position: relative;
@@ -3610,6 +3620,8 @@ textarea::selection,
   padding: 0 16px 0 20px;
   border-bottom: 1px solid var(--line);
   -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .settings-route-head button,
 .settings-route-head .win-controls {
@@ -3645,6 +3657,8 @@ textarea::selection,
   display: flex;
   flex-direction: column;
   gap: 16px;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .settings-group {
   display: flex;
@@ -3704,6 +3718,8 @@ textarea::selection,
   flex: none;
   flex-shrink: 0;
   border-bottom: 1px solid var(--line);
+  -webkit-user-select: none;
+  user-select: none;
 }
 .settings-head h2 {
   margin: 0;

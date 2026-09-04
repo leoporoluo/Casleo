@@ -14,6 +14,7 @@ const api: DesktopApi = {
     version: () => ipcRenderer.invoke("app:version"),
     openExternal: (url) => ipcRenderer.invoke("app:open-external", url),
     revealPath: (skillName, hint) => ipcRenderer.invoke("app:reveal-path", skillName, hint),
+    revealPackagePath: (source, scope) => ipcRenderer.invoke("app:reveal-package-path", source, scope),
     listSkills: () => ipcRenderer.invoke("app:list-skills"),
     listPlugins: () => ipcRenderer.invoke("app:list-plugins"),
     listPackages: () => ipcRenderer.invoke("app:list-packages"),

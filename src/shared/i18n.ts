@@ -377,7 +377,6 @@ const zh = {
   "settings.mineruBadge": "免配内置",
   "settings.mineruHint":
     "未配置识图 API 时自动启用：免密钥 OCR。已配置 DeepSeek / 自定义识图时只走识图接口，不再等待 MinerU。",
-  "settings.clearConfig": "清除配置",
   "settings.save": "保存",
   "settings.close": "关闭",
   "settings.fillUrlKey": "请先填写 API URL 与 Key",
@@ -823,7 +822,6 @@ const en: Record<MessageKey, string> = {
   "settings.mineruBadge": "Built-in",
   "settings.mineruHint":
     "Used only when no vision API key is set. With DeepSeek / custom vision configured, the vision API runs alone — MinerU is skipped.",
-  "settings.clearConfig": "Clear config",
   "settings.save": "Save",
   "settings.close": "Close",
   "settings.fillUrlKey": "Enter API URL and key first",

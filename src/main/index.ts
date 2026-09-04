@@ -12,6 +12,7 @@ import {
   nativeImage,
   net,
   protocol,
+  screen,
   shell,
   Tray,
 } from "electron";
@@ -214,6 +215,41 @@ async function openPackagesFolder(): Promise<void> {
   if (error) throw new Error(error);
 }
 
+function piPackageRoot(scope: "global" | "project"): string {
+  if (scope === "project") {
+    if (!activeAgentCwd) throw new Error("请先打开并信任一个项目");
+    return path.join(activeAgentCwd, ".pi", "npm", "node_modules");
+  }
+  return path.join(process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir(), ".pi", "agent", "npm", "node_modules");
+}
+
+function npmPackageName(source: string): string | undefined {
+  const spec = source.trim().replace(/^npm:/, "");
+  const match = spec.match(/^(@[^/]+\/[^@/]+|[^@/]+)(?:@.+)?$/);
+  return match?.[1];
+}
+
+async function revealPackagePath(source: string, scope: "global" | "project"): Promise<void> {
+  const root = piPackageRoot(scope);
+  const packageName = npmPackageName(source);
+  const candidate = packageName ? path.resolve(root, packageName) : root;
+  const relative = path.relative(path.resolve(root), candidate);
+  const insideRoot = relative === "" || (!relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+  let packageExists = false;
+  if (insideRoot && packageName) {
+    try {
+      await fsp.access(candidate);
+      packageExists = true;
+    } catch {
+      packageExists = false;
+    }
+  }
+  const target = packageExists ? candidate : root;
+  await fsp.mkdir(root, { recursive: true, mode: 0o700 });
+  const error = await shell.openPath(target);
+  if (error) throw new Error(error);
+}
+
 function piSettingsPath(scope: "global" | "project"): string {
   if (scope === "project") {
     if (!activeAgentCwd) throw new Error("请先打开并信任一个项目");
@@ -372,11 +408,14 @@ async function checkForUpdates(manual = false): Promise<void> {
 }
 
 function createWindow(): void {
+  const workArea = screen.getPrimaryDisplay().workAreaSize;
+  const windowWidth = Math.min(1100, workArea.width);
+  const windowHeight = Math.min(768, workArea.height);
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 880,
-    minHeight: 560,
+    width: windowWidth,
+    height: windowHeight,
+    minWidth: Math.min(880, windowWidth),
+    minHeight: Math.min(560, windowHeight),
     show: false,
     // An opaque surface avoids the first-paint composition flash on Windows.
     transparent: false,
@@ -534,6 +573,11 @@ function registerIpc(): void {
       );
     },
   );
+  ipcMain.handle("app:reveal-package-path", async (_event, source: unknown, scope: unknown) => {
+    if (typeof source !== "string" || !source.trim()) throw new Error("Invalid package source");
+    if (scope !== "global" && scope !== "project") throw new Error("Invalid package scope");
+    await revealPackagePath(source, scope);
+  });
   ipcMain.handle("app:list-skills", async () =>
     listLocalSkills(activeAgentCwd),
   );

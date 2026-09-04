@@ -2319,9 +2319,7 @@ export function PermissionPicker({
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const options = permissionOptions(t);
-  // /plan remains a command-only mode; the persistent picker mirrors Codex's
-  // three access choices and falls back to the default automatic mode.
-  const selected = options.find((item) => item.value === value) ?? options[1]!;
+  const selected = options.find((item) => item.value === value) ?? options[2]!;
 
   useEffect(() => {
     if (!open) return;
@@ -2344,7 +2342,6 @@ export function PermissionPicker({
       >
         <Icon path={selected.icon} size={14} className="permission-trigger-icon" />
         <span>{selected.label}</span>
-        <Icon path="M6 9l6 6 6-6" size={12} />
       </button>
 
       {open && (
@@ -2403,7 +2400,7 @@ export function SessionModelControls({
   if (!model.trim() || models.length === 0) return null;
   return (
     <div className="session-model-controls">
-      <Combo value={model} options={models} searchable placeholder={t("composer.filterModels")} down={down} onChange={onModel} />
+      <Combo value={model} options={models} searchable placeholder={t("composer.filterModels")} down={down} hideChevron onChange={onModel} />
       {reasoningLevelsAvailable(effortLevels) && (
         <EffortPicker value={effort} levels={effortLevels} down={down} onChange={onEffort} />
       )}
@@ -2430,7 +2427,7 @@ export function EffortPicker({
   if (options.length === 0) return null;
   return (
     <div className="effort-combo" title={t("composer.effort")}>
-      <Combo value={value} options={options} down={down} onChange={onChange} />
+      <Combo value={value} options={options} down={down} hideChevron onChange={onChange} />
     </div>
   );
 }
@@ -2454,6 +2451,7 @@ export function Combo({
   searchable,
   placeholder,
   down,
+  hideChevron,
 }: {
   value: string;
   options: { value: string; label: string }[];
@@ -2461,6 +2459,7 @@ export function Combo({
   searchable?: boolean;
   placeholder?: string;
   down?: boolean;
+  hideChevron?: boolean;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -2546,7 +2545,7 @@ export function Combo({
       ) : (
         <button type="button" className="combo-trigger" onClick={() => { setOpen((was) => !was); setQuery(""); }}>
           <span>{selected?.label ?? value}</span>
-          <Icon path="M6 9l6 6 6-6" size={12} />
+          {!hideChevron && <Icon path="M6 9l6 6 6-6" size={12} />}
         </button>
       )}
       {open && placement && createPortal(
@@ -3059,7 +3058,6 @@ function settingsNav(t: ReturnType<typeof useI18n>["t"]): Array<{ label: string;
 }
 
 export function Login({
-  configured,
   model,
   baseUrl,
   agentSkills = [],
@@ -3070,7 +3068,6 @@ export function Login({
   onClose,
   onSaved,
 }: {
-  configured: boolean;
   model: string;
   baseUrl?: string;
   agentSkills?: AgentSkillCommand[];
@@ -3450,10 +3447,14 @@ export function Login({
                         const key = `${item.scope}:${item.source}`;
                         return (
                           <div className="skills-row package-row" key={key} title={item.settingsPath}>
-                            <span className="skills-row-main plugin-row-copy">
-                              <strong>{item.source}</strong>
-                              <small>{item.scope === "global" ? t("settings.packagesPathUser") : t("settings.packagesPathProject")}</small>
-                            </span>
+                          <button type="button" className="skills-row-main plugin-row-copy" onClick={() => {
+                            void window.harness.app.revealPackagePath(item.source, item.scope).catch((error) => {
+                              setPromptStatus(error instanceof Error ? error.message : String(error));
+                            });
+                          }}>
+                            <strong>{item.source}</strong>
+                            <small>{item.scope === "global" ? t("settings.packagesPathUser") : t("settings.packagesPathProject")}</small>
+                          </button>
                             <PreferenceSegment checked={item.enabled} onChange={(enabled) => void (async () => {
                               setResourceBusy(key);
                               try {
@@ -3530,18 +3531,6 @@ export function Login({
 
           </div>
           <footer className="settings-foot">
-            {configured && pane === "chat" && (
-              <button
-                type="button"
-                className="ghost danger"
-                onClick={async () => {
-                  await window.harness.auth.logout("deepseek");
-                  await onSaved();
-                }}
-              >
-                {t("settings.clearConfig")}
-              </button>
-            )}
             {pane !== "chat" ? (
               <button type="button" className="primary" onClick={onClose}>
                 {t("settings.close")}

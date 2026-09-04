@@ -11,7 +11,7 @@ import type {
   LocalPluginEntry,
 } from "../shared/types";
 import type { AgentSlashCommand, AgentSkillCommand } from "../shared/skills";
-import { skillSlashCommand } from "../shared/skills";
+import { parseAgentCommands, skillSlashCommand } from "../shared/skills";
 import {
   DEFAULT_EFFORT,
   levelsForModel,
@@ -258,7 +258,7 @@ export function App() {
   const [chatModels, setChatModels] = useState<string[]>([]);
   const [effort, setEffort] = useState(readStoredEffort);
   const [thinkingLevels, setThinkingLevels] = useState<string[]>(["low", "medium", "high", "max"]);
-  const [permission, setPermission] = useState<PermissionMode>("auto");
+  const [permission, setPermission] = useState<PermissionMode>("full");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [stats, setStats] = useState<AgentSessionStats>();
   const [promptFill, setPromptFill] = useState({ text: "", token: 0 });
@@ -309,7 +309,7 @@ export function App() {
   const agentModelIdsRef = useRef<string[]>([]);
   const agentModelsRef = useRef<AgentSnapshot["models"]>([]);
   const startSeq = useRef(0);
-  const permissionBeforePlan = useRef<Exclude<PermissionMode, "plan">>("auto");
+  const permissionBeforePlan = useRef<Exclude<PermissionMode, "plan">>("full");
 
   useEffect(() => {
     if (!projectMenu) return;
@@ -505,11 +505,20 @@ export function App() {
         transport: activeProfile?.transport,
       });
       if (seq !== startSeq.current) return false;
+      const commandSnapshot = await window.harness.agent.command<{
+        commands: Array<{
+          name: string;
+          description?: string;
+          source?: string;
+          sourceInfo?: { path?: string; baseDir?: string; source?: string; origin?: string };
+        }>;
+      }>("get_commands").catch(() => ({ commands: [] }));
+      const discoveredCommands = parseAgentCommands(commandSnapshot.commands ?? []);
       if (seedMessage) {
         setMessages([...normalizeMessages(snapshot.messages), seedMessage]);
         setStats(snapshot.stats);
         setAgentSkills(snapshot.skills ?? []);
-        setAgentCommands(snapshot.commands ?? []);
+        setAgentCommands(discoveredCommands);
         setRunning(true);
       } else {
         const raw = normalizeMessages(snapshot.messages);
@@ -519,7 +528,7 @@ export function App() {
         setStats(snapshot.stats);
         setRunning(Boolean(snapshot.state.isStreaming) && !hadRunning);
         setAgentSkills(snapshot.skills ?? []);
-        setAgentCommands(snapshot.commands ?? []);
+        setAgentCommands(discoveredCommands);
         if (resume && hadRunning) setToast(t("toast.sessionInterrupted"));
         if (sessionPath && next.length === 0) {
           setToast(t("toast.sessionEmpty"));
@@ -633,11 +642,12 @@ export function App() {
     setPreview(undefined);
     setFeatureTodos([]);
     setAgentSkills([]);
-    if (!agentCwd.current) return true;
-    agentCwd.current = undefined;
-    if (!running) await window.harness.agent.stop().catch(() => undefined);
-    return true;
-  }, [fillPrompt, running, t]);
+    if (agentCwd.current) {
+      agentCwd.current = undefined;
+      if (!running) await window.harness.agent.stop().catch(() => undefined);
+    }
+    return startAgent(cwd, undefined, true, false, permission);
+  }, [fillPrompt, permission, running, startAgent, t]);
   const openFolder = useCallback(async (): Promise<string | null> => {
     const selected = await window.harness.workspace.choose();
     if (!selected) return null;
@@ -1484,7 +1494,6 @@ export function App() {
 
       {loginOpen && (
         <Login
-          configured={Boolean(connected?.configured)}
           model={model}
           baseUrl={connected?.baseUrl}
           agentSkills={agentSkills}
