@@ -1193,7 +1193,15 @@ export const AssistantTurn = memo(function AssistantTurn({
       )}
     </article>
   );
-});
+}, (previous, next) => (
+  previous.workspace === next.workspace
+  && previous.errorRecovered === next.errorRecovered
+  && previous.recoverableFailStreak === next.recoverableFailStreak
+  && previous.onOpenFile === next.onOpenFile
+  && previous.onRetry === next.onRetry
+  && previous.messages.length === next.messages.length
+  && previous.messages.every((message, index) => message === next.messages[index])
+));
 
 function fileGlyph(path: string) {
   return /\.(tsx?|jsx?|mjs|cjs|css|json|ya?ml)$/i.test(path) ? "M8 8l-4 4 4 4M16 8l4 4-4 4" : "M6 3h9l5 5v13H6z";
@@ -1677,9 +1685,11 @@ function serializePrompt(root: HTMLElement): string {
   return out;
 }
 
-function caretOffset(root: HTMLElement): number {
+function caretOffset(root: HTMLElement, fallbackLength?: number): number {
   const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || !sel.anchorNode || !root.contains(sel.anchorNode)) return serializePrompt(root).length;
+  if (!sel || sel.rangeCount === 0 || !sel.anchorNode || !root.contains(sel.anchorNode)) {
+    return fallbackLength ?? serializePrompt(root).length;
+  }
   const endNode = sel.anchorNode;
   const endOff = sel.anchorOffset;
   let offset = 0;
@@ -1931,10 +1941,14 @@ export function PromptBar({
     const root = area.current;
     if (!root) return "";
     flattenPromptBlocks(root);
-    if (!serializePrompt(root).trim() && !root.querySelector("[data-url], [data-file]")) root.replaceChildren();
-    const next = serializePrompt(root);
-    setBlank(isPromptEmpty(root, images.length, attachments.length));
-    setCursor(caretOffset(root));
+    let next = serializePrompt(root);
+    const hasInlineReference = Boolean(root.querySelector("[data-url], [data-file]"));
+    if (!next.trim() && !hasInlineReference) {
+      root.replaceChildren();
+      next = "";
+    }
+    setBlank(!next.trim() && images.length === 0 && attachments.length === 0);
+    setCursor(caretOffset(root, next.length));
     skipHydrate.current = true;
     if (next !== value) setValue(next);
     return next;
@@ -2067,7 +2081,6 @@ export function PromptBar({
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
     const root = area.current;
     if (!root) return;
-    setCursor(caretOffset(root));
     if (reference && referenceMatches.length > 0) {
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -2294,7 +2307,15 @@ export function PromptBar({
             }
           }}
           onInput={emit}
-          onKeyUp={() => area.current && setCursor(caretOffset(area.current))}
+          onKeyUp={(event) => {
+            if (!area.current) return;
+            if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+              setCursor(caretOffset(area.current));
+            }
+          }}
+          onMouseUp={() => {
+            if (area.current) setCursor(caretOffset(area.current));
+          }}
           onKeyDown={onKey}
           onPaste={(event) => {
             const files = [...event.clipboardData.items]
