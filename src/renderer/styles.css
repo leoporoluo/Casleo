@@ -3017,6 +3017,18 @@ textarea::selection,
   -webkit-user-select: none;
   user-select: none;
 }
+.prompt-command {
+  display: inline-block;
+  margin-right: 2px;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--inset);
+  color: var(--ink);
+  font: 12px/1.35 var(--mono);
+  vertical-align: baseline;
+  user-select: all;
+}
 .prompt-input .prompt-upload {
   display: inline-block;
   width: 28px;
@@ -3427,10 +3439,6 @@ textarea::selection,
   flex: none;
   color: var(--ink-2);
 }
-.permission-trigger.danger,
-.permission-trigger.danger .permission-trigger-icon {
-  color: var(--ink-2);
-}
 .permission-menu {
   position: absolute;
   left: 0;
@@ -3506,17 +3514,6 @@ textarea::selection,
   color: var(--ink);
   margin-left: 2px;
 }
-.permission-item.danger .permission-icon,
-.permission-item.danger .permission-title,
-.permission-item.danger .permission-desc,
-.permission-item.danger .permission-check {
-  color: inherit;
-}
-.permission-item.danger:hover,
-.permission-item.danger.selected {
-  background: var(--hover);
-}
-
 .modal {
   position: fixed;
   inset: 0;

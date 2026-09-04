@@ -876,7 +876,7 @@ export function App() {
     }
   }, [loading, running]);
 
-  const sendMessage = useCallback(async (preset?: string, images?: string[]) => {
+  const sendMessage = useCallback(async (preset?: string, images?: string[], extensionCommand?: string) => {
     const text = (preset ?? "").trim();
     if (text === "/undo") {
       if (running) return;
@@ -887,6 +887,31 @@ export function App() {
     if (!text || loading || sending.current) return;
     // A newly submitted turn should always follow the conversation tail.
     stick.current = true;
+    if (extensionCommand) {
+      fillPrompt("");
+      try {
+        if (!agentCwd.current) {
+          const cwd = workspace ?? await openFolder();
+          if (!cwd) {
+            fillPrompt(text);
+            return;
+          }
+          const started = await startAgent(cwd, undefined, true, false, permission);
+          if (!started) {
+            fillPrompt(text);
+            return;
+          }
+        } else if (!(await ensureModelReady())) {
+          fillPrompt(text);
+          return;
+        }
+        await window.harness.agent.command("prompt", { message: text });
+      } catch (error) {
+        fillPrompt(text);
+        setToast(friendlyAgentError(error));
+      }
+      return;
+    }
     if (running) {
       if (text.startsWith("/")) {
         fillPrompt("");
@@ -1104,7 +1129,7 @@ export function App() {
     <PromptBar
       fillText={promptFill.text}
       fillToken={promptFill.token}
-      onSubmit={(text, images) => void sendMessage(text, images)}
+      onSubmit={(text, images, extensionCommand) => void sendMessage(text, images, extensionCommand)}
       onStop={() => {
         setToast(t("toast.stopping"));
         void window.harness.agent.command("abort")
@@ -1150,7 +1175,6 @@ export function App() {
         if (command === "/login") setLoginOpen(true);
       }}
       slashCommands={agentCommands}
-      pluginCommands={agentPlugins}
       placement={home ? "hero" : "dock"}
     />
   );

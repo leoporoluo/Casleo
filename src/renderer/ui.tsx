@@ -1630,6 +1630,7 @@ function mentionAt(text: string, cursor: number): { start: number; query: string
 }
 
 function promptTokenLength(el: HTMLElement): number {
+  if (el.dataset.command) return el.dataset.command.length;
   if (el.dataset.url) return el.dataset.url.length;
   if (el.dataset.file) return `@${el.dataset.file}`.length;
   return 0;
@@ -1649,7 +1650,8 @@ function serializePrompt(root: HTMLElement): string {
         continue;
       }
       if (!(node instanceof HTMLElement)) continue;
-      if (node.dataset.url) push(node.dataset.url);
+      if (node.dataset.command) push(node.dataset.command);
+      else if (node.dataset.url) push(node.dataset.url);
       else if (node.dataset.file) push(`@${node.dataset.file}`);
       else if (node.tagName === "BR") out += "\n";
       else if (!node.dataset.image) walk(node);
@@ -1678,7 +1680,7 @@ function caretOffset(root: HTMLElement): number {
       offset += node.textContent?.length ?? 0;
       return false;
     }
-    if (node instanceof HTMLElement && (node.dataset.url || node.dataset.file || node.dataset.image)) {
+    if (node instanceof HTMLElement && (node.dataset.command || node.dataset.url || node.dataset.file || node.dataset.image)) {
       offset += promptTokenLength(node);
       return node === endNode || node.contains(endNode);
     }
@@ -1709,7 +1711,7 @@ function placeCaret(root: HTMLElement, offset: number): void {
       left -= size;
       return false;
     }
-    if (node instanceof HTMLElement && (node.dataset.url || node.dataset.file || node.dataset.image)) {
+    if (node instanceof HTMLElement && (node.dataset.command || node.dataset.url || node.dataset.file || node.dataset.image)) {
       const size = promptTokenLength(node);
       if (left <= size) {
         range.setStartAfter(node);
@@ -1754,6 +1756,53 @@ function hydratePrompt(root: HTMLElement, text: string): void {
   for (const image of images) root.append(image);
 }
 
+function promptPoint(root: HTMLElement, offset: number): { container: Node; offset: number } {
+  let remaining = Math.max(0, offset);
+  const visit = (parent: Node): { container: Node; offset: number } | undefined => {
+    const children = [...parent.childNodes];
+    for (let index = 0; index < children.length; index += 1) {
+      const child = children[index]!;
+      if (child instanceof HTMLElement && (child.dataset.command || child.dataset.url || child.dataset.file || child.dataset.image)) {
+        const length = promptTokenLength(child);
+        if (remaining <= length) return { container: parent, offset: remaining === length ? index + 1 : index };
+        remaining -= length;
+        continue;
+      }
+      if (child.nodeType === Node.TEXT_NODE) {
+        const length = child.textContent?.length ?? 0;
+        if (remaining <= length) return { container: child, offset: remaining };
+        remaining -= length;
+        continue;
+      }
+      if (child instanceof HTMLElement && child.tagName === "BR") {
+        if (remaining <= 1) return { container: parent, offset: remaining === 1 ? index + 1 : index };
+        remaining -= 1;
+        continue;
+      }
+      const nested = visit(child);
+      if (nested) return nested;
+    }
+    return remaining === 0 ? { container: parent, offset: children.length } : undefined;
+  };
+  return visit(root) ?? { container: root, offset: root.childNodes.length };
+}
+
+function insertPromptCommand(root: HTMLElement, start: number, end: number, command: string): void {
+  const range = document.createRange();
+  const from = promptPoint(root, start);
+  const to = promptPoint(root, end);
+  range.setStart(from.container, from.offset);
+  range.setEnd(to.container, to.offset);
+  range.deleteContents();
+  const tag = document.createElement("span");
+  tag.className = "prompt-command";
+  tag.dataset.command = command;
+  tag.contentEditable = "false";
+  tag.textContent = command;
+  range.insertNode(tag);
+  tag.after(document.createTextNode(" "));
+}
+
 function flattenPromptBlocks(root: HTMLElement): void {
   for (const el of [...root.querySelectorAll(".inspect-file")]) el.remove();
   for (const block of [...root.querySelectorAll<HTMLElement>("div, p")]) {
@@ -1787,13 +1836,12 @@ export function PromptBar({
   onPermission,
   onCommand,
   slashCommands = [],
-  pluginCommands = [],
   placement = "dock",
 }: {
   /** Parent bumps fillToken when it wants to inject/clear the composer (edit queue, restore, reset). */
   fillText?: string;
   fillToken?: number;
-  onSubmit(text?: string, images?: string[]): void;
+  onSubmit(text?: string, images?: string[], extensionCommand?: string): void;
   onStop(): void;
   steering?: string[];
   rootRef?: Ref<HTMLDivElement>;
@@ -1811,7 +1859,6 @@ export function PromptBar({
   onPermission(value: string): void;
   onCommand(command: string): void;
   slashCommands?: AgentSlashCommand[];
-  pluginCommands?: LocalPluginEntry[];
   placement?: "dock" | "hero";
 }) {
   const { t } = useI18n();
@@ -1829,15 +1876,11 @@ export function PromptBar({
   const mention = workspace ? mentionAt(value, cursor) : undefined;
   const matches = mention ? filterMentionPaths(files, mention.query) : [];
   const skillReference = value.slice(0, cursor).match(/^\/([^\s]*)$/);
-  const pluginReference = value.slice(0, cursor).match(/^#([^\s]*)$/);
   const reference = skillReference
     ? { trigger: "/" as const, query: skillReference[1] ?? "", start: cursor - (skillReference[1]?.length ?? 0) - 1 }
-    : pluginReference
-      ? { trigger: "#" as const, query: pluginReference[1] ?? "", start: cursor - (pluginReference[1]?.length ?? 0) - 1 }
-      : undefined;
+    : undefined;
   const referenceMatches: Array<{ name: string; description?: string; insert: string }> = reference
-    ? reference.trigger === "/"
-      ? [
+    ? [
         ...(reference.query === "" || "plan".startsWith(reference.query.toLowerCase())
           ? [{ name: "plan", description: t("perm.plan"), insert: "/plan" }]
           : []),
@@ -1845,10 +1888,6 @@ export function PromptBar({
           .filter((item) => item.enabled !== false && item.name.toLowerCase().startsWith(reference.query.toLowerCase()))
           .map((item) => ({ name: item.name, description: item.description, insert: agentSlashCommand(item) })),
       ].slice(0, 12)
-      : pluginCommands
-        .filter((item) => item.name.toLowerCase().startsWith(reference.query.toLowerCase()))
-        .map((item) => ({ name: item.name, description: item.description, insert: `#${item.name}` }))
-        .slice(0, 12)
     : [];
 
   useEffect(() => {
@@ -1956,9 +1995,11 @@ export function PromptBar({
   };
 
   const insertReference = (item: { name: string; insert: string }) => {
-    if (!reference) return;
+    const root = area.current;
+    if (!reference || !root) return;
     const prefix = item.insert;
     const next = `${value.slice(0, reference.start)}${prefix} ${value.slice(cursor)}`;
+    if (reference.trigger === "/") insertPromptCommand(root, reference.start, cursor, prefix);
     const caret = reference.start + prefix.length + 1;
     setValue(next);
     setCursor(caret);
@@ -1974,10 +2015,11 @@ export function PromptBar({
     if (!root || disabled) return;
     const text = serializePrompt(root).trim();
     if (!text) return;
+    const command = root.querySelector<HTMLElement>("[data-command]")?.dataset.command;
     root.replaceChildren();
     setBlank(true);
     setValue("");
-    onSubmit(text);
+    onSubmit(text, undefined, command && !command.startsWith("/skill:") ? command : undefined);
   };
 
   const focusOrChooseWorkspace = async () => {
@@ -2239,7 +2281,6 @@ export interface PermissionOptionConfig {
   label: string;
   desc: string;
   icon: string;
-  danger?: boolean;
 }
 
 function permissionOptions(t: ReturnType<typeof useI18n>["t"]): PermissionOptionConfig[] {
@@ -2254,14 +2295,13 @@ function permissionOptions(t: ReturnType<typeof useI18n>["t"]): PermissionOption
     value: "auto",
     label: t("perm.auto"),
     desc: t("perm.autoDesc"),
-    icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v5M12 16h.01",
+    icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
   },
   {
     value: "full",
     label: t("perm.full"),
     desc: t("perm.fullDesc"),
-    icon: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 0c2.5 0 4.5 4.5 4.5 10s-2 10-4.5 10-4.5-4.5-4.5-10 2-10 4.5-10z M2 12h20",
-    danger: true,
+    icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v5M12 16h.01",
   },
   ];
 }
@@ -2298,7 +2338,7 @@ export function PermissionPicker({
     <div ref={box} className={`combo permission-combo${open ? " open" : ""}${down ? " down" : ""}`}>
       <button
         type="button"
-        className={`combo-trigger permission-trigger${selected.danger ? " danger" : ""}`}
+        className="combo-trigger permission-trigger"
         onClick={() => setOpen((was) => !was)}
         title={selected.desc}
       >
@@ -2315,7 +2355,7 @@ export function PermissionPicker({
               <button
                 key={item.value}
                 type="button"
-                className={`permission-item${isSelected ? " selected" : ""}${item.danger ? " danger" : ""}`}
+                className={`permission-item${isSelected ? " selected" : ""}`}
                 onClick={() => {
                   onChange(item.value);
                   setOpen(false);

@@ -20,7 +20,7 @@ export interface AgentSkillCommand {
   enabled?: boolean;
 }
 
-export type AgentCommandSource = "extension" | "prompt" | "skill";
+export type AgentCommandSource = "extension" | "skill";
 
 export interface AgentSlashCommand {
   name: string;
@@ -44,12 +44,14 @@ export function parseAgentCommands(
     name: string;
     description?: string;
     source?: string;
-    sourceInfo?: { path?: string; baseDir?: string };
+    sourceInfo?: { path?: string; baseDir?: string; source?: string; origin?: string };
   }>,
 ): AgentSlashCommand[] {
   const result: AgentSlashCommand[] = [];
   for (const command of commands) {
-    if (command.source !== "extension" && command.source !== "prompt" && command.source !== "skill") continue;
+    if (command.source !== "extension" && command.source !== "skill") continue;
+    if (command.source === "extension" && command.sourceInfo?.source !== undefined
+      && command.sourceInfo.source !== "local" && command.sourceInfo.origin !== "package") continue;
     const rawName = command.name.replace(/^\/+/, "");
     const name = command.source === "skill" && rawName.startsWith("skill:")
       ? rawName.slice("skill:".length)

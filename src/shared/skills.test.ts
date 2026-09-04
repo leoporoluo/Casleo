@@ -25,20 +25,23 @@ describe("skills", () => {
     ]);
   });
 
-  it("keeps extension and package commands available as slash commands", () => {
+  it("keeps external extension and package commands available as slash commands", () => {
     const commands = parseAgentCommands([
       { name: "wechat", description: "Connect WeChat", source: "extension", sourceInfo: { baseDir: "/home/.pi/agent/npm/wechat" } },
+      { name: "local-tool", source: "extension", sourceInfo: { source: "local", origin: "top-level" } },
+      { name: "package-tool", source: "extension", sourceInfo: { source: "npm:demo", origin: "package" } },
       { name: "skill:demo", source: "skill" },
       { name: "/template", source: "prompt" },
-      { name: "builtin", source: "builtin" },
+      { name: "casleo", source: "extension", sourceInfo: { source: "inline" } },
     ]);
 
     expect(commands).toEqual([
+      { name: "local-tool", source: "extension" },
+      { name: "package-tool", source: "extension" },
       { name: "demo", source: "skill" },
-      { name: "template", source: "prompt" },
       { name: "wechat", description: "Connect WeChat", source: "extension", path: "/home/.pi/agent/npm/wechat" },
     ]);
-    expect(commands.map(agentSlashCommand)).toEqual(["/skill:demo", "/template", "/wechat"]);
+    expect(commands.map(agentSlashCommand)).toEqual(["/local-tool", "/package-tool", "/skill:demo", "/wechat"]);
   });
 
   it("collapses skill user text to a tag", () => {
