@@ -492,6 +492,7 @@ export function App() {
     storagePath?: string,
   ) => {
     const seq = ++startSeq.current;
+    live.current = false;
     setLoading(true);
     statsRef.current = undefined;
     setStats(undefined);

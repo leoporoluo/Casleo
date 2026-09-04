@@ -139,8 +139,9 @@ export class AgentHost {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child = child;
-    child.stdout.on("data", (chunk: Buffer) => this.handleChunk(chunk));
+    child.stdout.on("data", (chunk: Buffer) => this.handleChunk(child, chunk));
     child.stderr.on("data", (chunk: Buffer) => {
+      if (this.child !== child) return;
       this.stderr = `${this.stderr}${chunk.toString()}`.slice(-AgentHost.STDERR_CAP);
       const qr = extractQrOutput(this.stderr);
       if (qr && qr !== this.qrOutput) {
@@ -233,13 +234,15 @@ export class AgentHost {
     }
   }
 
-  private handleChunk(chunk: Buffer): void {
+  private handleChunk(child: ChildProcessWithoutNullStreams, chunk: Buffer): void {
+    if (this.child !== child) return;
     const drained = drainUtf8Lines(this.lineBuffer, chunk);
     this.lineBuffer = Buffer.from(drained.rest);
-    for (const line of drained.lines) this.handleLine(line);
+    for (const line of drained.lines) this.handleLine(child, line);
   }
 
-  private handleLine(line: string): void {
+  private handleLine(child: ChildProcessWithoutNullStreams, line: string): void {
+    if (this.child !== child) return;
     let data: Record<string, unknown>;
     try {
       data = JSON.parse(line) as Record<string, unknown>;
