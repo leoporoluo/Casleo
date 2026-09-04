@@ -11,7 +11,7 @@ describe("modelsUrl", () => {
     expect(modelsUrl("https://api.example.com/v1/models")).toBe("https://api.example.com/v1/models");
   });
 
-  it("strips chat/completions so vision endpoints still hit /models", () => {
+  it("strips chat/completions so compatible endpoints still hit /models", () => {
     expect(modelsUrl("https://open.bigmodel.cn/api/paas/v4/chat/completions"))
       .toBe("https://open.bigmodel.cn/api/paas/v4/models");
   });

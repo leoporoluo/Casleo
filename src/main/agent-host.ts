@@ -92,9 +92,6 @@ export class AgentHost {
 
   async start(options: AgentStartOptions & {
     cwd: string;
-    visionExtension?: string;
-    visionConfig?: string;
-    visionUploads?: string;
   }): Promise<AgentSnapshot> {
     await this.stop();
     const args = [
@@ -117,7 +114,6 @@ export class AgentHost {
     if (options.effort) args.push("--effort", options.effort);
     args.push("--transport", options.transport ?? "openai-responses");
     if (options.sessionPath) args.push("--session", options.sessionPath);
-    if (options.visionExtension) args.push("--extension", options.visionExtension);
 
     this.lineBuffer = Buffer.alloc(0);
     this.stderr = "";
@@ -135,8 +131,6 @@ export class AgentHost {
         ...(options.contextWindow
           ? { CASLEO_CONTEXT_WINDOW: String(options.contextWindow) }
           : {}),
-        ...(options.visionConfig ? { HARNESS_VISION_CONFIG: options.visionConfig } : {}),
-        ...(options.visionUploads ? { HARNESS_VISION_UPLOADS: options.visionUploads } : {}),
         ...(options.writableRoots?.length
           ? { CASLEO_WRITABLE_ROOTS: options.writableRoots.join(path.delimiter) }
           : {}),

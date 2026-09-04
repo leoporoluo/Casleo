@@ -50,11 +50,6 @@ const api: DesktopApi = {
     pathForFile: (file) => webUtils.getPathForFile(file),
     onChanged: (listener) => subscribe<string>("workspace:changed", listener),
   },
-  vision: {
-    config: () => ipcRenderer.invoke("vision:config"),
-    saveConfig: (config) => ipcRenderer.invoke("vision:save-config", config),
-    stage: (images) => ipcRenderer.invoke("vision:stage", images),
-  },
   services: {
     webSearch: () => ipcRenderer.invoke("services:web-search"),
     saveWebSearch: (config) => ipcRenderer.invoke("services:save-web-search", config),

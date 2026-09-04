@@ -5,8 +5,6 @@ import type { ApiTransport } from "./chat-profiles";
 /** Previews load through their own origin so page storage works without reaching the app. */
 export const PREVIEW_SCHEME = "harness-preview";
 export const PREVIEW_HOST = "workspace";
-/** Staged image uploads live outside the workspace, so they get their own preview host. */
-export const UPLOADS_HOST = "uploads";
 
 export const PROVIDER_IDS = [
   "deepseek",
@@ -197,22 +195,6 @@ export interface DesktopApi {
     restore(files: Array<{ path: string; content: string | null; mode?: number }>, cwd?: string): Promise<{ restored: string[] }>;
     pathForFile(file: File): string;
     onChanged(listener: (root: string) => void): () => void;
-  };
-  vision: {
-    config(): Promise<{
-      provider?: "deepseek" | "custom";
-      endpoint: string;
-      model: string;
-      apiKey: string;
-      hasApiKey?: boolean;
-      profiles: import("./chat-profiles").CustomApiProfile[];
-      activeProfileId: string;
-    }>;
-    saveConfig(config: {
-      profiles: import("./chat-profiles").CustomApiProfile[];
-      activeProfileId: string;
-    }): Promise<void>;
-    stage(images: string[]): Promise<string[]>;
   };
   services: {
     webSearch(): Promise<import("./integrations").WebSearchConfig>;

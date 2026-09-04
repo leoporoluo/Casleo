@@ -2,7 +2,6 @@ import type { AgentEvent, PermissionMode } from "../shared/types";
 import { sameUserSkillTurn } from "../shared/skills";
 import { parseWebSearchCard } from "../shared/integrations";
 import { DEFAULT_LOCALE, t, type Locale, type MessageKey } from "../shared/i18n";
-import { isVisionHandoff, mimeFromImagePath, visibleUserText, visionHandoffPaths, visionToolTitle, visionUploadUrl } from "../shared/vision-api";
 
 let activeLocale: Locale = DEFAULT_LOCALE;
 
@@ -118,9 +117,7 @@ export function normalizeMessages(messages: unknown[]): ChatMessage[] {
     if (value.role !== "user" && value.role !== "assistant") continue;
     const parsed = messageFromRecord(value, `history-${result.length}`);
     if (!parsed) continue;
-    result.push(isVisionHandoff(parsed.text)
-      ? { ...parsed, text: visibleUserText(parsed.text), images: stagedImages(parsed.text) }
-      : parsed);
+    result.push(parsed);
   }
   return result;
 }
@@ -315,7 +312,7 @@ export function turnAnchors(groups: ConversationGroup[]): Array<{ id: string; la
   const anchors: Array<{ id: string; label: string }> = [];
   for (const group of groups) {
     if (group.type !== "user") continue;
-    const label = visibleUserText(group.message.text).replace(/\s+/g, " ").trim();
+    const label = group.message.text.replace(/\s+/g, " ").trim();
     if (!label || label.startsWith("/")) continue;
     anchors.push({
       id: turnAnchorId(group.id),
@@ -353,10 +350,6 @@ export function applyAgentEvent(messages: ChatMessage[], event: AgentEvent): Cha
     if (!incoming) return messages;
 
     if (incoming.role === "user") {
-      if (isVisionHandoff(incoming.text)) {
-        if (messages.length > 0) return messages;
-        return [{ ...incoming, text: visibleUserText(incoming.text), images: stagedImages(incoming.text) }];
-      }
       const last = messages.at(-1);
       if (last?.role === "user" && (last.text === incoming.text || sameUserSkillTurn(last.text, incoming.text))) {
         return messages.map((message, index) =>
@@ -400,7 +393,6 @@ export function applyAgentEvent(messages: ChatMessage[], event: AgentEvent): Cha
     const activity = toolFromEvent(event, "running");
     activity.output = stringifyToolResult(event.partialResult);
     activity.details = toolDetails(event.partialResult) ?? toolDetails(event);
-    if (activity.name === "vision") activity.title = visionConversationTitle(activity.details);
     if (activity.name === "delegate") activity.title = delegateToolTitle(activity);
     return upsertLastAssistantTool(messages, activity);
   }
@@ -410,7 +402,6 @@ export function applyAgentEvent(messages: ChatMessage[], event: AgentEvent): Cha
       ?? stringifyToolResult(event.error)
       ?? stringifyToolResult(event.message);
     activity.details = toolDetails(event.result) ?? toolDetails(event);
-    if (activity.name === "vision") activity.title = visionConversationTitle(activity.details);
     if (activity.name === "delegate") activity.title = delegateToolTitle(activity);
     return upsertLastAssistantTool(messages, activity);
   }
@@ -471,15 +462,6 @@ function messageFromRecord(value: JsonRecord, id: string): ChatMessage | undefin
     tools,
     work,
   };
-}
-
-/** Pasted bytes never reach the session file, only the staged paths, so rebuild from those. */
-function stagedImages(handoff: string): ChatImage[] {
-  return visionHandoffPaths(handoff).map((file) => ({
-    data: "",
-    mimeType: mimeFromImagePath(file),
-    src: visionUploadUrl(file),
-  }));
 }
 
 function getImages(content: unknown): ChatImage[] {
@@ -587,7 +569,6 @@ function normalizeTimestamp(value: unknown): number | undefined {
 }
 
 function preferToolTitle(next: string, previous: string): string {
-  if (next.startsWith("MinerU") || next.includes("GLM") || next.includes("OCR")) return next;
   return vagueToolTitle(next) && !vagueToolTitle(previous) ? previous : next;
 }
 
@@ -607,7 +588,6 @@ function toolTitle(name: string, args: unknown): string {
   if (name.includes("write") || target?.action === "add") return file ? ct("tool.wrote", { file }) : ct("tool.wroteEmpty");
   if (name.includes("edit") || name.includes("patch")) return file ? ct("tool.edited", { file }) : ct("tool.editedEmpty");
   if (name.includes("search")) return ct("tool.search");
-  if (name === "vision") return ct("tool.vision");
   if (name === "delegate") {
     const progress = delegateProgress({
       id: "preview",
@@ -867,12 +847,6 @@ function stringifyToolResult(value: unknown): string | undefined {
   } catch {
     return String(value);
   }
-}
-
-function visionConversationTitle(details: unknown): string {
-  const title = visionToolTitle(details);
-  if (!isRecord(details) || details.pending === true || details.glm !== true) return title;
-  return title.startsWith("识图 ·") ? `GLM-4V ${title}` : title;
 }
 
 function toolDetails(value: unknown): unknown {
@@ -1293,7 +1267,6 @@ function toolRow(tool: ToolActivity, index: number): TraceRow {
       chip: lines[0] ?? "",
     };
   }
-  if (tool.name === "vision") return { ...base, kind: "look", label: ct("trace.look"), chip: "", mono: false };
   if (/web_search|fetch_content|get_search_content/.test(name)) {
     const card = parseWebSearchCard(tool.name, tool.args, tool.details, tool.output);
     return {

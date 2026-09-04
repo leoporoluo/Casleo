@@ -46,10 +46,8 @@ import {
   isDeepSeekUrl,
   mergeChatProfiles,
   migrateChatProfiles,
-  officialDeepSeekKey,
   parseChatProfiles,
   type ChatProfiles,
-  type CustomApiProfile,
 } from "../shared/chat-profiles";
 import {
   mergeWebSearchConfig,
@@ -61,17 +59,6 @@ import {
   type WebSearchConfig,
 } from "../shared/integrations";
 import {
-  DEFAULT_VISION_CONFIG,
-  DEEPSEEK_VISION_BASE,
-  parseVisionStore,
-  resolveVisionRuntime,
-  resolveVisionSettings,
-  serializeVisionStore,
-  visionSnapshot,
-  visionTitle,
-  type VisionConfig,
-} from "../shared/vision-api";
-import {
   DEFAULT_LOCALE,
   isLocale,
   resolveLocale,
@@ -81,7 +68,6 @@ import {
 import { getLatestUpdate } from "./update-check";
 import {
   PREVIEW_SCHEME,
-  UPLOADS_HOST,
   type AgentSnapshot,
   type AgentStartOptions,
   type AppPreferences,
@@ -732,80 +718,6 @@ function registerIpc(): void {
     watchWorkspace(root);
     return listWorkspaceFiles(root);
   });
-  ipcMain.handle("vision:config", async () => {
-    let raw: unknown = {};
-    try {
-      raw = JSON.parse(await fsp.readFile(visionConfigPath(), "utf8")) as unknown;
-    } catch {
-      raw = {
-        ...DEFAULT_VISION_CONFIG,
-        apiKey: process.env.ZHIPU_API_KEY?.trim() ?? "",
-      };
-    }
-    const store = parseVisionStore(raw);
-    const profiles = await loadChatProfiles().catch(() => undefined);
-    const chatKey = profiles ? officialDeepSeekKey(profiles) : "";
-    const next = store.profiles.map((item) => {
-      const base = item.url.trim().replace(/\/+$/, "").replace(/\/chat\/completions$/i, "").replace(/\/+$/, "");
-      if (chatKey && isDeepSeekUrl(base) && !item.apiKey.trim()) return { ...item, apiKey: chatKey };
-      return item;
-    });
-    const snapshot = visionSnapshot(next, store.activeProfileId);
-    return {
-      ...snapshot,
-      profiles: next,
-      activeProfileId: store.activeProfileId,
-      hasApiKey: Boolean(snapshot.apiKey.trim()),
-    };
-  });
-  ipcMain.handle(
-    "vision:save-config",
-    async (
-      _event,
-      next: {
-        profiles?: CustomApiProfile[];
-        activeProfileId?: string;
-      },
-    ) => {
-      const store = parseVisionStore({
-        profiles: Array.isArray(next.profiles) ? next.profiles : [],
-        activeProfileId: next.activeProfileId,
-      });
-      await fsp.writeFile(
-        visionConfigPath(),
-        `${JSON.stringify(serializeVisionStore(store.profiles, store.activeProfileId), null, 2)}\n`,
-        { mode: 0o600 },
-      );
-    },
-  );
-  ipcMain.handle("vision:stage", async (_event, images: string[]) => {
-    const refs = Array.isArray(images)
-      ? images.filter((item) => typeof item === "string" && item).slice(0, 4)
-      : [];
-    if (refs.length === 0) throw new Error("先上传至少一张图片");
-    const dir = visionUploadsDir();
-    await fsp.mkdir(dir, { recursive: true, mode: 0o700 });
-    const stamp = Date.now();
-    return Promise.all(
-      refs.map(async (item, index) => {
-        const match = item.match(/^data:([^;]+);base64,(.+)$/);
-        const mime = match?.[1] ?? "image/png";
-        const data = match?.[2] ?? item.replace(/^data:[^;]+;base64,/, "");
-        const ext =
-          mime.includes("jpeg") || mime.includes("jpg")
-            ? "jpg"
-            : mime.includes("webp")
-              ? "webp"
-              : mime.includes("gif")
-                ? "gif"
-                : "png";
-        const file = path.join(dir, `${stamp}-${index + 1}.${ext}`);
-        await fsp.writeFile(file, Buffer.from(data, "base64"), { mode: 0o600 });
-        return file;
-      }),
-    );
-  });
-
   ipcMain.handle("services:web-search", async () => parseWebSearchConfig(await readHomeJson("web-search.json")));
   ipcMain.handle(
     "services:save-web-search",
@@ -848,7 +760,7 @@ function registerIpc(): void {
         storagePath: thread.storagePath,
         id: thread.id,
         cwd: thread.cwd,
-        title: visionTitle(thread.title),
+        title: thread.title,
         createdAt: thread.createdAt,
         updatedAt: thread.updatedAt,
         ...(thread.provider ? { provider: thread.provider } : {}),
@@ -1016,8 +928,6 @@ function registerIpc(): void {
     }
     const sandbox = requestedSandbox ?? "workspace-write";
     const rawUrl = startOptions.baseUrl;
-    // Keep DeepSeek vision credentials in sync with the chat DeepSeek key/base URL.
-    await syncDeepSeekVisionConfig().catch(() => undefined);
     const profiles = await loadChatProfiles();
     const activeProfile = activeCustomProfile(profiles);
     const contextWindow = activeProfile?.contextWindow;
@@ -1028,9 +938,6 @@ function registerIpc(): void {
       ...(sessionPath ? { sessionPath } : {}),
       cwd,
       sandbox,
-      visionExtension: visionExtensionPath(),
-      visionConfig: visionConfigPath(),
-      visionUploads: visionUploadsDir(),
       ...(baseUrl ? { baseUrl } : {}),
       ...(maxTokens ? { maxTokens } : {}),
       ...(contextWindow ? { contextWindow } : {}),
@@ -1207,28 +1114,19 @@ async function servePreview(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const name = decodeURIComponent(url.pathname).replace(/^\/+/, "");
   let target: string;
-  if (url.host === UPLOADS_HOST) {
-    // basename only: this host serves staged uploads, never an arbitrary path on disk.
-    target = path.join(visionUploadsDir(), path.basename(name));
-  } else {
-    try {
-      target = await resolveInWorkspace(name);
-    } catch (error) {
-      return new Response(
-        error instanceof Error ? error.message : "Forbidden",
-        { status: 403 },
-      );
-    }
+  try {
+    target = await resolveInWorkspace(name);
+  } catch (error) {
+    return new Response(
+      error instanceof Error ? error.message : "Forbidden",
+      { status: 403 },
+    );
   }
   try {
     return await net.fetch(pathToFileURL(target).toString());
   } catch {
     return new Response("Not found", { status: 404 });
   }
-}
-
-function visionConfigPath(): string {
-  return path.join(userDataPath, "vision-config.json");
 }
 
 function chatProfilesPath(): string {
@@ -1272,74 +1170,6 @@ async function saveChatProfiles(next: ChatProfiles): Promise<void> {
   const chat = activeChat(merged);
   if (chat.apiKey) await saveProviderApiKey("openai", chat.apiKey);
   if (chat.model) await saveDefaultModel("openai", chat.model);
-}
-
-function visionUploadsDir(): string {
-  return path.join(userDataPath, "uploads");
-}
-
-function visionExtensionPath(): string {
-  return path.join(currentDirectory, "../extensions/vision.js");
-}
-
-async function loadVisionConfig(): Promise<VisionConfig> {
-  try {
-    const raw = JSON.parse(
-      await fsp.readFile(visionConfigPath(), "utf8"),
-    ) as Partial<VisionConfig>;
-    const settings = resolveVisionSettings(raw);
-    const base: VisionConfig = {
-      ...settings,
-      apiKey: typeof raw.apiKey === "string" ? raw.apiKey.trim() : "",
-    };
-    if (base.provider === "deepseek")
-      return materializeDeepSeekVision(base.apiKey);
-    return base;
-  } catch {
-    return {
-      ...DEFAULT_VISION_CONFIG,
-      apiKey: process.env.ZHIPU_API_KEY?.trim() ?? "",
-    };
-  }
-}
-
-async function materializeDeepSeekVision(
-  fallbackKey = "",
-): Promise<VisionConfig> {
-  const store = await createCasleoCredentialStore();
-  try {
-    const profiles = await loadChatProfiles().catch(() => undefined);
-    const stored = await store.read("deepseek");
-    const storedKey =
-      stored && stored.type === "api_key" && typeof stored.key === "string"
-        ? stored.key.trim()
-        : "";
-    // Prefer an explicit vision key; only reuse an official DeepSeek chat key
-    // (the credential slot is overwritten by whichever profile is enabled).
-    const chatKey = profiles ? officialDeepSeekKey(profiles) : storedKey;
-    const key =
-      fallbackKey.trim() ||
-      chatKey ||
-      process.env.DEEPSEEK_API_KEY?.trim() ||
-      "";
-    return resolveVisionRuntime(
-      { provider: "deepseek", endpoint: "", model: "", apiKey: "" },
-      { baseUrl: DEEPSEEK_VISION_BASE, apiKey: key },
-    );
-  } finally {
-    // Credential store may hold file handles on some backends; ignore close failures.
-  }
-}
-
-async function syncDeepSeekVisionConfig(): Promise<void> {
-  const current = await loadVisionConfig();
-  if (current.provider !== "deepseek") return;
-  const next = await materializeDeepSeekVision(current.apiKey);
-  await fsp.writeFile(
-    visionConfigPath(),
-    `${JSON.stringify(next, null, 2)}\n`,
-    { mode: 0o600 },
-  );
 }
 
 async function resolveInWorkspace(

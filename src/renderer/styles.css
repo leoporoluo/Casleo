@@ -2126,33 +2126,6 @@ textarea::selection,
   flex-wrap: wrap;
   gap: 6px;
 }
-.vision-tool {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-.vision-section {
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--inset);
-  border: 1px solid var(--line);
-}
-.vision-section strong {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--ink-3);
-  font-size: 11px;
-  font-weight: 500;
-}
-.vision-section p {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 12.5px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
 .web-tool {
   display: flex;
   flex-direction: column;

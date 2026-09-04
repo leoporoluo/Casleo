@@ -4,7 +4,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode } from "../shared/types";
 import { agentSlashCommand, skillSlashCommand, skillUserDisplay, type AgentSlashCommand } from "../shared/skills";
-import { visibleUserText } from "../shared/vision-api";
 import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
 import { applyTheme, readStoredTheme, THEMES, type ThemeId } from "../shared/theme";
 import { effortLabelKey, pickEffortOptions, reasoningLevelsAvailable } from "../shared/thinking";
@@ -77,7 +76,7 @@ function UserText({ text }: { text: string }) {
 
 export function UserTurn({ text, images = [], anchor }: { text: string; images?: ChatImage[]; anchor?: string }) {
   const skill = skillUserDisplay(text);
-  const shown = skill ? skill.command : visibleUserText(text);
+  const shown = skill ? skill.command : text;
   return (
     <div className="user-turn" id={anchor}>
       <article className="user">

@@ -21,13 +21,4 @@ export default defineConfig([
     external: ["electron"],
     outExtension: () => ({ js: ".cjs" }),
   },
-  {
-    entry: { "extensions/vision": "src/extensions/vision.ts" },
-    format: ["esm"],
-    platform: "node",
-    outDir: "dist-electron",
-    sourcemap: false,
-    clean: false,
-    outExtension: () => ({ js: ".js" }),
-  },
 ]);

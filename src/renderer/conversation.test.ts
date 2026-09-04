@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { visionAgentPrompt } from "../shared/vision-api";
 import { applyAgentEvent, approvalTitle, assistantErrorRecovered, assistantGroupSucceeded, assistantReplyText, baseName, cacheHitRate, collectFileChanges, collectTodos, collectWorkingFiles, delegateProgress, dropLastTurn, filterMentionPaths, formatCommand, formatThinking, friendlyAgentError, groupConversation, hasNewCheckpointUndo, isRecoverableRequestError, isTransientStreamError, lastTurnRestoreFiles, liveStatus, mentionedFiles, normalizeFilePath, normalizeMessages, omitFinalReply, optimisticUserMessage, parseFeaturesJson, planAwaitingApproval, recoverableFailStreaks, repairMarkdownTables, sessionTerminals, splitHttpUrls, splitPromptChips, splitPatch, stripEmptyMarkdown, terminalLabel, thoughtSteps, toolErrorText, toolSummary, toolWritePreview, takeTrailingUrl, isHttpUrl, urlChipLabel, spliceFileMention, traceRows, turnAnchorId, turnAnchors, turnWork, undoDialogTitle, workspaceRelative, type ChatMessage } from "./conversation";
 
 describe("conversation events", () => {
@@ -53,50 +52,6 @@ describe("conversation events", () => {
     expect(messages.filter((item) => item.role === "user")).toHaveLength(1);
   });
 
-  it("hides the vision handoff user turn so write tools stay on the same assistant", () => {
-    const assistant = {
-      id: "vision-1",
-      role: "assistant" as const,
-      text: "",
-      thinking: "识图",
-      images: [] as [],
-      tools: [{ id: "v", name: "vision", title: "POST glm-4.6v-flash", status: "complete" as const }],
-      work: [],
-    };
-    let messages = [optimisticUserMessage("做成 html"), assistant];
-    messages = applyAgentEvent(messages, {
-      type: "message_start",
-      message: { role: "user", content: [{ type: "text", text: visionAgentPrompt("做成 html", ["D:/tmp/1.png"]) }] },
-    });
-    expect(messages).toHaveLength(2);
-    expect(messages.at(-1)?.role).toBe("assistant");
-    messages = applyAgentEvent(messages, {
-      type: "tool_execution_start",
-      toolCallId: "w1",
-      toolName: "exec_command",
-      args: { cmd: "cat > index.html" },
-    });
-    expect(messages.at(-1)?.tools.some((tool) => tool.id === "w1" || tool.name === "exec_command")).toBe(true);
-  });
-
-  it("still hides the handoff after the zero-width mark is stripped", () => {
-    const prompt = visionAgentPrompt("这是什么", ["/tmp/1.jpg"]).replace(/^\u200b/, "");
-    const local = optimisticUserMessage("这是什么", false, [{ data: "AAA", mimeType: "image/jpeg" }]);
-    const messages = applyAgentEvent([local], {
-      type: "message_start",
-      message: { role: "user", content: [{ type: "text", text: prompt }] },
-    });
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toMatchObject({ text: "这是什么", images: [{ data: "AAA", mimeType: "image/jpeg" }] });
-  });
-
-  it("unwraps a stored vision handoff into the original user text", () => {
-    const messages = normalizeMessages([{
-      role: "user",
-      content: [{ type: "text", text: visionAgentPrompt("这是什么", ["/tmp/1.jpg"]) }],
-    }]);
-    expect(messages[0]).toMatchObject({ role: "user", text: "这是什么" });
-  });
 
   it("shows the model error when a turn fails", () => {
     const messages = applyAgentEvent([optimisticUserMessage("你好")], {
@@ -266,62 +221,6 @@ describe("conversation events", () => {
     });
   });
 
-  it("keeps the vision tool error text so the UI can show it", () => {
-    let messages = applyAgentEvent([], {
-      type: "tool_execution_start",
-      toolCallId: "v1",
-      toolName: "vision",
-    });
-    messages = applyAgentEvent(messages, {
-      type: "tool_execution_end",
-      toolCallId: "v1",
-      toolName: "vision",
-      isError: true,
-      result: { content: [{ type: "text", text: "invalid image" }] },
-    });
-    expect(messages[0]?.tools[0]).toMatchObject({ status: "error", title: "图片识别", output: "invalid image" });
-    expect(toolErrorText(messages[0]!.tools)).toBe("invalid image");
-  });
-
-  it("renames the vision chip once engine details arrive", () => {
-    let messages = applyAgentEvent([], {
-      type: "tool_execution_start",
-      toolCallId: "v2",
-      toolName: "vision",
-    });
-    expect(messages[0]?.tools[0]?.title).toBe("图片识别");
-    messages = applyAgentEvent(messages, {
-      type: "tool_execution_update",
-      toolCallId: "v2",
-      toolName: "vision",
-      partialResult: {
-        details: {
-          model: "mineru-ocr",
-          engines: ["mineru-ocr"],
-          images: 1,
-          ocr: true,
-          glm: false,
-        },
-      },
-    });
-    expect(messages[0]?.tools[0]?.title).toBe("MinerU OCR");
-    messages = applyAgentEvent(messages, {
-      type: "tool_execution_end",
-      toolCallId: "v2",
-      toolName: "vision",
-      result: {
-        content: [{ type: "text", text: "OCR 提取文字（MinerU）：\nhello" }],
-        details: {
-          model: "glm-4v-flash",
-          engines: ["glm-4v-flash", "mineru-ocr"],
-          images: 1,
-          ocr: true,
-          glm: true,
-        },
-      },
-    });
-    expect(messages[0]?.tools[0]?.title).toBe("GLM-4V 识图 · glm-4v-flash · MinerU OCR");
-  });
 
   it("tracks delegate progress from start through cumulative updates", () => {
     const tasks = [

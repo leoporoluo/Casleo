@@ -1,7 +1,5 @@
 # Casleo 开发文档
 
-> English: [DEVELOPMENT.en.md](DEVELOPMENT.en.md)
-
 > 面向仓库的 AI 编程桌面工作台。本文面向在 Casleo 仓库内做开发的工程师：解释架构、模块职责、关键数据流与常见开发任务。产品说明与用户文档见根目录 `README.md` / `README.zh-CN.md`。
 
 ## 1. 项目概览
@@ -20,7 +18,7 @@ Casleo 是一个基于 Electron 的 AI 编程桌面工作台：模型调用、�
 | React 19 + react-markdown | 渲染进程 UI                                        |
 | TypeScript 5.9（strict）  | 全部源码                                           |
 | Vite 7                    | 渲染进程构建 + dev server                          |
-| tsup 8                    | 主进程 / preload / 扩展构建为 ESM/CJS              |
+| tsup 8                    | 主进程 / preload 构建为 ESM/CJS                    |
 | Vitest 3                  | 单元测试                                           |
 | casleo-agent-core 0.1.18   | agent 运行时（RPC worker、沙箱、会话、checkpoint） |
 | electron-builder 26       | 打包 dmg / nsis / dir                              |
@@ -50,7 +48,7 @@ casleo-agent-core（node_modules 依赖，RPC worker 进程）
 ├── README.md / README.zh-CN.md
 ├── package.json               # scripts：dev / build / typecheck / test / check / pack*
 ├── electron-builder.yml       # 打包配置（asar: false，图标、目标平台）
-├── tsup.config.ts             # 主进程 / preload / 扩展的三段构建
+├── tsup.config.ts             # 主进程 / preload 的双目标构建
 ├── vite.config.ts             # 渲染进程 dev server + build + vitest 配置
 ├── tsconfig.json
 ├── pnpm-workspace.yaml        # allowBuilds / minimumReleaseAgeExclude 配置
@@ -84,9 +82,9 @@ casleo-agent-core（node_modules 依赖，RPC worker 进程）
     │   ├── thinking.ts        # 思考等级 / effort 映射、模型推理能力推断
     │   ├── chat-profiles.ts   # DeepSeek / 自定义 profile 数据模型与迁移
     │   ├── openai-models.ts   # {base}/models 模型列表抓取与解析
-    │   └── vision-api.ts      # GLM-4V / MinerU 视觉 API 封装
+    │   └── image-input.ts     # Pi 原生图片输入转换
     └── extensions/
-        └── vision.ts          # 视觉扩展（作为 agent 插件注册 vision 工具）
+        # Pi 官方扩展由 Runtime 负责加载
 ```
 
 ### 2.1 模块之间的依赖规则
@@ -136,7 +134,6 @@ pnpm pack:win       # 仅 Windows nsis
 | window                | `window:minimize` / `window:toggle-maximize` / `window:close`                                                                                                    | 非 macOS 无边框窗口的标题栏按钮（macOS 用原生 traffic lights）                                                   |
 | workspace             | `workspace:choose` / `workspace:recent` / `workspace:forget` / `workspace:read` / `workspace:open` / `workspace:reveal` / `workspace:list` / `workspace:restore` | 选择/最近/遗忘工作区、读文件（200KB 截断、二进制检测）、外部打开、文件管理器显示、列出工作区文件树、批量恢复文件 |
 | workspace（事件）     | `workspace:changed`                                                                                                                                              | 工作区文件变更（fs.watch 递归 + 200ms 防抖）                                                                     |
-| vision                | `vision:config` / `vision:save-config` / `vision:stage`                                                                                                          | 视觉配置读写、图片暂存（base64 落盘到 userData/uploads）                                                         |
 | sessions              | `sessions:list` / `sessions:remove` / `sessions:pin` / `sessions:rename`                                                                                         | 会话列表 / 永久删除 / 置顶 / 重命名（追加 `session_info` 条目 + 重建索引）                                       |
 | auth                  | `auth:status` / `auth:read-api-key` / `auth:save-api-key` / `auth:list-models` / `auth:profiles` / `auth:save-profiles` / `auth:logout`                          | provider 状态（stored / environment）、API key 读写、模型列表、chat profiles 读写、登出                          |
 | agent                 | `agent:start` / `agent:stop` / `agent:command` / `agent:ui-response`                                                                                             | 启动/停止 agent 子进程、执行 RPC 命令、回复扩展 UI 请求                                                          |
@@ -189,7 +186,7 @@ get_fork_messages  get_entries  get_commands  fork  compact
 
 ### 5.3 生命周期
 
-- `start()`：先 `stop()` 旧的 → spawn（`ELECTRON_RUN_AS_NODE=1`、`PI_TELEMETRY=0`、`PI_SKIP_VERSION_CHECK=1`、可选 `HARNESS_EXTRA_MODELS` / `HARNESS_VISION_CONFIG` / `HARNESS_VISION_UPLOADS` 环境变量）→ 返回 `snapshot()`。
+- `start()`：先 `stop()` 旧的 → spawn（`ELECTRON_RUN_AS_NODE=1`、`PI_TELEMETRY=0`、`PI_SKIP_VERSION_CHECK=1`、可选 `HARNESS_EXTRA_MODELS` 环境变量）→ 返回 `snapshot()`。
 - `stop()`：SIGTERM，900ms 后仍未退出则 SIGKILL；所有 pending 请求 reject。
 - `handleLine()`：响应按 `id` 匹配 pending；非响应行视为事件转发。
 - 子进程退出：pending 全部 reject，并 emitError（附 stderr）。
@@ -201,7 +198,6 @@ get_fork_messages  get_entries  get_commands  fork  compact
 - cwd 缺省为 `userData/tasks`（无项目时的只读任务区）。
 - resume 且同会话时直接返回当前 snapshot（不重启进程）。
 - 沙箱兜底：`tasks` 目录强制 `read-only`；请求 `read-only` 的项目提升为 `workspace-write`。
-- 附加 vision 扩展参数：`--extension dist-electron/extensions/vision.js`、`HARNESS_VISION_CONFIG`、`HARNESS_VISION_UPLOADS`。
 - 自定义 profile 的 maxTokens 会作为 `--max-tokens` 传入。
 
 ## 6. 渲染进程
@@ -272,7 +268,7 @@ interface ChatMessage {
 3. 无工作区时先 `openFolder()`。
 4. **乐观渲染**：`optimisticUserMessage` 立即把用户消息画进列表，`setRunning(true)`。
 5. 首次发送（无 agent）：`startAgent(..., seedMessage=乐观消息)`。
-6. `agent:command("prompt", { message })`；带图时先 `vision:stage`（base64 落盘），消息体替换为 `visionAgentPrompt`（含 handoff 路径）。
+6. `agent:command("prompt", { message, images })`；图片作为 Pi 原生 `image` 内容直接发送给当前配置模型。
 7. 失败：移除乐观消息、恢复 draft、toast 错误；`agent_settled` 事件负责收尾状态。
 
 队列消费：useEffect 监听 `queued`，非运行/非加载时逐条取出发送；停止（abort）**保留**队列，切对话/换项目/新聊天清空队列。
@@ -301,7 +297,7 @@ agent 事件通过 `agent:event` 推送，`App.tsx` 里先做副作用处理（`
 - **导航**：`SidebarNav` / `TurnNav`（回合跳转）/ `WindowControls`（Windows 无边框窗口按钮）。
 - **右侧检查栏**：`InspectPanel`（工作文件 / 任务清单 / 终端 jobs，宽度可拖拽记忆）/ `ChangeSummary` / `FileDrawer`（diff 拆分视图，`splitPatch` 按 git 风格行渲染）。
 - **Composer**：`PromptBar`（contenteditable，支持 `@` 文件 chip、URL chip、图片 chip、排队行、模型/力度/权限选择器）。
-- **设置**：`Login`（多 pane：chat / vision / skills / shortcuts / about）。
+- **设置**：`Login`（多 pane：chat / skills / shortcuts / about）。
 - **通用**：`Icon`（内联 SVG path）/ `CopyButton` / `ApprovalCard` / `PermissionPicker` / `EffortPicker` / `Combo`（组合输入框）/ `ContextStats`。
 
 样式全部在 `styles.css`（手写 CSS，无 UI 框架）。改 UI 气质前先读 `.agents/skills/casleo-ui/SKILL.md` 与 `tokens.md`（界面气质规范）。
@@ -359,29 +355,21 @@ agent 事件通过 `agent:event` 推送，`App.tsx` 里先做副作用处理（`
 
 ### 8.3 工作区文件安全
 
-所有渲染进程发来的相对路径都必须经过 `resolveInWorkspace()`：解析后必须落在"当前 agent cwd 或最近工作区"之内，否则拒绝（防目录穿越）。`servePreview`（预览协议）只服务工作区内文件，`uploads` host 只按 basename 服务暂存图片。外部链接只允许 http(s)。`workspace:read` 有 200KB 截断与二进制检测（`buffer.includes(0)`）。
+所有渲染进程发来的相对路径都必须经过 `resolveInWorkspace()`：解析后必须落在"当前 agent cwd 或最近工作区"之内，否则拒绝（防目录穿越）。`servePreview`（预览协议）只服务工作区内文件。外部链接只允许 http(s)。`workspace:read` 有 200KB 截断与二进制检测（`buffer.includes(0)`）。
 
-## 9. 视觉能力（src/extensions/vision.ts）
+## 9. 图片输入
 
-`src/extensions/vision.ts` 是作为 agent 插件（`--extension` 参数）注册的视觉工具：
-
-- **GLM-4V-Flash 识图**：需要用户配置智谱 API key（`vision-config.json`）；走 OpenAI chat.completions 兼容格式，data URI 传图。
-- **MinerU OCR**：免费 OCR，异步上传 + 轮询（45s 超时），失败静默降级。
-- 工具在**本回合用户粘贴了图片**或消息含图片 handoff 时才启用（`before_agent_start` 里粘性决定，会话内不中途摘除，避免模型回退到 shell OCR 花招）。
-- 系统提示注入两条工程约定：`NO_CAPTURE`（除非用户本轮明确要截图，否则不用 Chrome/headless 截图验收）与语言旁白规则（按可见用户文本是否含 CJK 选择中/英文）。
-- 扩展 API 来自 agent-core 的 `ExtensionAPI`：`registerTool` / `getActiveTools` / `setActiveTools` / `on`。
-
-shared 层 `vision-api.ts` 提供纯函数：请求构造、响应解析、结果合并（GLM + OCR 分段）、`visionHandoffPaths` / `visibleUserText`（从 handoff 消息还原用户原文与图片路径）。图片粘贴后 base64 经 `vision:stage` 落盘到 `userData/uploads`（限制 4 张），会话文件里只存暂存路径。
+Casleo 不维护独立视觉模型、OCR 服务或图片识别扩展。桌面上传和扩展传入的图片统一转换为 Pi 原生 `image` 内容，随当前配置的模型请求发送；图片能力、token 计算、上下文压缩和流式处理全部由 Pi Runtime 决定。
 
 ## 10. 数据与存储布局
 
 | 位置                                                                        | 内容                                                                                                                                   |
 | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `appData/Casleo`（userData，旧的 `appData/DSHarness` 首次启动自动改名迁移） | `recent-workspaces.json`（最近工作区）、`vision-config.json`、`chat-profiles.json`、`uploads/`（暂存图片）、`tasks/`（无项目时的 cwd） |
+| `appData/Casleo`（userData，旧的 `appData/DSHarness` 首次启动自动改名迁移） | `recent-workspaces.json`（最近工作区）、`chat-profiles.json`、`tasks/`（无项目时的 cwd） |
 | `~/.casleo`（getCasleoHome，casleo-agent-core 管理）                        | `settings.json`（locale / 默认 provider+model）、会话索引与线程存储、凭据（`CASLEO_CREDENTIALS_STORE=file` 时落文件而非系统钥匙串）    |
 | 项目内 `.agents/`                                                           | `features.json`（跨会话任务清单）、`progress.md`（进度）——由技能约定维护                                                               |
 
-环境变量约定：`CASLEO_CREDENTIALS_STORE=file`（分发版避免钥匙串弹窗）；`PI_TELEMETRY=0`；`PI_SKIP_VERSION_CHECK=1`；`HARNESS_EXTRA_MODELS` / `HARNESS_VISION_CONFIG` / `HARNESS_VISION_UPLOADS` 传给 agent 子进程。
+环境变量约定：`CASLEO_CREDENTIALS_STORE=file`（分发版避免钥匙串弹窗）；`PI_TELEMETRY=0`；`PI_SKIP_VERSION_CHECK=1`；`HARNESS_EXTRA_MODELS` 传给 agent 子进程。
 
 ## 11. 技能（Skills）系统
 
@@ -395,13 +383,12 @@ shared 层 `vision-api.ts` 提供纯函数：请求构造、响应解析、结�
 
 ## 12. 构建与打包
 
-### 12.1 三端构建（tsup.config.ts）
+### 12.1 双目标构建（tsup.config.ts）
 
 | 产物    | 入口                       | 格式          | 输出                                                       |
 | ------- | -------------------------- | ------------- | ---------------------------------------------------------- |
 | 主进程  | `src/main/index.ts`        | ESM（`.mjs`） | `dist-electron/main/index.mjs`（`package.json` 的 `main`） |
 | preload | `src/preload/index.ts`     | CJS（`.cjs`） | `dist-electron/preload/index.cjs`                          |
-| 扩展    | `src/extensions/vision.ts` | ESM（`.js`）  | `dist-electron/extensions/vision.js`                       |
 
 `electron` 与 `casleo-agent-core` 标记为 external。
 
@@ -423,7 +410,7 @@ postinstall / predev 执行：检查 Electron 发行二进制是否完整，缺�
 ## 13. 测试
 
 - 位置：与源码同目录的 `*.test.ts`（Vitest，node 环境），目前 12 个文件约 112 个用例。
-- 重点覆盖：`conversation.ts` 事件归并与解析（最大测试面）、`shared/*` 纯函数（i18n、chat-profiles、thinking、skills、vision-api、openai-models）、`main/*` 工具（rpc-lines、skills-fs、update-check）。
+- 重点覆盖：`conversation.ts` 事件归并与解析（最大测试面）、`shared/*` 纯函数（i18n、chat-profiles、thinking、skills、image-input、openai-models）、`main/*` 工具（rpc-lines、skills-fs、update-check）。
 - 运行：`pnpm test` 或 `node_modules/.bin/vitest run`；CI 里用默认配置。
 - 已知环境相关失败：`skills-fs.test.ts` 假设 `$HOME` 干净（临时 HOME 下只有它创建的 skill）；若本机 `$HOME` 下存在其他真实技能目录会多出条目导致断言失败——CI/干净环境不受影响。
 

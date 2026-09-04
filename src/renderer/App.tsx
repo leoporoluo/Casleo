@@ -51,7 +51,7 @@ import {
   type RestoreFile,
   type SessionTodo,
 } from "./conversation";
-import { toPromptImages } from "../shared/vision-api";
+import { toPromptImages } from "../shared/image-input";
 import {
   ApprovalCard,
   AssistantTurn,
@@ -299,6 +299,7 @@ export function App() {
   const [workspace, setWorkspace] = useState<string>();
   const [activeSession, setActiveSession] = useState<string>();
   const [model, setModel] = useState("");
+  const [modelConfigured, setModelConfigured] = useState(false);
   const [contextWindow, setContextWindow] = useState<number | undefined>();
   const [chatModels, setChatModels] = useState<string[]>([]);
   const [effort, setEffort] = useState(readStoredEffort);
@@ -657,6 +658,7 @@ export function App() {
 
   const switchModel = useCallback((next: string) => {
     setModel(next);
+    setModelConfigured(Boolean(next.trim()));
     modelRef.current = next;
     applyThinkingForModel(next);
     if (agentCwd.current && agentModelIdsRef.current.includes(next)) {
@@ -961,7 +963,7 @@ export function App() {
           fillPrompt(text);
           return;
         }
-        await window.harness.agent.command("prompt", { message: text });
+        await window.harness.agent.command("prompt", { message: text, images: promptImages });
       } catch (error) {
         fillPrompt(text);
         setToast(friendlyAgentError(error));
@@ -1037,9 +1039,13 @@ export function App() {
   }, [ensureModelReady, fillPrompt, loading, openFolder, permission, running, startAgent, t, undoLastTurn, workspace]);
 
   useEffect(() => {
-    void refresh().then((status) => {
+    void refresh().then(async (status) => {
       const current = status.find((item) => item.id === "openai");
-      if (current?.configured) setModel(current.defaultModel);
+      const profiles = await window.harness.auth.profiles().catch(() => undefined);
+      const configuredModel = profiles ? activeCustomProfile(profiles)?.model.trim() ?? "" : "";
+      modelRef.current = configuredModel;
+      setModel(configuredModel);
+      setModelConfigured(Boolean(current?.configured && configuredModel));
     });
   }, []);
 
@@ -1217,7 +1223,7 @@ export function App() {
       effort={effort}
       effortLevels={thinkingLevels}
       onEffort={applyEffort}
-      modelConfigured={Boolean(connected?.configured && model.trim())}
+      modelConfigured={modelConfigured}
       permission={permission}
       onPermission={(next) => {
         const mode = next as PermissionMode;
@@ -1562,9 +1568,11 @@ export function App() {
             setProviders(status);
             const current = status.find((item) => item.id === "openai");
             if (current?.configured) {
-              const nextModel = current.defaultModel;
+              const profiles = await window.harness.auth.profiles().catch(() => undefined);
+              const nextModel = profiles ? activeCustomProfile(profiles)?.model.trim() ?? "" : "";
               modelRef.current = nextModel;
               setModel(nextModel);
+              setModelConfigured(Boolean(nextModel));
               applyThinkingForModel(nextModel);
               setLoginOpen(false);
               await window.harness.agent.stop().catch(() => undefined);

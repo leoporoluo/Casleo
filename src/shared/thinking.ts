@@ -44,7 +44,7 @@ export function inferModelReasoning(modelId: string): boolean {
   const id = modelId.toLowerCase();
   if (!/deepseek|reasoner|\br1\b|v4-flash|v4-pro|(?:^|[-_])gpt-5(?:[.-]|$)|(?:^|[-_])o[134](?:[-_.]|$)/.test(id)) return false;
   if (/deepseek-chat|deepseek-coder/.test(id)) return false;
-  if (/(?:^|[-_])(chat|coder|lite|distill|embed|vision|ocr|instruct)(?:$|[-_])/.test(id)) {
+  if (/(?:^|[-_])(chat|coder|lite|distill|embed|instruct)(?:$|[-_])/.test(id)) {
     return false;
   }
   return true;
