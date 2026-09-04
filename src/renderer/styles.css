@@ -782,10 +782,6 @@ textarea::selection,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.model-effort-separator {
-  flex: none;
-  color: var(--ink-3);
-}
 .model-effort-level {
   flex: none;
   white-space: nowrap;
@@ -1599,7 +1595,7 @@ textarea::selection,
 }
 .inspect-file {
   width: 100%;
-  min-height: 28px;
+  min-height: 46px;
   padding: 4px 4px 4px 22px;
   display: flex;
   align-items: center;
@@ -3054,7 +3050,7 @@ textarea::selection,
 .prompt-input.empty {
   min-height: 46px;
 }
-.prompt-wrap.hero .prompt-input.empty {
+.prompt-wrap.hero .prompt-input {
   min-height: 72px;
 }
 .prompt-input.empty::before {

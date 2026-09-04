@@ -2542,7 +2542,6 @@ function ModelEffortPicker({
         <span className="model-effort-model">{selected?.label ?? model}</span>
         {effortOptions.length > 0 && effort ? (
           <>
-            <span className="model-effort-separator" aria-hidden="true">/</span>
             <span className="model-effort-level">{t(effortLabelKey(effort))}</span>
           </>
         ) : null}
@@ -2557,6 +2556,8 @@ function ModelEffortPicker({
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
                 setOpen(false);
                 setQuery("");
               }
@@ -2716,6 +2717,8 @@ export function Combo({
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
               setOpen(false);
               setQuery("");
             }
@@ -3292,6 +3295,16 @@ export function Login({
   const chatKey = activeCustom?.apiKey ?? "";
   const modKey = window.harness.platform === "darwin" ? "⌘" : "Ctrl";
 
+  useEffect(() => {
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
   const listModels = async (target: "chat") => {
     const base = chatUrl;
     const secret = chatKey;
@@ -3400,7 +3413,7 @@ export function Login({
   };
 
   return (
-    <div className="settings-route" onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
+    <div className="settings-route">
       <header className="settings-route-head">
         <button type="button" className="settings-back" onClick={onClose}>
           <Icon path="M19 12H5M12 19l-7-7 7-7" size={16} />
