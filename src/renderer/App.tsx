@@ -716,7 +716,6 @@ export function App() {
 
   const newThread = useCallback(async () => {
     live.current = false;
-    setWorkspace(undefined);
     setMessages([]);
     setStats(undefined);
     fillPrompt("");
