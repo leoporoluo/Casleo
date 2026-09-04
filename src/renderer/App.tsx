@@ -1217,11 +1217,16 @@ export function App() {
   useLayoutEffect(() => {
     const node = scroller.current;
     if (!node || home) return;
+    let frame = 0;
 
     const pin = () => {
       const overlay = dock.current?.offsetHeight ?? 0;
       if (overlay > 0) node.style.setProperty("--dock-clearance", `${overlay + 24}px`);
-      if (stick.current) node.scrollTop = node.scrollHeight;
+      if (!stick.current || frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        if (stick.current) node.scrollTop = node.scrollHeight;
+      });
     };
 
     const content = node.querySelector(".messages");
@@ -1229,19 +1234,11 @@ export function App() {
     if (content) ro.observe(content);
     if (dock.current) ro.observe(dock.current);
     pin();
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, [home, steering.length]);
-
-  // Streaming updates can change text without changing the observed layout
-  // node's dimensions synchronously. Re-pin after each render while following.
-  useLayoutEffect(() => {
-    const node = scroller.current;
-    if (!node || home || !stick.current) return;
-    const frame = window.requestAnimationFrame(() => {
-      if (stick.current) node.scrollTop = node.scrollHeight;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [messages, running, uiRequest, home]);
 
   const composer = (
     <PromptBar
