@@ -1126,7 +1126,6 @@ export function StreamingText({
           <Markdown streaming={streaming} workspace={workspace}>{text}</Markdown>
         </div>
       ) : null}
-      {streaming ? <span className="caret" aria-hidden="true" /> : null}
     </div>
   );
 }

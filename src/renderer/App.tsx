@@ -362,6 +362,7 @@ export function App() {
   const profileEffortRef = useRef<string | undefined>(undefined);
   const agentModelIdsRef = useRef<string[]>([]);
   const agentModelsRef = useRef<AgentSnapshot["models"]>([]);
+  const statsRef = useRef<AgentSessionStats | undefined>(undefined);
   const startSeq = useRef(0);
   const permissionBeforePlan = useRef<Exclude<PermissionMode, "plan">>("full");
 
@@ -573,7 +574,10 @@ export function App() {
       const discoveredCommands = parseAgentCommands(commandSnapshot.commands ?? []);
       if (seedMessage) {
         setMessages([...normalizeMessages(snapshot.messages), seedMessage]);
-        setStats(snapshot.stats);
+        if (snapshot.stats) {
+          statsRef.current = snapshot.stats;
+          setStats(snapshot.stats);
+        }
         setAgentSkills(snapshot.skills ?? []);
         setAgentCommands(discoveredCommands);
         setRunning(true);
@@ -582,7 +586,10 @@ export function App() {
         const hadRunning = Boolean(raw.at(-1)?.tools.some((tool) => tool.status === "running"));
         const next = resume ? finalizeInterruptedTurn(raw) : raw;
         setMessages(next);
-        setStats(snapshot.stats);
+        if (snapshot.stats) {
+          statsRef.current = snapshot.stats;
+          setStats(snapshot.stats);
+        }
         setRunning(Boolean(snapshot.state.isStreaming) && !hadRunning);
         setAgentSkills(snapshot.skills ?? []);
         setAgentCommands(discoveredCommands);
@@ -690,6 +697,7 @@ export function App() {
     setWorkspace(cwd);
     setOpenProjects((current) => ({ ...current, [cwd]: true }));
     setMessages([]);
+    statsRef.current = undefined;
     setStats(undefined);
     fillPrompt("");
     setSteering([]);
@@ -716,6 +724,7 @@ export function App() {
 
   const newThread = useCallback(async () => {
     live.current = false;
+    statsRef.current = undefined;
     setMessages([]);
     setStats(undefined);
     fillPrompt("");
@@ -749,6 +758,7 @@ export function App() {
         agentCwd.current = undefined;
       }
       setMessages([]);
+      statsRef.current = undefined;
       setStats(undefined);
       setSteering([]);
       setActiveSession(undefined);
@@ -795,6 +805,7 @@ export function App() {
     live.current = false;
     setWorkspace(undefined);
     setMessages([]);
+    statsRef.current = undefined;
     setStats(undefined);
     setSteering([]);
     setActiveSession(undefined);
@@ -896,6 +907,7 @@ export function App() {
         window.harness.agent.command<AgentSessionStats>("get_session_stats"),
       ]);
       setMessages(normalizeMessages(history.messages));
+      statsRef.current = nextStats;
       setStats(nextStats);
       setToast(
         result.tokensBefore
@@ -1099,7 +1111,10 @@ export function App() {
         if (Array.isArray(event.commands)) setAgentCommands(event.commands as AgentSlashCommand[]);
         if (event.stats && typeof event.stats === "object") {
           const nextStats = event.stats as AgentSessionStats;
-          setStats(nextStats);
+          if (!statsRef.current) {
+            statsRef.current = nextStats;
+            setStats(nextStats);
+          }
           if (typeof nextStats.sessionFile === "string") {
             sessionRef.current = nextStats.sessionFile;
             setActiveSession(nextStats.sessionFile);
@@ -1111,6 +1126,7 @@ export function App() {
         // Keep a pending extension approval visible until the user responds.
         void window.harness.agent.command<AgentSessionStats>("get_session_stats").then((nextStats) => {
           if (!live.current) return;
+          statsRef.current = nextStats;
           setStats(nextStats);
           if (typeof nextStats?.sessionFile !== "string") return;
           sessionRef.current = nextStats.sessionFile;

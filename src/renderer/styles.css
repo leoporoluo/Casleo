@@ -2643,28 +2643,6 @@ textarea::selection,
 .stream {
   position: relative;
 }
-.stream.live .caret {
-  margin-top: 4px;
-}
-.caret {
-  display: inline-block;
-  width: 2px;
-  height: 1.05em;
-  margin-left: 2px;
-  border-radius: 1px;
-  background: var(--ink-3);
-  vertical-align: text-bottom;
-  animation: caret-pulse 1.15s ease-in-out infinite;
-}
-@keyframes caret-pulse {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
 
 .approval {
   position: absolute;
@@ -4903,8 +4881,7 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .trace.live .shimmer,
-  .caret {
+  .trace.live .shimmer {
     animation: none;
   }
 }
