@@ -50,7 +50,7 @@ describe("vision tool availability", () => {
     expect(pi.fire("tool_call", { toolName: "vision", input: {} })).toMatchObject({ block: true });
   });
 
-  it("routes extension images through vision even when the model advertises image input", async () => {
+  it("keeps extension images native when the model advertises image input", async () => {
     const pi = harness();
     const directory = await mkdtemp(path.join(os.tmpdir(), "casleo-vision-"));
     const previous = process.env.HARNESS_VISION_UPLOADS;
@@ -65,8 +65,7 @@ describe("vision tool availability", () => {
         },
         { model: { input: ["text", "image"] } },
       );
-      expect(result).toMatchObject({ action: "transform", images: [] });
-      expect((result as { text: string }).text).toContain("先调用 vision 工具查看");
+      expect(result).toMatchObject({ action: "continue" });
     } finally {
       if (previous === undefined) delete process.env.HARNESS_VISION_UPLOADS;
       else process.env.HARNESS_VISION_UPLOADS = previous;

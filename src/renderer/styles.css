@@ -3063,25 +3063,6 @@ textarea::selection,
   line-height: 1;
   cursor: pointer;
 }
-.prompt-file-input {
-  display: none;
-}
-.prompt-attach {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  color: var(--ink-2);
-}
-.prompt-attach:hover:not(:disabled) {
-  background: var(--hover);
-  color: var(--ink);
-}
-.prompt-attach:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
 .prompt-input {
   display: block;
   width: 100%;

@@ -1831,6 +1831,7 @@ export function PromptBar({
   effort,
   effortLevels,
   onEffort,
+  modelConfigured,
   permission,
   onPermission,
   onCommand,
@@ -1854,6 +1855,7 @@ export function PromptBar({
   effort: string;
   effortLevels: string[];
   onEffort(value: string): void;
+  modelConfigured?: boolean;
   permission: string;
   onPermission(value: string): void;
   onCommand(command: string): void;
@@ -1873,7 +1875,6 @@ export function PromptBar({
   const choosingWorkspace = useRef(false);
   const area = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
-  const filePicker = useRef<HTMLInputElement>(null);
   const mention = workspace ? mentionAt(value, cursor) : undefined;
   const matches = mention ? filterMentionPaths(files, mention.query) : [];
   const skillReference = value.slice(0, cursor).match(/^\/([^\s]*)$/);
@@ -2287,38 +2288,17 @@ export function PromptBar({
           </div>
         )}
         <div className="prompt-bar">
-          <input
-            ref={filePicker}
-            className="prompt-file-input"
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(event) => {
-              const files = [...(event.target.files ?? [])];
-              event.currentTarget.value = "";
-              void appendImageFiles(files);
-            }}
-          />
-          <button
-            type="button"
-            className="prompt-attach"
-            aria-label={t("composer.uploadImage")}
-            title={t("composer.uploadImage")}
-            onClick={() => filePicker.current?.click()}
-          >
-            <Icon path="M4 5h16v14H4z\nM8 14l2.5-3 2 2.5 1.5-2 4 4.5\nM8 9h.01" size={15} />
-          </button>
           <PermissionPicker value={permission} down={hero} onChange={onPermission} />
           <div className="prompt-bar-end">
-            <SessionModelControls
-              model={model}
-              models={models}
-              onModel={onModel}
-              effort={effort}
-              effortLevels={effortLevels}
-              onEffort={onEffort}
-              down={hero}
-            />
+            {modelConfigured && <SessionModelControls
+                model={model}
+                models={models}
+                onModel={onModel}
+                effort={effort}
+                effortLevels={effortLevels}
+                onEffort={onEffort}
+                down={hero}
+              />}
             {running ? (
               <button type="button" className="send stop" onClick={onStop} aria-label={t("composer.abort")}>
                 <i />

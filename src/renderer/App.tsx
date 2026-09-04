@@ -1217,6 +1217,7 @@ export function App() {
       effort={effort}
       effortLevels={thinkingLevels}
       onEffort={applyEffort}
+      modelConfigured={Boolean(connected?.configured && model.trim())}
       permission={permission}
       onPermission={(next) => {
         const mode = next as PermissionMode;
