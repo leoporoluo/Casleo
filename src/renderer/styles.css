@@ -386,7 +386,7 @@ textarea::selection,
   transform: rotate(90deg);
 }
 .session-list {
-  margin: 1px 0 8px;
+  margin: 4px 0 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -397,7 +397,7 @@ textarea::selection,
   border-radius: 7px;
 }
 .session-list.nested .session-item {
-  margin-left: 24px;
+  margin-left: 0;
 }
 .session-item:hover {
   background: color-mix(in srgb, var(--hover) 68%, transparent);
@@ -416,6 +416,9 @@ textarea::selection,
   min-width: 0;
   flex: 1;
   border-radius: 0;
+}
+.session-list.nested .session-row {
+  padding-left: 32px;
 }
 .session-del {
   flex: none;
@@ -2999,6 +3002,47 @@ textarea::selection,
   flex-wrap: wrap;
   gap: 8px;
   padding: 0 4px 8px;
+}
+.prompt-attachment {
+  min-width: 0;
+  max-width: min(260px, 100%);
+  height: 32px;
+  padding: 0 6px 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  background: var(--inset);
+  color: var(--ink-2);
+  box-shadow: var(--shadow-hairline);
+  font-size: 12px;
+}
+.prompt-attachment > svg {
+  flex: none;
+  color: var(--ink-3);
+}
+.prompt-attachment > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prompt-attachment-remove {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.prompt-attachment-remove:hover {
+  background: var(--hover-2);
+  color: var(--ink);
 }
 .prompt-upload {
   position: relative;

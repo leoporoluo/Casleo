@@ -7,7 +7,7 @@ import { agentSlashCommand, skillSlashCommand, skillUserDisplay, type AgentSlash
 import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
 import { applyTheme, readStoredTheme, THEMES, type ThemeId } from "../shared/theme";
 import { effortLabelKey, pickEffortOptions, reasoningLevelsAvailable } from "../shared/thinking";
-import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThinking, delegateProgress, delegateStatusLabel, filterMentionPaths, formatCommand, isRecoverableRequestError, liveStatus, omitFinalReply, repairMarkdownTables, splitHttpUrls, splitPatch, stripEmptyMarkdown, spliceFileMention, terminalLabel, toolCommand, toolSummary, toolWritePreview, traceRows, turnWork, assistantReplyText, webSearchCard, workspaceRelative, type ChatImage, type ChatMessage, type FileChange, type SessionFile, type SessionTerminal, type SessionTodo, type ToolActivity, type TraceRow, type WorkItem } from "./conversation";
+import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThinking, delegateProgress, delegateStatusLabel, filterMentionPaths, formatCommand, isRecoverableRequestError, liveStatus, omitFinalReply, repairMarkdownTables, splitHttpUrls, splitPatch, stripEmptyMarkdown, terminalLabel, toolCommand, toolSummary, toolWritePreview, traceRows, turnWork, assistantReplyText, webSearchCard, workspaceRelative, type ChatImage, type ChatMessage, type FileChange, type SessionFile, type SessionTerminal, type SessionTodo, type ToolActivity, type TraceRow, type WorkItem } from "./conversation";
 import { tokenizeCode } from "./highlight";
 import type { AgentSkillCommand } from "../shared/skills";
 import type { LocalPluginEntry, PiPackageEntry, ResourceKind } from "../shared/types";
@@ -92,6 +92,19 @@ export function UserTurn({ text, images = [], anchor }: { text: string; images?:
 
 function isImageFile(file: File): boolean {
   return file.type.startsWith("image/") || /\.(?:png|jpe?g|webp|gif|bmp)$/i.test(file.name);
+}
+
+type PromptAttachmentKind = "file" | "folder" | "audio";
+
+type PromptAttachment = {
+  path: string;
+  name: string;
+  kind: PromptAttachmentKind;
+};
+
+function promptAttachmentKind(path: string, folder = false): PromptAttachmentKind {
+  if (folder) return "folder";
+  return /\.(?:aac|amr|flac|m4a|mp3|oga|ogg|opus|wav|webm|wma)$/i.test(path) ? "audio" : "file";
 }
 
 function readImageFile(file: File): Promise<string> {
@@ -1809,8 +1822,8 @@ function flattenPromptBlocks(root: HTMLElement): void {
   }
 }
 
-function isPromptEmpty(root: HTMLElement, imageCount = 0): boolean {
-  return !serializePrompt(root).trim() && imageCount === 0;
+function isPromptEmpty(root: HTMLElement, imageCount = 0, attachmentCount = 0): boolean {
+  return !serializePrompt(root).trim() && imageCount === 0 && attachmentCount === 0;
 }
 
 export function PromptBar({
@@ -1865,6 +1878,7 @@ export function PromptBar({
   const [value, setValue] = useState("");
   const [cursor, setCursor] = useState(0);
   const [images, setImages] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
   const [files, setFiles] = useState<string[]>([]);
   const [listing, setListing] = useState(false);
   const [picked, setPicked] = useState(0);
@@ -1893,6 +1907,7 @@ export function PromptBar({
 
   useEffect(() => {
     setValue(fillText ?? "");
+    if (!fillText?.trim()) setAttachments([]);
   }, [fillToken]);
 
   useEffect(() => {
@@ -1919,7 +1934,7 @@ export function PromptBar({
     flattenPromptBlocks(root);
     if (!serializePrompt(root).trim() && !root.querySelector("[data-url], [data-file]")) root.replaceChildren();
     const next = serializePrompt(root);
-    setBlank(isPromptEmpty(root, images.length));
+    setBlank(isPromptEmpty(root, images.length, attachments.length));
     setCursor(caretOffset(root));
     skipHydrate.current = true;
     if (next !== value) setValue(next);
@@ -1966,8 +1981,8 @@ export function PromptBar({
     }
     if (serializePrompt(root) === value) return;
     hydratePrompt(root, value);
-    setBlank(isPromptEmpty(root, images.length));
-  }, [value, images.length]);
+    setBlank(isPromptEmpty(root, images.length, attachments.length));
+  }, [value, images.length, attachments.length]);
 
   const insertFile = (file: string, confirm = false) => {
     const root = area.current;
@@ -2019,7 +2034,7 @@ export function PromptBar({
     const dataUrls = await Promise.all(selected.map((file) => readImageFile(file).catch(() => "")));
     const next = [...images, ...dataUrls.filter(Boolean)].slice(0, MAX_PROMPT_IMAGES);
     setImages(next);
-    setBlank(isPromptEmpty(root, next.length));
+    setBlank(isPromptEmpty(root, next.length, attachments.length));
     root.focus();
   };
 
@@ -2027,13 +2042,16 @@ export function PromptBar({
     const root = area.current;
     if (!root || disabled) return;
     const text = serializePrompt(root).trim();
-    if (!text && images.length === 0) return;
+    const attachmentText = attachments.map((item) => `@${item.path}`).join("\n");
+    const prompt = [text, attachmentText].filter(Boolean).join("\n");
+    if (!prompt && images.length === 0) return;
     const command = root.querySelector<HTMLElement>("[data-command]")?.dataset.command;
     root.replaceChildren();
     setImages([]);
+    setAttachments([]);
     setBlank(true);
     setValue("");
-    onSubmit(text, images, command && !command.startsWith("/skill:") ? command : undefined);
+    onSubmit(prompt, images, command && !command.startsWith("/skill:") ? command : undefined);
   };
 
   const focusOrChooseWorkspace = async () => {
@@ -2116,7 +2134,7 @@ export function PromptBar({
     if (root) root.contentEditable = "false";
     setDropOver(false);
     if (!root) return;
-    const paths: string[] = [];
+    const nextAttachments: PromptAttachment[] = [];
     const treePath = treeDragPath || event.dataTransfer.getData(PATH_MIME);
     const dropped = [...event.dataTransfer.items]
       .filter((item) => item.kind === "file")
@@ -2134,34 +2152,32 @@ export function PromptBar({
     if (imageFiles.length > 0) void appendImageFiles(imageFiles);
     const pathItems = dropped.filter((item) => !imageFiles.includes(item.file));
     if (treePath) {
-      paths.push(treePath);
+      const folder = treePath.endsWith("/") || files.includes(`${treePath}/`);
+      const normalized = folder ? `${treePath.replace(/\/$/, "")}/` : treePath;
+      nextAttachments.push({ path: normalized, name: baseName(normalized), kind: promptAttachmentKind(normalized, folder) });
     } else if (workspace) {
       for (const item of pathItems) {
         const rel = workspaceRelative(droppedAbsPath(item.file), workspace);
         if (!rel) continue;
         const directory = item.directory || files.includes(`${rel}/`);
-        paths.push(directory ? `${rel.replace(/\/$/, "")}/` : rel);
+        const normalized = directory ? `${rel.replace(/\/$/, "")}/` : rel;
+        nextAttachments.push({ path: normalized, name: baseName(normalized), kind: promptAttachmentKind(normalized, directory) });
       }
     }
-    if (paths.length === 0) {
+    if (nextAttachments.length === 0) {
       root.contentEditable = "true";
       return;
     }
-    let next = serializePrompt(root);
-    let caret = Math.min(cursor, next.length);
-    for (const path of paths) {
-      const inserted = spliceFileMention(next, path, caret);
-      next = inserted.next;
-      caret = inserted.caret;
-    }
-    setValue(next);
-    setCursor(caret);
+    setAttachments((current) => {
+      const seen = new Set(current.map((item) => item.path));
+      return [...current, ...nextAttachments.filter((item) => !seen.has(item.path))];
+    });
+    setBlank(false);
     requestAnimationFrame(() => {
       const node = area.current;
       if (!node) return;
       node.contentEditable = "true";
       node.focus();
-      placeCaret(node, caret);
     });
   };
   const hero = placement === "hero";
@@ -2209,6 +2225,32 @@ export function PromptBar({
             sendNow();
           }}
         >
+        {attachments.length > 0 && (
+          <div className="prompt-attachments" aria-label="文件附件">
+            {attachments.map((item) => (
+              <div className={`prompt-attachment ${item.kind}`} key={item.path}>
+                <Icon
+                  path={item.kind === "folder" ? "M3 7h6l2 2h10v10H3z" : item.kind === "audio" ? "M9 18V5l10-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zm10-2a3 3 0 1 1-3-3 3 3 0 0 1 3 3z" : "M6 2h9l4 4v16H6zM15 2v5h5"}
+                  size={13}
+                />
+                <span title={item.path}>{item.name}</span>
+                <button
+                  type="button"
+                  className="prompt-attachment-remove"
+                  aria-label="删除附件"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setAttachments((current) => current.filter((attachment) => attachment.path !== item.path));
+                    setBlank(isPromptEmpty(area.current!, images.length, attachments.length - 1));
+                    area.current?.focus();
+                  }}
+                >
+                  <Icon path="M6 6l12 12M18 6L6 18" size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         {images.length > 0 && (
           <div className="prompt-attachments" aria-label="图片附件">
             {images.map((dataUrl, index) => (
@@ -2222,7 +2264,7 @@ export function PromptBar({
                   onClick={() => {
                     const next = images.filter((_, imageIndex) => imageIndex !== index);
                     setImages(next);
-                    setBlank(isPromptEmpty(area.current!, next.length));
+                    setBlank(isPromptEmpty(area.current!, next.length, attachments.length));
                     area.current?.focus();
                   }}
                 >

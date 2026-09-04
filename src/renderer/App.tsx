@@ -79,8 +79,14 @@ function isSameSession(session: SessionSummary, active?: string) {
 }
 
 function qrLink(text: string): string | undefined {
-  const value = text.match(/https?:\/\/[^\s]+/u)?.[0];
-  return value?.replace(/[。，、）)】]+$/u, "");
+  const value = text.match(/https?:\/\/[^\s<>"'`]+/u)?.[0];
+  return value?.replace(/[。，、；：！？）)】》」』"'`]+$/u, "");
+}
+
+function isQrNotification(text: string): boolean {
+  const link = qrLink(text);
+  if (!link) return false;
+  return /[█▀▄▌▐]/u.test(text) || /二维码|扫码登录|scan\s+to\s+login/i.test(text);
 }
 
 function QrDialog({ text, onClose }: { text: string; onClose(): void }) {
@@ -352,6 +358,8 @@ export function App() {
   chatModelsRef.current = chatModels;
   const effortRef = useRef(effort);
   effortRef.current = effort;
+  const effortOverride = useRef(false);
+  const profileEffortRef = useRef<string | undefined>(undefined);
   const agentModelIdsRef = useRef<string[]>([]);
   const agentModelsRef = useRef<AgentSnapshot["models"]>([]);
   const startSeq = useRef(0);
@@ -393,7 +401,9 @@ export function App() {
       ]);
       const levels = Array.isArray(levelsResp?.levels) ? levelsResp.levels : ["off"];
       setThinkingLevels(levels);
-      const activeLevel = typeof stateResp?.thinkingLevel === "string"
+      const activeLevel = effortOverride.current
+        ? effortRef.current
+        : typeof stateResp?.thinkingLevel === "string"
         ? stateResp.thinkingLevel
         : effortRef.current;
       const next = normalizeEffort(activeLevel, levels);
@@ -411,6 +421,7 @@ export function App() {
   }, []);
 
   const applyEffort = useCallback((next: string) => {
+    effortOverride.current = true;
     effortRef.current = next;
     setEffort(next);
     writeStoredEffort(next);
@@ -514,7 +525,7 @@ export function App() {
     const configuredContextWindow = activeProfile?.contextWindow;
     const startMaxTokens = clampMaxTokens(activeProfile?.maxTokens, configuredContextWindow);
     setContextWindow(configuredContextWindow);
-    if (activeProfile?.effort) {
+    if (activeProfile?.effort && !effortOverride.current) {
       effortRef.current = activeProfile.effort;
       setEffort(activeProfile.effort);
       writeStoredEffort(activeProfile.effort);
@@ -717,6 +728,12 @@ export function App() {
     setAgentSkills([]);
     setActiveSession(undefined);
     sessionRef.current = undefined;
+    effortOverride.current = false;
+    if (profileEffortRef.current) {
+      effortRef.current = profileEffortRef.current;
+      setEffort(profileEffortRef.current);
+      writeStoredEffort(profileEffortRef.current);
+    }
     if (!agentCwd.current) return;
     agentCwd.current = undefined;
     await window.harness.agent.command("abort").catch(() => undefined);
@@ -1043,9 +1060,16 @@ export function App() {
       const current = status.find((item) => item.id === "openai");
       const profiles = await window.harness.auth.profiles().catch(() => undefined);
       const configuredModel = profiles ? activeCustomProfile(profiles)?.model.trim() ?? "" : "";
+      const configuredEffort = profiles ? activeCustomProfile(profiles)?.effort?.trim() ?? "" : "";
+      profileEffortRef.current = configuredEffort || undefined;
       modelRef.current = configuredModel;
       setModel(configuredModel);
       setModelConfigured(Boolean(current?.configured && configuredModel));
+      if (configuredEffort && !effortOverride.current) {
+        effortRef.current = configuredEffort;
+        setEffort(configuredEffort);
+        writeStoredEffort(configuredEffort);
+      }
     });
   }, []);
 
@@ -1115,8 +1139,14 @@ export function App() {
         const request = event as ExtensionUiRequest;
         if (request.method === "notify") {
           const message = request.message ?? t("toast.notify");
-          if (/[█▀▄]/u.test(message) && /https?:\/\//u.test(message)) setQrOutput(message);
-          else setToast(message);
+          if (/^微信桥接已(?:自动)?启动/u.test(message.trim())) {
+            setToast(undefined);
+          } else if (isQrNotification(message)) {
+            setToast(undefined);
+            setQrOutput(message);
+          } else {
+            setToast(message);
+          }
         }
         else if (["select", "confirm", "input", "editor"].includes(request.method)) setUiRequest(request);
       }
