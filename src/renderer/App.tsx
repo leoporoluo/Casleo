@@ -614,6 +614,11 @@ export function App() {
         setModel(modelId);
         await window.harness.agent.command("set_model", { provider: "openai", modelId }).catch(() => undefined);
       }
+      void window.harness.agent.command<AgentSessionStats>("get_session_stats").then((nextStats) => {
+        if (!live.current || seq !== startSeq.current) return;
+        statsRef.current = nextStats;
+        setStats(nextStats);
+      }).catch(() => undefined);
       applyThinkingForModel(modelId);
       const nextEffort = effortRef.current;
       await window.harness.agent.command("set_thinking_level", { level: nextEffort }).catch(() => undefined);
@@ -1111,7 +1116,14 @@ export function App() {
           agentModelIdsRef.current = agentModelsRef.current.map((item) => item.id).filter(Boolean);
         }
         if (Array.isArray(event.skills)) setAgentSkills(event.skills as AgentSkillCommand[]);
-        if (Array.isArray(event.commands)) setAgentCommands(event.commands as AgentSlashCommand[]);
+        if (Array.isArray(event.commands)) {
+          setAgentCommands(parseAgentCommands(event.commands as Array<{
+            name: string;
+            description?: string;
+            source?: string;
+            sourceInfo?: { path?: string; baseDir?: string; source?: string; origin?: string };
+          }>));
+        }
         if (event.stats && typeof event.stats === "object") {
           const nextStats = event.stats as AgentSessionStats;
           if (!statsRef.current || statsRef.current.sessionId !== nextStats.sessionId) {
