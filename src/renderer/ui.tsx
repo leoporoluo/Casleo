@@ -2387,38 +2387,186 @@ export function SessionModelControls({
   onEffort(value: string): void;
   down?: boolean;
 }) {
-  const { t } = useI18n();
   if (!model.trim() || models.length === 0) return null;
   return (
     <div className="session-model-controls">
-      <Combo value={model} options={models} searchable placeholder={t("composer.filterModels")} down={down} hideChevron onChange={onModel} />
-      {reasoningLevelsAvailable(effortLevels) && (
-        <EffortPicker value={effort} levels={effortLevels} down={down} onChange={onEffort} />
-      )}
+      <ModelEffortPicker
+        model={model}
+        models={models}
+        onModel={onModel}
+        effort={effort}
+        effortLevels={effortLevels}
+        onEffort={onEffort}
+        down={down}
+      />
     </div>
   );
 }
 
-export function EffortPicker({
-  value,
-  levels,
-  onChange,
+function ModelEffortPicker({
+  model,
+  models,
+  onModel,
+  effort,
+  effortLevels,
+  onEffort,
   down,
 }: {
-  value: string;
-  levels: string[];
-  onChange(value: string): void;
+  model: string;
+  models: { value: string; label: string }[];
+  onModel(value: string): void;
+  effort: string;
+  effortLevels: string[];
+  onEffort(value: string): void;
   down?: boolean;
 }) {
   const { t } = useI18n();
-  const options = pickEffortOptions(levels).map((level) => ({
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [anchor, setAnchor] = useState<DOMRect>();
+  const box = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const selected = models.find((item) => item.value === model);
+  const filteredModels = query
+    ? models.filter((item) => item.label.toLowerCase().includes(query.toLowerCase()))
+    : models;
+  const effortOptions = pickEffortOptions(effortLevels).map((level) => ({
     value: level,
     label: t(effortLabelKey(level)),
   }));
-  if (options.length === 0) return null;
+
+  useEffect(() => {
+    if (!open) {
+      setAnchor(undefined);
+      return;
+    }
+    const close = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (box.current?.contains(target) || menu.current?.contains(target)) return;
+      setOpen(false);
+      setQuery("");
+    };
+    const place = () => setAnchor(box.current?.getBoundingClientRect());
+    place();
+    document.addEventListener("mousedown", close);
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
+  const dropDown = (() => {
+    if (!anchor) return Boolean(down);
+    const below = window.innerHeight - anchor.bottom - 14;
+    const above = anchor.top - 14;
+    if (down) return below >= 220 || below >= above;
+    return below >= above && below >= 220;
+  })();
+  const maxHeight = anchor
+    ? Math.min(380, Math.max(180, dropDown ? window.innerHeight - anchor.bottom - 14 : anchor.top - 14))
+    : 380;
+  const placement = anchor
+    ? {
+      left: Math.min(anchor.left, Math.max(8, window.innerWidth - Math.max(anchor.width, 260) - 8)),
+      minWidth: Math.max(anchor.width, 260),
+      maxHeight,
+      ...(dropDown
+        ? { top: anchor.bottom + 6 }
+        : { bottom: window.innerHeight - anchor.top + 6 }),
+    }
+    : undefined;
+
   return (
-    <div className="effort-combo" title={t("composer.effort")}>
-      <Combo value={value} options={options} down={down} hideChevron onChange={onChange} />
+    <div ref={box} className={`model-effort-picker${open ? " open" : ""}`}>
+      <button
+        type="button"
+        className="model-effort-trigger"
+        aria-expanded={open}
+        aria-label={`${selected?.label ?? model}, ${t(effortLabelKey(effort))}`}
+        onClick={() => {
+          setOpen((was) => !was);
+          setQuery("");
+        }}
+      >
+        <span className="model-effort-model">{selected?.label ?? model}</span>
+        {effortOptions.length > 0 && effort ? (
+          <>
+            <span className="model-effort-separator" aria-hidden="true">/</span>
+            <span className="model-effort-level">{t(effortLabelKey(effort))}</span>
+          </>
+        ) : null}
+      </button>
+      {open && placement && createPortal(
+        <div ref={menu} className="model-effort-menu" role="dialog" style={placement}>
+          <input
+            className="model-effort-search"
+            value={query}
+            autoFocus
+            placeholder={t("composer.filterModels")}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setOpen(false);
+                setQuery("");
+              }
+              if (event.key === "Enter") {
+                event.preventDefault();
+                const next = filteredModels[0]?.value ?? query.trim();
+                if (next) onModel(next);
+                setOpen(false);
+                setQuery("");
+              }
+            }}
+          />
+          <div className="model-effort-section-label">{t("common.model")}</div>
+          <div className="model-effort-models" role="listbox">
+            {filteredModels.length === 0 ? (
+              <div className="combo-empty">{t("combo.empty")}</div>
+            ) : filteredModels.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={item.value === model ? "combo-item selected" : "combo-item"}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onModel(item.value);
+                  setOpen(false);
+                  setQuery("");
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          {reasoningLevelsAvailable(effortLevels) && effortOptions.length > 0 && (
+            <>
+              <div className="model-effort-section-label">{t("composer.effort")}</div>
+              <div className="model-effort-options" role="radiogroup">
+                {effortOptions.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={item.value === effort ? "model-effort-option selected" : "model-effort-option"}
+                    role="radio"
+                    aria-checked={item.value === effort}
+                    onClick={() => {
+                      onEffort(item.value);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

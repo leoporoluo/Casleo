@@ -747,15 +747,104 @@ textarea::selection,
   gap: 0;
   min-width: 0;
 }
-.session-model-controls .combo-trigger {
-  padding-left: 2px;
-  padding-right: 2px;
+.model-effort-picker {
+  position: relative;
+  min-width: 0;
 }
-.session-model-controls > .combo:first-child .combo-trigger {
-  padding-right: 0;
+.model-effort-trigger {
+  height: 28px;
+  max-width: 280px;
+  min-width: 0;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--inset);
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  text-align: left;
 }
-.session-model-controls .effort-combo .combo-trigger {
-  padding-left: 0;
+.model-effort-trigger:hover,
+.model-effort-picker.open .model-effort-trigger {
+  background: var(--hover);
+  color: var(--ink);
+}
+.model-effort-model {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-effort-separator {
+  flex: none;
+  color: var(--ink-3);
+}
+.model-effort-level {
+  flex: none;
+  white-space: nowrap;
+}
+.model-effort-menu {
+  position: fixed;
+  z-index: 100;
+  max-width: min(340px, calc(100vw - 16px));
+  overflow: auto;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.model-effort-search {
+  width: 100%;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--inset);
+  color: var(--ink);
+  outline: 0;
+  font-size: 12.5px;
+}
+.model-effort-search:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.model-effort-section-label {
+  padding: 5px 6px 2px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+.model-effort-models {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 190px;
+  overflow: auto;
+}
+.model-effort-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+.model-effort-option {
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.model-effort-option:hover,
+.model-effort-option.selected {
+  background: var(--hover);
+  border-color: var(--line-strong);
+  color: var(--ink);
 }
 .context-stats-wrap {
   position: relative;
@@ -3274,19 +3363,6 @@ textarea::selection,
 .combo {
   position: relative;
   min-width: 92px;
-}
-.effort-combo {
-  min-width: 0;
-}
-.effort-combo .combo {
-  min-width: 0;
-}
-.effort-combo .combo-trigger,
-.effort-combo .combo-input {
-  min-width: 56px;
-  max-width: 88px;
-  justify-content: center;
-  gap: 2px;
 }
 .combo-trigger,
 .combo-input {
