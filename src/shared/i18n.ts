@@ -177,7 +177,7 @@ const zh = {
   "perm.askDesc": "编辑外部文件和使用互联网时始终询问。",
   "perm.auto": "帮我批准",
   "perm.autoDesc": "仅对检测到的风险操作请求批准。",
-  "perm.full": "完全访问权限",
+  "perm.full": "完全访问",
   "perm.fullDesc": "可不受限制地访问互联网和你电脑上的任何文件。",
 
   "approval.needConfirm": "需要批准",

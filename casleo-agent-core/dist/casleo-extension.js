@@ -22,7 +22,7 @@ import { registerCasleoProjectTrust } from "./project-trust.js";
 import { defaultModelForProvider } from "./providers.js";
 import { executeSandboxedCommand, sandboxDescription } from "./sandbox.js";
 import { applyCasleoSystemPrompt } from "./prompt.js";
-import { resolveRegisteredLimits } from "./pi-model-limits.js";
+import { findPiModel, resolveRegisteredLimits } from "./pi-model-limits.js";
 import { execCommandParameterDescription, shellPromptRules, } from "./shell.js";
 import { registerSessionCommands } from "./session-commands.js";
 import { formatStatusReport } from "./status.js";
@@ -816,7 +816,7 @@ function registerCasleoProvider(pi, options) {
                 name: model.name,
                 api,
                 reasoning: true,
-                input: ["text"],
+                input: findPiModel(model.id)?.input ?? (modelSupportsVision(model.id) ? ["text", "image"] : ["text"]),
                 cost: model.cost,
                 ...resolveRegisteredLimits(model.id, {
                     contextWindow: options.contextWindow,
