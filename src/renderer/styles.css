@@ -180,7 +180,7 @@ textarea::selection,
   user-select: none;
 }
 [data-theme="dark"] .sidebar {
-  background: rgba(25, 25, 25, 0.72);
+  background: rgba(25, 25, 25, 0.62);
   border-right-color: rgba(255, 255, 255, 0.08);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.035);
 }
@@ -671,8 +671,8 @@ textarea::selection,
 }
 
 .chat {
-  /* Cap reading width at 80% on wide layouts; narrow windows still use the full column. */
-  --col: min(90%, 1320px, max(720px, 68vw));
+  /* Keep the reading column proportional on wide screens. */
+  --col: min(90%, 1320px, max(720px, 66vw));
   /* Fallback until the dock height is measured; pin() overwrites this. */
   --dock-clearance: 280px;
   min-width: 0;
@@ -686,7 +686,105 @@ textarea::selection,
 }
 @media (max-width: 1100px) {
   .chat {
-    --col: min(100%, 1320px, max(720px, 68vw));
+    --col: min(100%, 1320px, max(720px, 66vw));
+  }
+}
+
+@media (min-width: 1400px) {
+  .sidebar-titlebar {
+    height: 106px;
+    min-height: 106px;
+    padding: 0 30px 19px;
+  }
+  .sidebar-brand strong {
+    font-size: 28px;
+  }
+  .sidebar-primary {
+    padding: 0 15px 35px;
+  }
+  .nav-btn {
+    height: 50px;
+    padding: 0 18px;
+    gap: 14px;
+    font-size: 18px;
+  }
+  .nav-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+  .thread-list {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  .section-label {
+    padding-left: 14px;
+    font-size: 14px;
+  }
+  .project-row,
+  .session-row {
+    height: 44px;
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 10px;
+    font-size: 18px;
+  }
+  .project-row svg,
+  .session-row svg {
+    width: 20px;
+    height: 20px;
+  }
+  .chevron-hit {
+    width: 20px;
+    height: 20px;
+  }
+  .session-list.nested .session-row {
+    padding-left: 32px;
+  }
+  .sidebar-footer {
+    padding: 15px 15px 18px;
+  }
+  .account {
+    min-height: 56px;
+    padding: 8px 10px;
+    gap: 12px;
+  }
+  .account-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .account-meta strong {
+    font-size: 18px;
+  }
+  .account-meta small {
+    font-size: 14px;
+  }
+  .chat-bar {
+    height: 56px;
+    min-height: 56px;
+    padding-left: 24px;
+  }
+  .chat-title {
+    font-size: 18px;
+  }
+  .messages {
+    padding-top: 42px;
+  }
+  .user {
+    padding: 14px 20px;
+    font-size: 18px;
+  }
+  .turn {
+    font-size: 18px;
+  }
+  .prompt {
+    padding: 16px 18px 12px;
+  }
+  .prompt-input {
+    min-height: 72px;
+    font-size: 18px;
+  }
+  .prompt-wrap.hero .prompt-input {
+    min-height: 96px;
   }
 }
 .chat-bar {

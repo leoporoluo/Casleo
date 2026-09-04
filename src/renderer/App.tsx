@@ -493,6 +493,8 @@ export function App() {
   ) => {
     const seq = ++startSeq.current;
     setLoading(true);
+    statsRef.current = undefined;
+    setStats(undefined);
     setQrOutput(undefined);
     setUiRequest(undefined);
     let accounts: ProviderStatus[];
@@ -1111,7 +1113,7 @@ export function App() {
         if (Array.isArray(event.commands)) setAgentCommands(event.commands as AgentSlashCommand[]);
         if (event.stats && typeof event.stats === "object") {
           const nextStats = event.stats as AgentSessionStats;
-          if (!statsRef.current) {
+          if (!statsRef.current || statsRef.current.sessionId !== nextStats.sessionId) {
             statsRef.current = nextStats;
             setStats(nextStats);
           }
