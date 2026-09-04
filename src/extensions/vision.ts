@@ -92,7 +92,10 @@ export default function visionExtension(pi: ExtensionAPI) {
     ctx?: { model?: { input?: string[] } },
   ) => {
     const images = event.images ?? [];
-    if (images.length === 0 || ctx?.model?.input?.includes("image")) return { action: "continue" as const };
+    const nativeVision = Boolean(ctx?.model?.input?.includes("image"));
+    if (images.length === 0 || (nativeVision && event.source !== "extension")) {
+      return { action: "continue" as const };
+    }
     const paths = await stageInputImages(images);
     if (paths.length === 0) return { action: "continue" as const };
     wanted = true;

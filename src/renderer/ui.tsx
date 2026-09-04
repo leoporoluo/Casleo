@@ -1659,15 +1659,11 @@ function serializePrompt(root: HTMLElement): string {
       else if (node.dataset.url) push(node.dataset.url);
       else if (node.dataset.file) push(`@${node.dataset.file}`);
       else if (node.tagName === "BR") out += "\n";
-      else if (!node.dataset.image) walk(node);
+      else walk(node);
     }
   };
   walk(root);
   return out;
-}
-
-function collectPromptImages(root: HTMLElement): string[] {
-  return [...root.querySelectorAll<HTMLElement>("[data-image]")].map((node) => node.dataset.image!).filter(Boolean);
 }
 
 function caretOffset(root: HTMLElement): number {
@@ -1685,7 +1681,7 @@ function caretOffset(root: HTMLElement): number {
       offset += node.textContent?.length ?? 0;
       return false;
     }
-    if (node instanceof HTMLElement && (node.dataset.command || node.dataset.url || node.dataset.file || node.dataset.image)) {
+    if (node instanceof HTMLElement && (node.dataset.command || node.dataset.url || node.dataset.file)) {
       offset += promptTokenLength(node);
       return node === endNode || node.contains(endNode);
     }
@@ -1716,7 +1712,7 @@ function placeCaret(root: HTMLElement, offset: number): void {
       left -= size;
       return false;
     }
-    if (node instanceof HTMLElement && (node.dataset.command || node.dataset.url || node.dataset.file || node.dataset.image)) {
+    if (node instanceof HTMLElement && (node.dataset.command || node.dataset.url || node.dataset.file)) {
       const size = promptTokenLength(node);
       if (left <= size) {
         range.setStartAfter(node);
@@ -1755,10 +1751,8 @@ function droppedAbsPath(file: File): string {
 }
 
 function hydratePrompt(root: HTMLElement, text: string): void {
-  const images = [...root.querySelectorAll<HTMLElement>("[data-image]")];
   root.replaceChildren();
   if (text) root.append(document.createTextNode(text));
-  for (const image of images) root.append(image);
 }
 
 function promptPoint(root: HTMLElement, offset: number): { container: Node; offset: number } {
@@ -1767,7 +1761,7 @@ function promptPoint(root: HTMLElement, offset: number): { container: Node; offs
     const children = [...parent.childNodes];
     for (let index = 0; index < children.length; index += 1) {
       const child = children[index]!;
-      if (child instanceof HTMLElement && (child.dataset.command || child.dataset.url || child.dataset.file || child.dataset.image)) {
+      if (child instanceof HTMLElement && (child.dataset.command || child.dataset.url || child.dataset.file)) {
         const length = promptTokenLength(child);
         if (remaining <= length) return { container: parent, offset: remaining === length ? index + 1 : index };
         remaining -= length;
@@ -1811,13 +1805,13 @@ function insertPromptCommand(root: HTMLElement, start: number, end: number, comm
 function flattenPromptBlocks(root: HTMLElement): void {
   for (const el of [...root.querySelectorAll(".inspect-file")]) el.remove();
   for (const block of [...root.querySelectorAll<HTMLElement>("div, p")]) {
-    if (block.dataset.url || block.dataset.file || block.dataset.image) continue;
+    if (block.dataset.url || block.dataset.file) continue;
     block.replaceWith(...block.childNodes);
   }
 }
 
-function isPromptEmpty(root: HTMLElement): boolean {
-  return !serializePrompt(root).trim() && collectPromptImages(root).length === 0;
+function isPromptEmpty(root: HTMLElement, imageCount = 0): boolean {
+  return !serializePrompt(root).trim() && imageCount === 0;
 }
 
 export function PromptBar({
@@ -1869,6 +1863,7 @@ export function PromptBar({
   const { t } = useI18n();
   const [value, setValue] = useState("");
   const [cursor, setCursor] = useState(0);
+  const [images, setImages] = useState<string[]>([]);
   const [files, setFiles] = useState<string[]>([]);
   const [listing, setListing] = useState(false);
   const [picked, setPicked] = useState(0);
@@ -1922,9 +1917,9 @@ export function PromptBar({
     const root = area.current;
     if (!root) return "";
     flattenPromptBlocks(root);
-    if (isPromptEmpty(root) && !root.querySelector("[data-url], [data-file], [data-image]")) root.replaceChildren();
+    if (!serializePrompt(root).trim() && !root.querySelector("[data-url], [data-file]")) root.replaceChildren();
     const next = serializePrompt(root);
-    setBlank(isPromptEmpty(root));
+    setBlank(isPromptEmpty(root, images.length));
     setCursor(caretOffset(root));
     skipHydrate.current = true;
     if (next !== value) setValue(next);
@@ -1971,8 +1966,8 @@ export function PromptBar({
     }
     if (serializePrompt(root) === value) return;
     hydratePrompt(root, value);
-    setBlank(isPromptEmpty(root));
-  }, [value]);
+    setBlank(isPromptEmpty(root, images.length));
+  }, [value, images.length]);
 
   const insertFile = (file: string, confirm = false) => {
     const root = area.current;
@@ -2019,30 +2014,12 @@ export function PromptBar({
   const appendImageFiles = async (fileList: File[]) => {
     const root = area.current;
     if (!root) return;
-    const current = collectPromptImages(root);
-    const remaining = Math.max(0, MAX_PROMPT_IMAGES - current.length);
-    if (remaining === 0) return;
-    const selected = fileList.filter(isImageFile).slice(0, remaining);
+    const selected = fileList.filter(isImageFile).slice(0, MAX_PROMPT_IMAGES - images.length);
     if (selected.length === 0) return;
     const dataUrls = await Promise.all(selected.map((file) => readImageFile(file).catch(() => "")));
-    for (const dataUrl of dataUrls.filter(Boolean)) {
-      const upload = document.createElement("span");
-      upload.className = "prompt-upload";
-      upload.dataset.image = dataUrl;
-      upload.contentEditable = "false";
-      const image = document.createElement("img");
-      image.src = dataUrl;
-      image.alt = "图片附件";
-      const remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "prompt-upload-remove";
-      remove.dataset.remove = "true";
-      remove.setAttribute("aria-label", "删除图片");
-      remove.textContent = "×";
-      upload.append(image, remove);
-      root.append(upload);
-    }
-    emit();
+    const next = [...images, ...dataUrls.filter(Boolean)].slice(0, MAX_PROMPT_IMAGES);
+    setImages(next);
+    setBlank(isPromptEmpty(root, next.length));
     root.focus();
   };
 
@@ -2050,10 +2027,10 @@ export function PromptBar({
     const root = area.current;
     if (!root || disabled) return;
     const text = serializePrompt(root).trim();
-    const images = collectPromptImages(root);
     if (!text && images.length === 0) return;
     const command = root.querySelector<HTMLElement>("[data-command]")?.dataset.command;
     root.replaceChildren();
+    setImages([]);
     setBlank(true);
     setValue("");
     onSubmit(text, images, command && !command.startsWith("/skill:") ? command : undefined);
@@ -2232,9 +2209,32 @@ export function PromptBar({
             sendNow();
           }}
         >
+        {images.length > 0 && (
+          <div className="prompt-attachments" aria-label="图片附件">
+            {images.map((dataUrl, index) => (
+              <div className="prompt-upload" key={`${dataUrl.slice(0, 24)}-${index}`}>
+                <img src={dataUrl} alt="图片附件" />
+                <button
+                  type="button"
+                  className="prompt-upload-remove"
+                  aria-label="删除图片"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    const next = images.filter((_, imageIndex) => imageIndex !== index);
+                    setImages(next);
+                    setBlank(isPromptEmpty(area.current!, next.length));
+                    area.current?.focus();
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div
           ref={area}
-          className={blank ? "prompt-input empty" : "prompt-input"}
+          className={value.trim() ? "prompt-input" : "prompt-input empty"}
           contentEditable={!dropOver}
           suppressContentEditableWarning
           role="textbox"
@@ -2247,7 +2247,6 @@ export function PromptBar({
             event.currentTarget.contentEditable = "false";
           }}
           onMouseDown={(event) => {
-            if ((event.target as HTMLElement).closest(".prompt-upload")) event.preventDefault();
             if (!workspace) {
               event.preventDefault();
               void focusOrChooseWorkspace();
@@ -2255,14 +2254,6 @@ export function PromptBar({
           }}
           onInput={emit}
           onKeyUp={() => area.current && setCursor(caretOffset(area.current))}
-          onClick={(event) => {
-            const remove = (event.target as HTMLElement).closest("[data-remove]");
-            if (!remove) return;
-            event.preventDefault();
-            remove.closest(".prompt-upload")?.remove();
-            emit();
-            area.current?.focus();
-          }}
           onKeyDown={onKey}
           onPaste={(event) => {
             const files = [...event.clipboardData.items]

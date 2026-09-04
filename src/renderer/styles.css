@@ -755,21 +755,26 @@ textarea::selection,
   height: 28px;
   max-width: 280px;
   min-width: 0;
-  padding: 0 7px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--inset);
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--ink-2);
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   font-size: 12.5px;
   text-align: left;
 }
 .model-effort-trigger:hover,
 .model-effort-picker.open .model-effort-trigger {
-  background: var(--hover);
+  background: transparent;
   color: var(--ink);
+}
+.model-effort-trigger:focus-visible {
+  outline: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .model-effort-model {
   min-width: 0;
@@ -2956,9 +2961,6 @@ textarea::selection,
   pointer-events: auto;
   overflow: visible;
 }
-.prompt:focus-within {
-  box-shadow: var(--shadow-overlay);
-}
 .prompt.drop {
   box-shadow:
     0 0 0 1.5px var(--ink),
@@ -3023,10 +3025,16 @@ textarea::selection,
 .prompt-tag.link {
   background: var(--accent-tint);
 }
+.prompt-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 4px 8px;
+}
 .prompt-upload {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   overflow: hidden;
   border-radius: 8px;
@@ -3037,15 +3045,6 @@ textarea::selection,
   height: 100%;
   display: block;
   object-fit: cover;
-}
-.prompt-upload svg {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  padding: 2px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
-  color: var(--ink);
 }
 .prompt-upload-remove {
   position: absolute;
@@ -3109,8 +3108,7 @@ textarea::selection,
   color: var(--ink-3);
   pointer-events: none;
 }
-.prompt-input .prompt-tag,
-.prompt-input .prompt-upload {
+.prompt-input .prompt-tag {
   vertical-align: 2px;
   margin: 0 2px;
   -webkit-user-select: none;
@@ -3128,23 +3126,19 @@ textarea::selection,
   vertical-align: baseline;
   user-select: all;
 }
-.prompt-input .prompt-upload {
-  display: inline-block;
-  width: 28px;
-  height: 28px;
-}
 .prompt-bar {
   display: flex;
   align-items: center;
   gap: 4px;
   min-height: 32px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .prompt-bar-end {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
   min-width: 0;
 }
 .prompt-bar-end .send {
