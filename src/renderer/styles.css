@@ -3057,7 +3057,7 @@ textarea::selection,
 .prompt-input {
   display: block;
   width: 100%;
-  min-height: 28px;
+  min-height: 46px;
   max-height: 160px;
   overflow-y: auto;
   border: 0;
@@ -3068,9 +3068,6 @@ textarea::selection,
   font-size: 15px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-.prompt-input.empty {
-  min-height: 46px;
 }
 .prompt-wrap.hero .prompt-input {
   min-height: 72px;
