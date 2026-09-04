@@ -16,6 +16,7 @@ import { useI18n } from "./i18n";
 import type { MessageKey } from "../shared/i18n";
 
 const PATH_MIME = "text/casleo-path";
+const MAX_PROMPT_IMAGES = 4;
 let treeDragPath = "";
 
 function isPromptFileDrag(transfer: DataTransfer): boolean {
@@ -88,6 +89,19 @@ export function UserTurn({ text, images = [], anchor }: { text: string; images?:
       </div>
     </div>
   );
+}
+
+function isImageFile(file: File): boolean {
+  return file.type.startsWith("image/") || /\.(?:png|jpe?g|webp|gif|bmp)$/i.test(file.name);
+}
+
+function readImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error ?? new Error("图片读取失败"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function MessageImages({
@@ -1864,6 +1878,7 @@ export function PromptBar({
   const choosingWorkspace = useRef(false);
   const area = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
+  const filePicker = useRef<HTMLInputElement>(null);
   const mention = workspace ? mentionAt(value, cursor) : undefined;
   const matches = mention ? filterMentionPaths(files, mention.query) : [];
   const skillReference = value.slice(0, cursor).match(/^\/([^\s]*)$/);
@@ -2001,16 +2016,47 @@ export function PromptBar({
     });
   };
 
+  const appendImageFiles = async (fileList: File[]) => {
+    const root = area.current;
+    if (!root) return;
+    const current = collectPromptImages(root);
+    const remaining = Math.max(0, MAX_PROMPT_IMAGES - current.length);
+    if (remaining === 0) return;
+    const selected = fileList.filter(isImageFile).slice(0, remaining);
+    if (selected.length === 0) return;
+    const dataUrls = await Promise.all(selected.map((file) => readImageFile(file).catch(() => "")));
+    for (const dataUrl of dataUrls.filter(Boolean)) {
+      const upload = document.createElement("span");
+      upload.className = "prompt-upload";
+      upload.dataset.image = dataUrl;
+      upload.contentEditable = "false";
+      const image = document.createElement("img");
+      image.src = dataUrl;
+      image.alt = "图片附件";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "prompt-upload-remove";
+      remove.dataset.remove = "true";
+      remove.setAttribute("aria-label", "删除图片");
+      remove.textContent = "×";
+      upload.append(image, remove);
+      root.append(upload);
+    }
+    emit();
+    root.focus();
+  };
+
   const sendNow = () => {
     const root = area.current;
     if (!root || disabled) return;
     const text = serializePrompt(root).trim();
-    if (!text) return;
+    const images = collectPromptImages(root);
+    if (!text && images.length === 0) return;
     const command = root.querySelector<HTMLElement>("[data-command]")?.dataset.command;
     root.replaceChildren();
     setBlank(true);
     setValue("");
-    onSubmit(text, undefined, command && !command.startsWith("/skill:") ? command : undefined);
+    onSubmit(text, images, command && !command.startsWith("/skill:") ? command : undefined);
   };
 
   const focusOrChooseWorkspace = async () => {
@@ -2107,10 +2153,13 @@ export function PromptBar({
     if (dropped.length === 0) {
       dropped.push(...[...event.dataTransfer.files].map((file) => ({ file, directory: false })));
     }
+    const imageFiles = dropped.filter((item) => !item.directory && isImageFile(item.file)).map((item) => item.file);
+    if (imageFiles.length > 0) void appendImageFiles(imageFiles);
+    const pathItems = dropped.filter((item) => !imageFiles.includes(item.file));
     if (treePath) {
       paths.push(treePath);
     } else if (workspace) {
-      for (const item of dropped) {
+      for (const item of pathItems) {
         const rel = workspaceRelative(droppedAbsPath(item.file), workspace);
         if (!rel) continue;
         const directory = item.directory || files.includes(`${rel}/`);
@@ -2215,7 +2264,15 @@ export function PromptBar({
             area.current?.focus();
           }}
           onKeyDown={onKey}
-          onPaste={() => undefined}
+          onPaste={(event) => {
+            const files = [...event.clipboardData.items]
+              .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+              .map((item) => item.getAsFile())
+              .filter((file): file is File => Boolean(file));
+            if (files.length === 0) return;
+            event.preventDefault();
+            void appendImageFiles(files);
+          }}
         />
         {mention && !reference && (
           <div
@@ -2239,6 +2296,27 @@ export function PromptBar({
           </div>
         )}
         <div className="prompt-bar">
+          <input
+            ref={filePicker}
+            className="prompt-file-input"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(event) => {
+              const files = [...(event.target.files ?? [])];
+              event.currentTarget.value = "";
+              void appendImageFiles(files);
+            }}
+          />
+          <button
+            type="button"
+            className="prompt-attach"
+            aria-label={t("composer.uploadImage")}
+            title={t("composer.uploadImage")}
+            onClick={() => filePicker.current?.click()}
+          >
+            <Icon path="M4 5h16v14H4z\nM8 14l2.5-3 2 2.5 1.5-2 4 4.5\nM8 9h.01" size={15} />
+          </button>
           <PermissionPicker value={permission} down={hero} onChange={onPermission} />
           <div className="prompt-bar-end">
             <SessionModelControls

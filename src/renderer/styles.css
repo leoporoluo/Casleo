@@ -3047,6 +3047,26 @@ textarea::selection,
   background: color-mix(in srgb, var(--surface) 80%, transparent);
   color: var(--ink);
 }
+.prompt-upload-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.prompt-file-input {
+  display: none;
+}
 .prompt-attach {
   width: 30px;
   height: 30px;

@@ -51,6 +51,7 @@ import {
   type RestoreFile,
   type SessionTodo,
 } from "./conversation";
+import { toPromptImages } from "../shared/vision-api";
 import {
   ApprovalCard,
   AssistantTurn,
@@ -932,13 +933,14 @@ export function App() {
 
   const sendMessage = useCallback(async (preset?: string, images?: string[], extensionCommand?: string) => {
     const text = (preset ?? "").trim();
+    const promptImages = toPromptImages(images ?? []);
     if (text === "/undo") {
       if (running) return;
       fillPrompt("");
       void undoLastTurn();
       return;
     }
-    if (!text || loading || sending.current) return;
+    if ((!text && promptImages.length === 0) || loading || sending.current) return;
     // A newly submitted turn should always follow the conversation tail.
     stick.current = true;
     if (extensionCommand) {
@@ -970,17 +972,17 @@ export function App() {
       if (text.startsWith("/")) {
         fillPrompt("");
         try {
-          await window.harness.agent.command("prompt", { message: text });
+          await window.harness.agent.command("prompt", { message: text, images: promptImages });
         } catch (error) {
           fillPrompt(text);
           setToast(friendlyAgentError(error));
         }
         return;
       }
-      const followup = text;
+      const followup = text || t("toast.defaultImagePrompt");
       fillPrompt("");
       try {
-        await window.harness.agent.command("steer", { message: followup });
+        await window.harness.agent.command("steer", { message: followup, images: promptImages });
         setSteering((current) => (current.includes(followup) ? current : [...current, followup]));
         setToast(t("toast.steered"));
       } catch (error) {
@@ -1001,7 +1003,7 @@ export function App() {
       }
 
       // Paint the user turn immediately so first-send doesn't sit on the home screen.
-      optimistic = optimisticUserMessage(question);
+      optimistic = optimisticUserMessage(question, false, promptImages.map(({ data, mimeType }) => ({ data, mimeType })));
       fillPrompt("");
       setMessages((current) => [...current, optimistic!]);
       setRunning(true);
@@ -1021,7 +1023,7 @@ export function App() {
         return;
       }
 
-      await window.harness.agent.command("prompt", { message: question });
+      await window.harness.agent.command("prompt", { message: question, images: promptImages });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       const optimisticId = optimistic?.id;

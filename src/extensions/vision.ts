@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   DEFAULT_VISION_CONFIG,
@@ -15,6 +15,7 @@ import {
   visionError,
   visionRequest,
   visionText,
+  visionAgentPrompt,
   isVisionHandoff,
   mentionsImageFile,
   visibleUserText,
@@ -40,6 +41,35 @@ function isVisualCapture(command: string) {
     || (/chrome|chromium/i.test(command) && /headless/i.test(command));
 }
 
+interface ImageInput {
+  type?: string;
+  data?: string;
+  mimeType?: string;
+}
+
+async function stageInputImages(images: unknown[]): Promise<string[]> {
+  const directory = process.env.HARNESS_VISION_UPLOADS;
+  if (!directory) return [];
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const paths: string[] = [];
+  for (const [index, value] of images.slice(0, 4).entries()) {
+    if (!value || typeof value !== "object") continue;
+    const image = value as ImageInput;
+    if (image.type !== "image" || typeof image.data !== "string" || !image.data) continue;
+    const mime = typeof image.mimeType === "string" && image.mimeType.startsWith("image/")
+      ? image.mimeType
+      : "image/png";
+    const data = image.data.replace(/^data:[^;]+;base64,/, "");
+    const bytes = Buffer.from(data, "base64");
+    if (bytes.length === 0) continue;
+    const extension = mime.includes("jpeg") ? "jpg" : mime.split("/")[1] ?? "png";
+    const file = path.join(directory, `message-${Date.now()}-${index + 1}.${extension}`);
+    await writeFile(file, bytes, { mode: 0o600 });
+    paths.push(file);
+  }
+  return paths;
+}
+
 const NO_CAPTURE = "- 不要用 Chrome、headless 或截图做视觉验收，除非用户这一轮明确要求截图。改 HTML/CSS 写完即可。";
 const LANG_ZH = "- 用户这一轮用中文。思考、计划、工具之间的说明、自检旁白和最终回复全部用简体中文，不要夹英文自言自语。代码、路径、命令、标识符保持原文。";
 const LANG_EN = "- The user is writing in English this turn. Think, plan, narrate between tools, and reply in English. Identifiers, paths, and commands stay as written.";
@@ -56,6 +86,22 @@ export default function visionExtension(pi: ExtensionAPI) {
   pi.on("session_start", () => {
     wanted = false;
     setVisionTool(pi, false);
+  });
+  pi.on("input", async (
+    event: { text: string; images?: unknown[]; source?: string },
+    ctx?: { model?: { input?: string[] } },
+  ) => {
+    const images = event.images ?? [];
+    if (images.length === 0 || ctx?.model?.input?.includes("image")) return { action: "continue" as const };
+    const paths = await stageInputImages(images);
+    if (paths.length === 0) return { action: "continue" as const };
+    wanted = true;
+    setVisionTool(pi, true);
+    return {
+      action: "transform" as const,
+      text: visionAgentPrompt(event.text?.trim() || "请分析这些图片", paths),
+      images: [],
+    };
   });
   pi.on("before_agent_start", (
     event: { prompt?: string; images?: unknown[]; systemPrompt?: string },
