@@ -60,7 +60,6 @@ export interface SessionSummary {
   messageCount: number;
   preview?: string;
   pinned: boolean;
-  archived: boolean;
 }
 
 export interface ProviderStatus {

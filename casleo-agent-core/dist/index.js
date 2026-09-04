@@ -3,7 +3,7 @@ export { createCasleoExtension } from "./casleo-extension.js";
 export { createCasleoRpcClient, getCasleoRpcEntryPath, RpcClient, } from "./rpc-client.js";
 export { authenticateProvider, getCasleoAgentDir, getCasleoAuthPath, hasDeepSeekEnvironmentKey, hasStoredDeepSeekKey, hasStoredProviderCredential, removeStoredDeepSeekKey, removeStoredProviderCredential, runAuthCommand, saveDeepSeekKey, saveProviderApiKey, validateDeepSeekKey, } from "./auth.js";
 export { createCasleoCredentialStore, FileCredentialStore, installCasleoCredentialStore, KeyringCredentialStore, } from "./credential-store.js";
-export { getCasleoArchivedSessionsDir, getCasleoHome, getCasleoSessionsDir, initializeCasleoHome, partitionExistingSessions, partitionSessionFile, ensureSessionRuntimeLink, } from "./home.js";
+export { getCasleoHome, getCasleoSessionsDir, initializeCasleoHome, partitionExistingSessions, partitionSessionFile, ensureSessionRuntimeLink, } from "./home.js";
 export { killProcessTree, listChildPids, trackDetachedChild, wipeTrackedChildren, } from "./process-tree.js";
 export { CasleoStateStore, getCasleoStatePath, indexCasleoSession, listCasleoThreads, } from "./state.js";
 export { DEFAULT_DEEPSEEK_BASE_URL, DEEPSEEK_MAX_TOKENS, getCasleoStorageSettings, getCasleoSettingsPath, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, parseMaxTokens, resolveMaxTokens, saveDeepSeekBaseUrl, saveDeepSeekMaxTokens, } from "./settings.js";

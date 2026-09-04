@@ -9,9 +9,6 @@ export function getCasleoHome() {
 export function getCasleoSessionsDir() {
     return resolveHomePath(casleoEnv("SESSIONS_DIR") ?? path.join(getCasleoHome(), "sessions"));
 }
-export function getCasleoArchivedSessionsDir() {
-    return resolveHomePath(casleoEnv("ARCHIVED_SESSIONS_DIR") ?? path.join(getCasleoHome(), "archived_sessions"));
-}
 /** Configure the underlying runtime to use Casleo Runtime-owned paths only. */
 export async function initializeCasleoHome() {
     const home = getCasleoHome();
@@ -31,8 +28,6 @@ export async function initializeCasleoHome() {
     await fs.chmod(home, 0o700).catch(() => undefined);
     await fs.mkdir(sessions, { recursive: true, mode: 0o700 });
     await fs.chmod(sessions, 0o700).catch(() => undefined);
-    await fs.mkdir(getCasleoArchivedSessionsDir(), { recursive: true, mode: 0o700 });
-    await fs.chmod(getCasleoArchivedSessionsDir(), 0o700).catch(() => undefined);
     await ensureWebSearchDefaults(home);
     return home;
 }

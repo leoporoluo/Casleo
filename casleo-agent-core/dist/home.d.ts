@@ -1,6 +1,5 @@
 export declare function getCasleoHome(): string;
 export declare function getCasleoSessionsDir(): string;
-export declare function getCasleoArchivedSessionsDir(): string;
 /** Configure the underlying runtime to use Casleo Runtime-owned paths only. */
 export declare function initializeCasleoHome(): Promise<string>;
 export interface PartitionedSessionPath {

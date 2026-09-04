@@ -277,16 +277,17 @@ export class AgentHost {
 }
 
 function extractQrOutput(stderr: string): string | undefined {
-  const marker = "Scan this QR code in WeChat:";
-  const start = stderr.lastIndexOf(marker);
+  const markerPattern = /(?:Scan this QR code in WeChat:|请用微信扫码登录：?)/u;
+  const markerMatches = [...stderr.matchAll(new RegExp(markerPattern.source, "gu"))];
+  const start = markerMatches.at(-1)?.index ?? stderr.lastIndexOf("二维码链接：");
   if (start < 0) return undefined;
   const lines = stderr.slice(start).split(/\r?\n/);
   const qrStart = lines.findIndex((line, index) => index > 0 && /[█▀▄]/u.test(line));
   if (qrStart < 0) return undefined;
   let end = qrStart;
   while (end < lines.length && /[█▀▄]/u.test(lines[end] ?? "")) end += 1;
-  if (end === lines.length) return undefined;
-  return lines.slice(0, end).join("\n").trim();
+  const link = lines.slice(end).join(" ").match(/https?:\/\/[^\s]+/u)?.[0]?.replace(/[。，、）)】]+$/u, "");
+  return [...lines.slice(0, end), ...(link ? [`二维码链接：${link}`] : [])].join("\n").trim();
 }
 
 function timeoutForRequest(type: string): number {

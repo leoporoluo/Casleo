@@ -2,7 +2,7 @@ import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { getCasleoArchivedSessionsDir, getCasleoHome, getCasleoSessionsDir, partitionSessionFile, } from "./home.js";
+import { getCasleoHome, getCasleoSessionsDir, partitionSessionFile, } from "./home.js";
 import { getCasleoStorageSettings } from "./settings.js";
 import { casleoEnv } from "./env.js";
 const require = createRequire(import.meta.url);
@@ -61,17 +61,13 @@ export class CasleoStateStore {
         if (legacySessions) {
             for (const file of await recursiveJsonlFiles(legacySessions)) {
                 seen.add(file);
-                await this.indexFile(file, file, false);
+                await this.indexFile(file, file);
             }
         }
         for (const file of await recursiveJsonlFiles(getCasleoSessionsDir())) {
             const partitioned = await partitionSessionFile(file);
             seen.add(partitioned.storagePath);
-            await this.indexFile(partitioned.runtimePath, partitioned.storagePath, false);
-        }
-        for (const file of await recursiveJsonlFiles(getCasleoArchivedSessionsDir())) {
-            seen.add(file);
-            await this.indexFile(file, file, true);
+            await this.indexFile(partitioned.runtimePath, partitioned.storagePath);
         }
         const rows = this.database.prepare("SELECT id, storage_path FROM threads").all();
         const remove = this.database.prepare("DELETE FROM threads WHERE id = ?");
@@ -82,13 +78,11 @@ export class CasleoStateStore {
     }
     async indexSession(file) {
         const partitioned = await partitionSessionFile(file);
-        return this.indexFile(partitioned.runtimePath, partitioned.storagePath, false);
+        return this.indexFile(partitioned.runtimePath, partitioned.storagePath);
     }
     list(options = {}) {
         const where = [];
         const parameters = [];
-        if (!options.includeArchived)
-            where.push("archived = 0");
         if (options.cwd) {
             where.push("cwd = ?");
             parameters.push(path.resolve(options.cwd));
@@ -105,59 +99,7 @@ export class CasleoStateStore {
             .prepare("UPDATE threads SET pinned = ? WHERE id = ?")
             .run(pinned ? 1 : 0, id).changes > 0;
     }
-    async archive(id) {
-        const current = this.get(id);
-        if (!current || current.archived)
-            return current;
-        const dateParts = current.createdAt.slice(0, 10).split("-");
-        const target = path.join(getCasleoArchivedSessionsDir(), ...dateParts, path.basename(current.storagePath));
-        await fs.mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
-        await fs.chmod(path.dirname(target), 0o700).catch(() => undefined);
-        let compatibilityLinkRemoved = false;
-        if (current.sessionPath !== current.storagePath) {
-            await fs.unlink(current.sessionPath).catch((error) => {
-                if (!isNodeError(error) || error.code !== "ENOENT")
-                    throw error;
-            });
-            compatibilityLinkRemoved = true;
-        }
-        try {
-            await fs.rename(current.storagePath, target);
-        }
-        catch (error) {
-            if (compatibilityLinkRemoved) {
-                await fs.link(current.storagePath, current.sessionPath).catch(() => undefined);
-            }
-            throw error;
-        }
-        this.database
-            .prepare("UPDATE threads SET session_path = ?, storage_path = ?, archived = 1, updated_at = ? WHERE id = ?")
-            .run(target, target, Date.now(), id);
-        return this.get(id);
-    }
-    async unarchive(id) {
-        const current = this.get(id);
-        if (!current || !current.archived)
-            return current;
-        const dateParts = current.createdAt.slice(0, 10).split("-");
-        const storagePath = path.join(getCasleoSessionsDir(), ...dateParts, path.basename(current.storagePath));
-        const runtimePath = path.join(getCasleoSessionsDir(), path.basename(current.storagePath));
-        await fs.mkdir(path.dirname(storagePath), { recursive: true, mode: 0o700 });
-        await fs.rename(current.storagePath, storagePath);
-        try {
-            await fs.link(storagePath, runtimePath);
-        }
-        catch (error) {
-            await fs.rename(storagePath, current.storagePath).catch(() => undefined);
-            throw error;
-        }
-        await fs.chmod(storagePath, 0o600).catch(() => undefined);
-        this.database
-            .prepare("UPDATE threads SET session_path = ?, storage_path = ?, archived = 0, updated_at = ? WHERE id = ?")
-            .run(runtimePath, storagePath, Date.now(), id);
-        return this.get(id);
-    }
-    async indexFile(sessionPath, storagePath, archived) {
+    async indexFile(sessionPath, storagePath) {
         let stat;
         try {
             stat = await fs.stat(storagePath);
@@ -170,8 +112,7 @@ export class CasleoStateStore {
         const cached = this.findByPath.get(sessionPath, storagePath);
         if (cached &&
             cached.file_size === stat.size &&
-            cached.file_mtime_ms === stat.mtimeMs &&
-            Boolean(cached.archived) === archived) {
+            cached.file_mtime_ms === stat.mtimeMs) {
             return rowToThread(cached);
         }
         const parsed = await parseSession(storagePath, stat);
@@ -182,7 +123,7 @@ export class CasleoStateStore {
         INSERT INTO threads (
           id, session_path, storage_path, cwd, title, preview, provider, model,
           created_at, updated_at, message_count, pinned, archived, file_size, file_mtime_ms
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           session_path = excluded.session_path,
           storage_path = excluded.storage_path,
@@ -198,7 +139,7 @@ export class CasleoStateStore {
           file_size = excluded.file_size,
           file_mtime_ms = excluded.file_mtime_ms
       `)
-            .run(parsed.id, sessionPath, storagePath, parsed.cwd, parsed.title, parsed.preview ?? null, parsed.provider ?? null, parsed.model ?? null, parsed.createdAt, stat.mtimeMs, parsed.messageCount, archived ? 1 : 0, stat.size, stat.mtimeMs);
+            .run(parsed.id, sessionPath, storagePath, parsed.cwd, parsed.title, parsed.preview ?? null, parsed.provider ?? null, parsed.model ?? null, parsed.createdAt, stat.mtimeMs, parsed.messageCount, stat.size, stat.mtimeMs);
         return this.get(parsed.id);
     }
 }
@@ -291,7 +232,6 @@ function rowToThread(row) {
         updatedAt: new Date(row.updated_at).toISOString(),
         messageCount: row.message_count,
         pinned: Boolean(row.pinned),
-        archived: Boolean(row.archived),
     };
 }
 async function directJsonlFiles(directory) {

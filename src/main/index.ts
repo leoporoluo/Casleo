@@ -29,13 +29,13 @@ import {
   providerDisplayName,
   providerEnvironmentKey,
   removeStoredProviderCredential,
-  saveDeepSeekBaseUrl,
   saveProviderApiKey,
   SUPPORTED_PROVIDER_IDS,
   type ApiKeyProviderId,
   type SupportedProviderId,
 } from "casleo-agent-core";
 import { AgentHost } from "./agent-host";
+import { npmPackageName, removeNpmPackage } from "./package-fs";
 import { isPathInsideRoot } from "./workspace-path";
 import { deleteResource, listLocalPlugins, listLocalSkills, revealSkillPath, setResourceEnabled } from "./skills-fs";
 import { apiBaseUrl, listOpenAiModels } from "../shared/openai-models";
@@ -223,12 +223,6 @@ function piPackageRoot(scope: "global" | "project"): string {
   return path.join(process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir(), ".pi", "agent", "npm", "node_modules");
 }
 
-function npmPackageName(source: string): string | undefined {
-  const spec = source.trim().replace(/^npm:/, "");
-  const match = spec.match(/^(@[^/]+\/[^@/]+|[^@/]+)(?:@.+)?$/);
-  return match?.[1];
-}
-
 async function revealPackagePath(source: string, scope: "global" | "project"): Promise<void> {
   const root = piPackageRoot(scope);
   const packageName = npmPackageName(source);
@@ -298,7 +292,10 @@ async function updatePiPackage(source: string, scope: "global" | "project", acti
   const packages = Array.isArray(settings.packages) ? settings.packages : [];
   const index = packages.findIndex((item) => (typeof item === "string" ? item : item && typeof item === "object" && typeof (item as Record<string, unknown>).source === "string" ? (item as Record<string, unknown>).source : "") === normalized);
   if (index < 0) throw new Error("找不到该 Package");
-  if (action === "delete") packages.splice(index, 1);
+  if (action === "delete") {
+    await removeNpmPackage(piPackageRoot(scope), normalized);
+    packages.splice(index, 1);
+  }
   else {
     const current = packages[index];
     if (typeof current === "string") packages[index] = { source: current, ...(action === "disable" ? { autoload: false } : {}) };
@@ -628,8 +625,9 @@ function registerIpc(): void {
     try {
       await store.refresh();
       for (const thread of store.list({ cwd: workspacePath })) {
-        await store.archive(thread.id);
+        await deleteSessionFiles(thread);
       }
+      await store.refresh();
     } finally {
       store.close();
     }
@@ -858,7 +856,6 @@ function registerIpc(): void {
         messageCount: thread.messageCount,
         ...(thread.preview ? { preview: thread.preview } : {}),
         pinned: thread.pinned,
-        archived: thread.archived,
       }),
     );
   });
@@ -866,7 +863,11 @@ function registerIpc(): void {
     const store = new CasleoStateStore();
     try {
       await store.refresh();
-      await store.archive(id);
+      const thread = store.get(id);
+      if (thread) {
+        await deleteSessionFiles(thread);
+        await store.refresh();
+      }
     } finally {
       store.close();
     }
@@ -915,7 +916,9 @@ function registerIpc(): void {
       (await credentialStore.list()).map((entry) => entry.providerId),
     );
     const stored = getStoredModelSelection();
-    const deepseekUrl = getStoredDeepSeekBaseUrl();
+    const profiles = await loadChatProfiles();
+    const activeProfile = activeCustomProfile(profiles);
+    const activeBaseUrl = activeProfile?.url.trim();
     return SUPPORTED_PROVIDER_IDS.filter((id) => id !== "openai-codex").map(
       (id) => {
         const hasStore = storedProviders.has(id);
@@ -936,7 +939,7 @@ function registerIpc(): void {
             stored?.providerId === id && stored.modelId
               ? stored.modelId
               : defaultModelForProvider(id),
-          ...(id === "openai" && deepseekUrl ? { baseUrl: deepseekUrl } : {}),
+          ...(id === "openai" && activeBaseUrl ? { baseUrl: activeBaseUrl } : {}),
           ...(stored?.providerId === id ? { preferred: true } : {}),
         };
       },
@@ -963,7 +966,6 @@ function registerIpc(): void {
     ) => {
       if (typeof key === "string" && key.trim())
         await saveProviderApiKey(provider, key.trim());
-      if (baseUrl?.trim()) await saveDeepSeekBaseUrl(baseUrl.trim());
       if (model?.trim()) await saveDefaultModel(provider, model.trim());
     },
   );
@@ -1013,11 +1015,7 @@ function registerIpc(): void {
       );
     }
     const sandbox = requestedSandbox ?? "workspace-write";
-    const storedUrl =
-      startOptions.provider === "deepseek"
-        ? getStoredDeepSeekBaseUrl()
-        : undefined;
-    const rawUrl = startOptions.baseUrl ?? storedUrl;
+    const rawUrl = startOptions.baseUrl;
     // Keep DeepSeek vision credentials in sync with the chat DeepSeek key/base URL.
     await syncDeepSeekVisionConfig().catch(() => undefined);
     const profiles = await loadChatProfiles();
@@ -1252,11 +1250,12 @@ async function loadChatProfiles(): Promise<ChatProfiles> {
       ? stored.key
       : "";
   const selected = getStoredModelSelection();
-  return migrateChatProfiles({
+  const migrated = migrateChatProfiles({
     url: getStoredDeepSeekBaseUrl() ?? "",
     model: selected?.providerId === "deepseek" ? (selected.modelId ?? "") : "",
     apiKey,
   });
+  return migrated;
 }
 
 async function saveChatProfiles(next: ChatProfiles): Promise<void> {
@@ -1272,7 +1271,6 @@ async function saveChatProfiles(next: ChatProfiles): Promise<void> {
   );
   const chat = activeChat(merged);
   if (chat.apiKey) await saveProviderApiKey("openai", chat.apiKey);
-  if (chat.url) await saveDeepSeekBaseUrl(chat.url.replace(/\/+$/, ""));
   if (chat.model) await saveDefaultModel("openai", chat.model);
 }
 
@@ -1408,6 +1406,12 @@ function sessionFileOf(snapshot: AgentSnapshot): string | undefined {
     sessionFileFromUnknown(snapshot.stats) ??
     sessionFileFromUnknown(snapshot.state)
   );
+}
+
+async function deleteSessionFiles(thread: { sessionPath: string; storagePath: string }): Promise<void> {
+  for (const file of new Set([thread.sessionPath, thread.storagePath])) {
+    await fsp.rm(file, { force: true });
+  }
 }
 
 function sessionFileFromUnknown(value: unknown): string | undefined {

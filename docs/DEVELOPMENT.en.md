@@ -137,7 +137,7 @@ The app consumes `casleo-agent-core` from npm. To work on the Runtime itself at 
 | workspace | `workspace:choose` / `workspace:recent` / `workspace:forget` / `workspace:read` / `workspace:open` / `workspace:reveal` / `workspace:list` / `workspace:restore` | pick/recent/forget workspaces, read files (200KB cap, binary detection), open externally, reveal in file manager, list the workspace file tree, batch-restore files |
 | workspace (event) | `workspace:changed` | workspace file changes (recursive fs.watch + 200ms debounce) |
 | vision | `vision:config` / `vision:save-config` / `vision:stage` | vision config read/write, stage images (base64 to userData/uploads) |
-| sessions | `sessions:list` / `sessions:remove` / `sessions:pin` / `sessions:rename` | list / archive-delete / pin / rename sessions (append a `session_info` entry + rebuild index) |
+| sessions | `sessions:list` / `sessions:remove` / `sessions:pin` / `sessions:rename` | list / permanently delete / pin / rename sessions (append a `session_info` entry + rebuild index) |
 | auth | `auth:status` / `auth:read-api-key` / `auth:save-api-key` / `auth:list-models` / `auth:profiles` / `auth:save-profiles` / `auth:logout` | provider status (stored / environment), API key read/write, model list, chat profiles read/write, logout |
 | agent | `agent:start` / `agent:stop` / `agent:command` / `agent:ui-response` | start/stop the agent child process, run RPC commands, reply to extension UI requests |
 | agent (events) | `agent:event` / `agent:error` | agent event stream / error stream |

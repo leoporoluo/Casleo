@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import QRCode from "qrcode";
 import type {
   AgentSessionStats,
   AgentSnapshot,
@@ -54,7 +55,6 @@ import {
   ApprovalCard,
   AssistantTurn,
   Chat,
-  Dots,
   FileDrawer,
   Icon,
   InspectPanel,
@@ -75,6 +75,50 @@ function sessionFileOf(snapshot: AgentSnapshot): string | undefined {
 
 function isSameSession(session: SessionSummary, active?: string) {
   return Boolean(active && (session.path === active || session.storagePath === active));
+}
+
+function qrLink(text: string): string | undefined {
+  const value = text.match(/https?:\/\/[^\s]+/u)?.[0];
+  return value?.replace(/[。，、）)】]+$/u, "");
+}
+
+function QrDialog({ text, onClose }: { text: string; onClose(): void }) {
+  const [image, setImage] = useState<string>();
+  const link = qrLink(text);
+
+  useEffect(() => {
+    let cancelled = false;
+    setImage(undefined);
+    if (!link) return;
+    void QRCode.toDataURL(link, { width: 280, margin: 2 })
+      .then((dataUrl) => {
+        if (!cancelled) setImage(dataUrl);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [link]);
+
+  return (
+    <div className="modal qr-modal" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="qr-panel" role="dialog" aria-modal="true">
+        {image ? <img className="qr-image" src={image} alt="微信二维码" /> : <pre className="qr-output">{text}</pre>}
+        {link ? (
+          <a
+            className="qr-link"
+            href={link}
+            onClick={(event) => {
+              event.preventDefault();
+              void window.harness.app.openExternal(link);
+            }}
+          >
+            {link}
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 const PIN_ICON =
@@ -646,7 +690,7 @@ export function App() {
       agentCwd.current = undefined;
       if (!running) await window.harness.agent.stop().catch(() => undefined);
     }
-    return startAgent(cwd, undefined, true, false, permission);
+    return true;
   }, [fillPrompt, permission, running, startAgent, t]);
   const openFolder = useCallback(async (): Promise<string | null> => {
     const selected = await window.harness.workspace.choose();
@@ -1022,7 +1066,14 @@ export function App() {
         }
         if (Array.isArray(event.skills)) setAgentSkills(event.skills as AgentSkillCommand[]);
         if (Array.isArray(event.commands)) setAgentCommands(event.commands as AgentSlashCommand[]);
-        if (event.stats && typeof event.stats === "object") setStats(event.stats as AgentSessionStats);
+        if (event.stats && typeof event.stats === "object") {
+          const nextStats = event.stats as AgentSessionStats;
+          setStats(nextStats);
+          if (typeof nextStats.sessionFile === "string") {
+            sessionRef.current = nextStats.sessionFile;
+            setActiveSession(nextStats.sessionFile);
+          }
+        }
       }
       if (event.type === "agent_settled") {
         setRunning(false);
@@ -1054,7 +1105,11 @@ export function App() {
       }
       if (event.type === "extension_ui_request") {
         const request = event as ExtensionUiRequest;
-        if (request.method === "notify") setToast(request.message ?? t("toast.notify"));
+        if (request.method === "notify") {
+          const message = request.message ?? t("toast.notify");
+          if (/[█▀▄]/u.test(message) && /https?:\/\//u.test(message)) setQrOutput(message);
+          else setToast(message);
+        }
         else if (["select", "confirm", "input", "editor"].includes(request.method)) setUiRequest(request);
       }
       setMessages((current) => (live.current ? applyAgentEvent(current, event) : current));
@@ -1351,9 +1406,7 @@ export function App() {
               </div>
             ) : null}
             {qrOutput ? (
-              <div className="modal qr-modal" onClick={(event) => { if (event.target === event.currentTarget) setQrOutput(undefined); }}>
-                <pre className="qr-output">{qrOutput}</pre>
-              </div>
+              <QrDialog text={qrOutput} onClose={() => setQrOutput(undefined)} />
             ) : null}
           </>
         ) : undefined}
@@ -1423,9 +1476,8 @@ export function App() {
           )}
           {!home && groups.length === 0 && (
             <div className={loading ? "session-pane loading" : "session-pane"}>
-              {loading ? (
+          {loading ? (
                 <div className="session-loading" role="status" aria-live="polite">
-                  <Dots />
                   <span className="shimmer">{t("chat.loadingSession")}</span>
                 </div>
               ) : (

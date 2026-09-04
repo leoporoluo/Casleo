@@ -748,8 +748,14 @@ textarea::selection,
   min-width: 0;
 }
 .session-model-controls .combo-trigger {
-  padding-left: 4px;
-  padding-right: 4px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+.session-model-controls > .combo:first-child .combo-trigger {
+  padding-right: 0;
+}
+.session-model-controls .effort-combo .combo-trigger {
+  padding-left: 0;
 }
 .context-stats-wrap {
   position: relative;
@@ -1200,53 +1206,6 @@ textarea::selection,
   font-size: 12px;
   font-weight: 400;
 }
-.dots {
-  display: grid;
-  grid-template-columns: repeat(3, 4px);
-  gap: 2px;
-  flex: none;
-}
-.dots i {
-  width: 4px;
-  height: 4px;
-  border-radius: 1px;
-  background: var(--ink);
-  animation: pixel 0.9s ease-in-out infinite;
-}
-.dots i:nth-child(2) {
-  animation-delay: 0.08s;
-}
-.dots i:nth-child(3) {
-  animation-delay: 0.16s;
-}
-.dots i:nth-child(4) {
-  animation-delay: 0.12s;
-}
-.dots i:nth-child(5) {
-  animation-delay: 0.2s;
-}
-.dots i:nth-child(6) {
-  animation-delay: 0.28s;
-}
-.dots i:nth-child(7) {
-  animation-delay: 0.24s;
-}
-.dots i:nth-child(8) {
-  animation-delay: 0.32s;
-}
-.dots i:nth-child(9) {
-  animation-delay: 0.4s;
-}
-@keyframes pixel {
-  0%,
-  100% {
-    opacity: 0.2;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 .user-turn {
   width: fit-content;
   max-width: 78%;
@@ -1808,11 +1767,6 @@ textarea::selection,
   font-weight: 500;
   color: inherit;
   text-align: left;
-}
-.trace-toggle .dots {
-  flex: none;
-  width: 16px;
-  color: var(--ink-3);
 }
 .trace-toggle span {
   min-width: 0;
@@ -2667,15 +2621,41 @@ textarea::selection,
 .chat-main > .modal {
   position: fixed;
 }
+.qr-panel {
+  width: min(360px, 92vw);
+  padding: 22px;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-overlay);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.qr-image {
+  display: block;
+  width: min(280px, 76vw);
+  height: auto;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+  background: white;
+}
+.qr-link {
+  width: 100%;
+  color: var(--ink-2);
+  font: 12px/1.5 var(--mono);
+  overflow-wrap: anywhere;
+  text-align: center;
+}
 .qr-output {
   margin: 0;
-  padding: 20px 24px;
-  max-width: min(92vw, 620px);
+  width: 100%;
+  padding: 12px;
+  max-height: 70vh;
   overflow: auto;
-  background: var(--surface);
+  background: var(--inset);
   color: var(--ink);
-  border-radius: 14px;
-  box-shadow: var(--shadow-overlay);
+  border-radius: 10px;
   font: 13px/1.05 var(--mono);
   white-space: pre;
 }
@@ -4839,7 +4819,6 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dots i,
   .trace.live .shimmer,
   .caret {
     animation: none;

@@ -160,14 +160,6 @@ function CopyAction({ text }: { text: string }) {
   return <CopyButton text={text} />;
 }
 
-export function Dots() {
-  return (
-    <span className="dots" aria-hidden="true">
-      {Array.from({ length: 9 }, (_, index) => <i key={index} />)}
-    </span>
-  );
-}
-
 function formatDuration(start?: number, end?: number) {
   if (!start) return "";
   const seconds = Math.max(0, ((end ?? Date.now()) - start) / 1000);
@@ -683,7 +675,6 @@ export function Thinking({
   return (
     <div className={live ? (open ? "trace live open" : "trace live") : open ? "trace open" : "trace"}>
       <button type="button" className="trace-toggle" onClick={() => expandable && setOpen((value) => !value)}>
-        {live ? <Dots /> : null}
         <span className={live ? "shimmer trace-label" : "trace-label"}>
           {header}
         </span>
