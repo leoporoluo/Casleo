@@ -48,7 +48,6 @@ export function parseAgentCommands(
   }>,
 ): AgentSlashCommand[] {
   const result: AgentSlashCommand[] = [];
-  const packageCommands: AgentSlashCommand[] = [];
   for (const command of commands) {
     if (command.source !== "extension" && command.source !== "skill") continue;
     if (command.source === "extension" && command.sourceInfo?.source !== undefined
@@ -59,16 +58,14 @@ export function parseAgentCommands(
       : rawName;
     if (!name) continue;
     const path = command.sourceInfo?.path ?? command.sourceInfo?.baseDir;
-    const parsed: AgentSlashCommand = {
+    result.push({
       name,
       source: command.source,
       ...(command.description ? { description: command.description } : {}),
       ...(path ? { path } : {}),
-    };
-    if (command.source === "extension" && command.sourceInfo?.origin === "package") packageCommands.push(parsed);
-    else result.push(parsed);
+    });
   }
-  return [...packageCommands, ...result];
+  return result.sort((a, b) => agentSlashCommand(a).localeCompare(agentSlashCommand(b)));
 }
 
 export function parseSkillCommands(
