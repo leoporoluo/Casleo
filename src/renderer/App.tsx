@@ -63,7 +63,7 @@ import {
   ContextStats,
   PromptBar,
   SidebarNav,
-  Thinking,
+  AgentActivity,
   TurnNav,
   UserTurn,
 } from "./ui";
@@ -1598,7 +1598,7 @@ export function App() {
               {waiting && (
                 <article className="turn">
                   <div className="turn-trace">
-                    <Thinking
+                    <AgentActivity
                       text=""
                       work={[]}
                       tools={[]}

@@ -1206,7 +1206,7 @@ export interface TraceRow {
   /** Chips carrying code, paths or commands read better in the mono face. */
   mono: boolean;
   status?: ToolActivity["status"];
-  /** Thinking markdown, for `think` rows. */
+  /** Internal thinking text used to derive the compact row summary. */
   text?: string;
   tool?: ToolActivity;
 }

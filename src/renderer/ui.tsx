@@ -647,7 +647,7 @@ export function TurnNav({ items }: { items: Array<{ id: string; label: string }>
   );
 }
 
-export function Thinking({
+export function AgentActivity({
   text,
   work,
   tools,
@@ -686,6 +686,9 @@ export function Thinking({
     return () => window.clearTimeout(timer);
   }, [error, errorTone, live, dismissedError]);
   const showError = error && !dismissedError;
+  useEffect(() => {
+    if (!live && !showError) setOpen(false);
+  }, [live, showError]);
   const rows = useMemo(() => traceRows(work, tools, text), [work, tools, text, locale]);
   const start = startedAt ?? (live ? born : undefined);
   const summary = useMemo(
@@ -693,8 +696,11 @@ export function Thinking({
     [tools, rows, locale],
   );
   const current = useMemo(() => liveStatus(tools), [tools, locale]);
-  const header = live ? label ?? t("think.live") : t("think.done");
-  const showLive = live && current !== header;
+  const header = live
+    ? t("activity.live")
+    : t("activity.summary", { steps: rows.length, duration: formatDuration(start, endedAt) || "0s" });
+  const liveLabel = label ?? current;
+  const showLive = live && liveLabel !== header;
   const hasBody = rows.length > 0 || showLive || Boolean(showError);
   const expandable = live || hasBody;
   if (!expandable && !live) return null;
@@ -704,13 +710,13 @@ export function Thinking({
         <span className={live ? "shimmer trace-label" : "trace-label"}>
           {header}
         </span>
-        {summary && <span className="trace-subtle">{summary}</span>}
+        {live && summary && <span className="trace-subtle">{summary}</span>}
         {!open && showError && (
           <span className={errorTone === "weak" ? "trace-subtle trace-failed weak" : "trace-subtle trace-failed"}>
             {t("trace.requestFailed")}
           </span>
         )}
-        <Elapsed start={start} end={endedAt} live={live} />
+        {live && <Elapsed start={start} end={endedAt} live />}
         {expandable ? <Icon className="chevron" path="M6 9l6 6 6-6" size={14} /> : null}
       </button>
       {open && expandable && (
@@ -718,7 +724,7 @@ export function Thinking({
           {rows.map((row) => <TraceRowView key={row.id} row={row} />)}
           {(showLive || (live && rows.length === 0)) && (
             <div className="trace-row-live">
-              <span className="shimmer">{rows.length === 0 ? header : current}</span>
+              <span className="shimmer">{rows.length === 0 ? liveLabel : current}</span>
             </div>
           )}
           {showError && (
@@ -757,6 +763,7 @@ const TRACE_GLYPHS: Record<TraceRow["kind"], string> = {
 };
 
 function TraceRowView({ row }: { row: TraceRow }) {
+  const { t } = useI18n();
   const isDelegate = row.tool?.name === "delegate";
   const [open, setOpen] = useState(false);
   const detail = traceDetail(row);
@@ -775,6 +782,12 @@ function TraceRowView({ row }: { row: TraceRow }) {
         </span>
         <span className="trace-row-label">{row.label}</span>
         {chip && <span className={row.mono ? "trace-row-chip mono" : "trace-row-chip"}>{chip}</span>}
+        {row.status && (
+          <span className={`trace-row-status ${row.status}`}>
+            <span aria-hidden="true">{row.status === "running" ? "●" : row.status === "complete" ? "✓" : "✗"}</span>
+            {t(row.status === "running" ? "activity.running" : row.status === "complete" ? "activity.completed" : "activity.failed")}
+          </span>
+        )}
         {detail ? <Icon className="trace-row-chevron chevron" path="M6 9l6 6 6-6" size={12} /> : null}
       </button>
       {open && detail && <div className="trace-row-detail">{detail}</div>}
@@ -783,9 +796,7 @@ function TraceRowView({ row }: { row: TraceRow }) {
 }
 
 function traceDetail(row: TraceRow): ReactNode {
-  if (row.kind === "think") {
-    return row.text ? <div className="trace-detail-text markdown"><Markdown>{row.text}</Markdown></div> : null;
-  }
+  if (row.kind === "think") return null;
   const tool = row.tool;
   if (!tool) return null;
   if (tool.name === "delegate") {
@@ -1170,7 +1181,7 @@ export const AssistantTurn = memo(function AssistantTurn({
     <article className="turn" onCopy={copyMarkdownPlain}>
       {(live || thinking || error || traceWork.length > 0 || tools.length > 0) && (
         <div className="turn-trace">
-          <Thinking
+          <AgentActivity
             text={thinking}
             work={traceWork}
             tools={tools}
