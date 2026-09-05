@@ -116,8 +116,6 @@ export class MCPManager {
                     },
                 });
             }
-            // registerTool refreshes Pi's registry after bind; activate the discovered names.
-            pi.setActiveTools([...new Set([...pi.getActiveTools(), ...registered])]);
             this.servers.push({ name: serverName, client, close, tools: registered });
         }
         catch (error) {

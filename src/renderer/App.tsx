@@ -78,6 +78,10 @@ function isSameSession(session: SessionSummary, active?: string) {
   return Boolean(active && (session.path === active || session.storagePath === active));
 }
 
+function encodeCommandDispatch(message: string): string {
+  return `/__casleo_dispatch ${btoa(encodeURIComponent(JSON.stringify({ message })))}`;
+}
+
 function qrLink(text: string): string | undefined {
   const value = text.match(/https?:\/\/[^\s<>"'`]+/u)?.[0];
   return value?.replace(/[。，、；：！？）)】》」』"'`]+$/u, "");
@@ -979,9 +983,16 @@ export function App() {
       return;
     }
     if ((!text && promptImages.length === 0) || loading || sending.current) return;
+    const typedCommand = text.match(/^\/([^\s]+)/)?.[1];
+    const knownExtensionCommand = agentCommands.some((item) => item.source === "extension" && item.name === typedCommand);
+    const routedExtensionCommand = extensionCommand && extensionCommand !== "/plan"
+      ? extensionCommand
+      : knownExtensionCommand
+        ? `/${typedCommand}`
+        : undefined;
     // A newly submitted turn should always follow the conversation tail.
     stick.current = true;
-    if (extensionCommand) {
+    if (routedExtensionCommand) {
       fillPrompt("");
       try {
         if (!agentCwd.current) {
@@ -999,7 +1010,7 @@ export function App() {
           fillPrompt(text);
           return;
         }
-        await window.harness.agent.command("prompt", { message: text, images: promptImages });
+        await window.harness.agent.command("prompt", { message: encodeCommandDispatch(text) });
       } catch (error) {
         fillPrompt(text);
         setToast(friendlyAgentError(error));
@@ -1072,7 +1083,7 @@ export function App() {
     } finally {
       sending.current = false;
     }
-  }, [ensureModelReady, fillPrompt, loading, openFolder, permission, running, startAgent, t, undoLastTurn, workspace]);
+  }, [agentCommands, ensureModelReady, fillPrompt, loading, openFolder, permission, running, startAgent, t, undoLastTurn, workspace]);
 
   useEffect(() => {
     void refresh().then(async (status) => {
