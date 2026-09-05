@@ -1911,7 +1911,7 @@ export function PromptBar({
         ...slashCommands
           .filter((item) => item.enabled !== false && item.name.toLowerCase().startsWith(reference.query.toLowerCase()))
           .map((item) => ({ name: item.name, description: item.description, insert: agentSlashCommand(item) })),
-      ].slice(0, 12)
+      ]
     : [];
 
   useEffect(() => {
