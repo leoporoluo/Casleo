@@ -75,6 +75,7 @@ const api: DesktopApi = {
   },
   agent: {
     start: (options) => ipcRenderer.invoke("agent:start", options),
+    discoverCommands: (options) => ipcRenderer.invoke("agent:discover-commands", options),
     stop: () => ipcRenderer.invoke("agent:stop"),
     command: (type, data) => ipcRenderer.invoke("agent:command", type, data),
     respondToUi: (id, response) => ipcRenderer.invoke("agent:ui-response", id, response),

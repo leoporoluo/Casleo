@@ -114,6 +114,7 @@ export class AgentHost {
     if (options.effort) args.push("--effort", options.effort);
     args.push("--transport", options.transport ?? "openai-responses");
     if (options.sessionPath) args.push("--session", options.sessionPath);
+    if (options.ephemeral) args.push("--no-session");
 
     this.lineBuffer = Buffer.alloc(0);
     this.stderr = "";
@@ -170,6 +171,23 @@ export class AgentHost {
     });
 
     return this.snapshot();
+  }
+
+  async discoverCommands(options: AgentStartOptions & { cwd: string }): Promise<{
+    commands: Array<{
+      name: string;
+      description?: string;
+      source?: string;
+      sourceInfo?: { path?: string; baseDir?: string; source?: string; origin?: string };
+    }>;
+  }> {
+    const host = new AgentHost(() => undefined, () => undefined);
+    try {
+      await host.start({ ...options, ephemeral: true });
+      return await host.request("get_commands");
+    } finally {
+      await host.stop();
+    }
   }
 
   async stop(): Promise<void> {

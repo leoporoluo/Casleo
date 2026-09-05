@@ -945,6 +945,17 @@ function registerIpc(): void {
     activeSessionPath = sessionFileOf(snapshot);
     return { ...snapshot, cwd };
   });
+  ipcMain.handle("agent:discover-commands", async (_event, options: AgentStartOptions) => {
+    if (!options || typeof options.cwd !== "string" || !options.cwd.trim()) {
+      throw new Error("Invalid workspace path");
+    }
+    const cwd = path.resolve(options.cwd);
+    const known = await recentWorkspaces.list();
+    if (!known.some((item) => path.resolve(item.path) === cwd)) {
+      throw new Error("Folder is not an opened project");
+    }
+    return agentHost!.discoverCommands({ ...options, cwd, project: true, ephemeral: true });
+  });
   ipcMain.handle("agent:stop", () => {
     activeSessionPath = undefined;
     return agentHost!.stop();

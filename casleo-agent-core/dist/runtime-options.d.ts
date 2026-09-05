@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { type HarnessMode, type ModelTransport, type PermissionMode } from "./config.js";
 import { type SupportedProviderId } from "./providers.js";
-export declare const WEB_ACCESS_TOOLS: readonly ["web_search", "fetch_content", "get_search_content"];
-export declare function getPiWebAccessExtensionPath(): string | undefined;
 export declare const sandboxModeSchema: z.ZodEnum<{
     "read-only": "read-only";
     "workspace-write": "workspace-write";

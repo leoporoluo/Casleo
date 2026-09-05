@@ -3352,6 +3352,11 @@ export function Login({
     | { type: "package"; source: string; scope: "global" | "project" }
   >();
 
+  const savePreferences = (next: AppPreferences) => {
+    setPreferences(next);
+    void window.harness.app.savePreferences(next).catch(() => undefined);
+  };
+
   const activeCustom = customProfiles.find((item) => item.id === activeCustomId) ?? customProfiles[0];
   const chatUrl = activeCustom?.url ?? "";
   const chatKey = activeCustom?.apiKey ?? "";
@@ -3598,14 +3603,14 @@ export function Login({
                       <b>{t("settings.closeToTray")}</b>
                       <small>{t("settings.closeToTrayHint")}</small>
                     </span>
-                    <PreferenceSegment checked={preferences.minimizeToTray} onChange={(minimizeToTray) => setPreferences((current) => ({ ...current, minimizeToTray }))} />
+                    <PreferenceSegment checked={preferences.minimizeToTray} onChange={(minimizeToTray) => savePreferences({ ...preferences, minimizeToTray })} />
                   </label>
                   <label className="settings-toggle-row">
                     <span>
                       <b>{t("settings.startup")}</b>
                       <small>{t("settings.startupHint")}</small>
                     </span>
-                    <PreferenceSegment checked={preferences.openAtLogin} onChange={(openAtLogin) => setPreferences((current) => ({ ...current, openAtLogin }))} />
+                    <PreferenceSegment checked={preferences.openAtLogin} onChange={(openAtLogin) => savePreferences({ ...preferences, openAtLogin })} />
                   </label>
                 </div>
               </div>

@@ -42,9 +42,6 @@ const planAllowedTools = new Set([
     "exec_command",
     "write_stdin",
     "update_plan",
-    "web_search",
-    "fetch_content",
-    "get_search_content",
     ASK_USER_TOOL,
 ]);
 const askWithoutPromptTools = new Set([

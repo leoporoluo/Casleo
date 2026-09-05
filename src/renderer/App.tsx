@@ -463,6 +463,28 @@ export function App() {
     setAgentPlugins(await window.harness.app.listPlugins().catch(() => []));
   }, []);
 
+  const discoverAgentCommands = useCallback(async (cwd: string): Promise<AgentSlashCommand[]> => {
+    const accounts = await window.harness.auth.status();
+    const chat = accounts.find((item) => item.id === "openai");
+    if (!chat?.configured) return [];
+    const profiles = await window.harness.auth.profiles().catch(() => undefined);
+    const activeProfile = profiles ? activeCustomProfile(profiles) : undefined;
+    const modelId = modelRef.current.trim() || chat.defaultModel;
+    const result = await window.harness.agent.discoverCommands({
+      cwd,
+      project: true,
+      provider: "openai",
+      ...(modelId ? { model: modelId } : {}),
+      ...(chat.baseUrl ? { baseUrl: chat.baseUrl } : {}),
+      ...(activeProfile?.transport ? { transport: activeProfile.transport } : {}),
+      effort: effortRef.current || DEFAULT_EFFORT,
+      permission,
+      sandbox: permission === "full" ? "danger-full-access" : "workspace-write",
+      ...(permission === "auto" || permission === "full" ? { network: true } : {}),
+    });
+    return parseAgentCommands(result.commands ?? []);
+  }, [permission]);
+
   const refresh = useCallback(async () => {
     const [recent, status, threads] = await Promise.all([
       window.harness.workspace.recent(),
@@ -1233,6 +1255,19 @@ export function App() {
       window.clearTimeout(timer);
     };
   }, [workspace, running, workingFiles.length]);
+
+  useEffect(() => {
+    if (!workspace || agentCwd.current) return;
+    let cancelled = false;
+    void discoverAgentCommands(workspace)
+      .then((commands) => {
+        if (!cancelled) setAgentCommands(commands);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [discoverAgentCommands, workspace]);
 
   const home = groups.length === 0 && !activeSession && !loading;
 

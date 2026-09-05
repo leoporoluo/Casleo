@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import path from "node:path";
 import { z } from "zod";
 import { harnessSchema, permissionSchema, transportSchema, } from "./config.js";
@@ -7,16 +6,6 @@ import { CASLEO_VERSION } from "./version.js";
 import { DEFAULT_API_BASE_URL, getCasleoStorageSettings, getStoredApiBaseUrl, getStoredMaxTokens, normalizeApiBaseUrl, parseMaxTokens, resolveMaxTokens, } from "./settings.js";
 import { ASK_USER_TOOL } from "./ask-user.js";
 import { defaultEffortForProvider, defaultModelForProvider, getStoredModelSelection, parseSupportedProviderId, SUPPORTED_PROVIDER_IDS, } from "./providers.js";
-const require = createRequire(import.meta.url);
-export const WEB_ACCESS_TOOLS = ["web_search", "fetch_content", "get_search_content"];
-export function getPiWebAccessExtensionPath() {
-    try {
-        return path.dirname(require.resolve("pi-web-access/package.json"));
-    }
-    catch {
-        return undefined;
-    }
-}
 export const sandboxModeSchema = z.enum(["read-only", "workspace-write", "danger-full-access"]);
 function parseWritableRoots(cwd, raw) {
     if (!raw?.trim())
@@ -161,9 +150,6 @@ export function parseRuntimeArgs(argv) {
         forwarded.unshift("--model", modelId);
     if (!hasFlag(forwarded, "--thinking"))
         forwarded.unshift("--thinking", effort);
-    const webAccess = getPiWebAccessExtensionPath();
-    if (webAccess && !forwarded.includes(webAccess))
-        forwarded.push("--extension", webAccess);
     activeTools ??= defaultActiveTools(harness);
     return {
         options: {
@@ -193,7 +179,7 @@ export function parseRuntimeArgs(argv) {
 function defaultActiveTools(harness) {
     const delegation = Number(casleoEnv("SUBAGENT_DEPTH") ?? "0") < 1 ? ["delegate"] : [];
     return harness === "minimal"
-        ? ["update_plan", "exec_command", "write_stdin", "apply_patch", ...WEB_ACCESS_TOOLS, ASK_USER_TOOL, ...delegation]
+        ? ["update_plan", "exec_command", "write_stdin", "apply_patch", ASK_USER_TOOL, ...delegation]
         : [
             "update_plan",
             "read_file",
@@ -203,7 +189,6 @@ function defaultActiveTools(harness) {
             "exec_command",
             "write_stdin",
             "apply_patch",
-            ...WEB_ACCESS_TOOLS,
             ASK_USER_TOOL,
             ...delegation,
         ];

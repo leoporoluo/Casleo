@@ -52,7 +52,6 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@napi-rs/keyring": "^1.3.0",
     "fast-glob": "^3.3.3",
-    "pi-web-access": "0.27.0",
     "picocolors": "^1.1.1",
     "typebox": "^1.3.7",
     "zod": "^4.1.5"

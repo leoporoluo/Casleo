@@ -102,6 +102,8 @@ export interface AgentStartOptions {
   extraModels?: string[];
   /** Extra host paths merged into workspace-write sandbox (absolute). */
   writableRoots?: string[];
+  /** Start a temporary in-memory runtime for resource discovery only. */
+  ephemeral?: boolean;
 }
 
 export interface AgentSessionStats {
@@ -221,6 +223,7 @@ export interface DesktopApi {
   };
   agent: {
     start(options: AgentStartOptions): Promise<AgentSnapshot>;
+    discoverCommands(options: AgentStartOptions): Promise<{ commands: Array<{ name: string; description?: string; source?: string; sourceInfo?: { path?: string; baseDir?: string; source?: string; origin?: string } }> }>;
     stop(): Promise<void>;
     command<T = unknown>(type: string, data?: Record<string, unknown>): Promise<T>;
     respondToUi(id: string, response: Record<string, unknown>): Promise<void>;
