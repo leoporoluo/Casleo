@@ -2068,28 +2068,6 @@ textarea::selection,
   font-family: var(--mono);
   font-size: 11.5px;
 }
-.trace-row-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-  color: var(--ink-3);
-  font-size: 11px;
-  white-space: nowrap;
-}
-.trace-row-status > span {
-  font-size: 10px;
-  line-height: 1;
-}
-.trace-row-status.running {
-  color: var(--ink-2);
-}
-.trace-row-status.complete {
-  color: var(--green);
-}
-.trace-row-status.error {
-  color: var(--red);
-}
 .trace-row-wrap.running .trace-row-chip {
   animation: tracePulse 1.6s ease-in-out infinite;
 }

@@ -647,7 +647,7 @@ export function TurnNav({ items }: { items: Array<{ id: string; label: string }>
   );
 }
 
-export function AgentActivity({
+export function Thinking({
   text,
   work,
   tools,
@@ -686,9 +686,6 @@ export function AgentActivity({
     return () => window.clearTimeout(timer);
   }, [error, errorTone, live, dismissedError]);
   const showError = error && !dismissedError;
-  useEffect(() => {
-    if (!live && !showError) setOpen(false);
-  }, [live, showError]);
   const rows = useMemo(() => traceRows(work, tools, text), [work, tools, text, locale]);
   const start = startedAt ?? (live ? born : undefined);
   const summary = useMemo(
@@ -696,11 +693,8 @@ export function AgentActivity({
     [tools, rows, locale],
   );
   const current = useMemo(() => liveStatus(tools), [tools, locale]);
-  const header = live
-    ? t("activity.live")
-    : t("activity.summary", { steps: rows.length, duration: formatDuration(start, endedAt) || "0s" });
-  const liveLabel = label ?? current;
-  const showLive = live && liveLabel !== header;
+  const header = live ? label ?? t("think.live") : t("think.done");
+  const showLive = live && current !== header;
   const hasBody = rows.length > 0 || showLive || Boolean(showError);
   const expandable = live || hasBody;
   if (!expandable && !live) return null;
@@ -710,13 +704,13 @@ export function AgentActivity({
         <span className={live ? "shimmer trace-label" : "trace-label"}>
           {header}
         </span>
-        {live && summary && <span className="trace-subtle">{summary}</span>}
+        {summary && <span className="trace-subtle">{summary}</span>}
         {!open && showError && (
           <span className={errorTone === "weak" ? "trace-subtle trace-failed weak" : "trace-subtle trace-failed"}>
             {t("trace.requestFailed")}
           </span>
         )}
-        {live && <Elapsed start={start} end={endedAt} live />}
+        <Elapsed start={start} end={endedAt} live={live} />
         {expandable ? <Icon className="chevron" path="M6 9l6 6 6-6" size={14} /> : null}
       </button>
       {open && expandable && (
@@ -724,7 +718,7 @@ export function AgentActivity({
           {rows.map((row) => <TraceRowView key={row.id} row={row} />)}
           {(showLive || (live && rows.length === 0)) && (
             <div className="trace-row-live">
-              <span className="shimmer">{rows.length === 0 ? liveLabel : current}</span>
+              <span className="shimmer">{rows.length === 0 ? header : current}</span>
             </div>
           )}
           {showError && (
@@ -763,7 +757,6 @@ const TRACE_GLYPHS: Record<TraceRow["kind"], string> = {
 };
 
 function TraceRowView({ row }: { row: TraceRow }) {
-  const { t } = useI18n();
   const isDelegate = row.tool?.name === "delegate";
   const [open, setOpen] = useState(false);
   const detail = traceDetail(row);
@@ -782,12 +775,6 @@ function TraceRowView({ row }: { row: TraceRow }) {
         </span>
         <span className="trace-row-label">{row.label}</span>
         {chip && <span className={row.mono ? "trace-row-chip mono" : "trace-row-chip"}>{chip}</span>}
-        {row.status && (
-          <span className={`trace-row-status ${row.status}`}>
-            <span aria-hidden="true">{row.status === "running" ? "●" : row.status === "complete" ? "✓" : "✗"}</span>
-            {t(row.status === "running" ? "activity.running" : row.status === "complete" ? "activity.completed" : "activity.failed")}
-          </span>
-        )}
         {detail ? <Icon className="trace-row-chevron chevron" path="M6 9l6 6 6-6" size={12} /> : null}
       </button>
       {open && detail && <div className="trace-row-detail">{detail}</div>}
@@ -796,7 +783,9 @@ function TraceRowView({ row }: { row: TraceRow }) {
 }
 
 function traceDetail(row: TraceRow): ReactNode {
-  if (row.kind === "think") return null;
+  if (row.kind === "think") {
+    return row.text ? <div className="trace-detail-text markdown"><Markdown>{row.text}</Markdown></div> : null;
+  }
   const tool = row.tool;
   if (!tool) return null;
   if (tool.name === "delegate") {
@@ -1144,7 +1133,6 @@ export function StreamingText({
 export const AssistantTurn = memo(function AssistantTurn({
   messages,
   workspace,
-  active = false,
   onOpenFile,
   errorRecovered = false,
   recoverableFailStreak = 0,
@@ -1152,7 +1140,6 @@ export const AssistantTurn = memo(function AssistantTurn({
 }: {
   messages: ChatMessage[];
   workspace?: string;
-  active?: boolean;
   onOpenFile?(file: FileChange): void;
   errorRecovered?: boolean;
   recoverableFailStreak?: number;
@@ -1171,7 +1158,7 @@ export const AssistantTurn = memo(function AssistantTurn({
       : "strong")
     : "hidden";
   const error = errorTone === "hidden" ? undefined : rawError;
-  const live = active || messages.some((item) => item.streaming) || tools.some((item) => item.status === "running");
+  const live = messages.some((item) => item.streaming) || tools.some((item) => item.status === "running");
   const started = messages.find((item) => item.timestamp)?.timestamp ?? tools[0]?.startedAt;
   const ended = Math.max(0, ...messages.map((item) => item.timestamp ?? 0), ...tools.map((item) => item.endedAt ?? 0));
   const changes = collectFileChanges(tools);
@@ -1183,7 +1170,7 @@ export const AssistantTurn = memo(function AssistantTurn({
     <article className="turn" onCopy={copyMarkdownPlain}>
       {(live || thinking || error || traceWork.length > 0 || tools.length > 0) && (
         <div className="turn-trace">
-          <AgentActivity
+          <Thinking
             text={thinking}
             work={traceWork}
             tools={tools}
@@ -1208,7 +1195,6 @@ export const AssistantTurn = memo(function AssistantTurn({
   );
 }, (previous, next) => (
   previous.workspace === next.workspace
-  && previous.active === next.active
   && previous.errorRecovered === next.errorRecovered
   && previous.recoverableFailStreak === next.recoverableFailStreak
   && previous.onOpenFile === next.onOpenFile

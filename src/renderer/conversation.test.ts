@@ -574,18 +574,6 @@ describe("conversation events", () => {
     ]);
   });
 
-  it("keeps compact tool statuses in activity rows", () => {
-    const rows = traceRows(
-      [{ type: "tool", id: "w1", toolId: "1" }, { type: "tool", id: "w2", toolId: "2" }, { type: "tool", id: "3", toolId: "3" }],
-      [
-        { id: "1", name: "exec_command", title: "Ran ls", status: "running" },
-        { id: "2", name: "read_file", title: "Read a", status: "complete", args: { path: "a.ts" } },
-        { id: "3", name: "write_file", title: "Wrote a", status: "error", args: { path: "a.ts" } },
-      ],
-    );
-    expect(rows.map((row) => row.status)).toEqual(["running", "complete", "error"]);
-  });
-
   it("shows collapsed thinking when the final message only left tool steps", () => {
     const tools = [{ id: "1", name: "exec_command", title: "Ran ls", status: "complete" as const }];
     expect(thoughtSteps(

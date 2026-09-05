@@ -63,7 +63,7 @@ import {
   ContextStats,
   PromptBar,
   SidebarNav,
-  AgentActivity,
+  Thinking,
   TurnNav,
   UserTurn,
 } from "./ui";
@@ -570,7 +570,6 @@ export function App() {
         transport: activeProfile?.transport,
       });
       if (seq !== startSeq.current) return false;
-      live.current = true;
       const commandSnapshot = await window.harness.agent.command<{
         commands: Array<{
           name: string;
@@ -606,6 +605,7 @@ export function App() {
           setToast(t("toast.sessionEmpty"));
         }
       }
+      live.current = true;
       agentCwd.current = snapshot.cwd ?? cwd ?? agentCwd.current;
       agentModelsRef.current = snapshot.models ?? [];
       if (!configuredContextWindow) {
@@ -1195,7 +1195,7 @@ export function App() {
     });
     const offError = window.harness.agent.onError((message) => {
       if (!live.current) return;
-      if (/Agent session closed/.test(message)) return;
+      if (/Agent session closed/.test(message) || isTransientStreamError(message)) return;
       setRunning(false);
       setMessages((current) => finalizeInterruptedTurn(current));
       const text = friendlyAgentError(message);
@@ -1538,12 +1538,6 @@ export function App() {
         <div
           className={home ? "conversation home" : "conversation"}
           ref={scroller}
-          onClickCapture={(event) => {
-            const target = event.target;
-            if (target instanceof Element && target.closest(".trace-toggle, .trace-row")) {
-              stick.current = false;
-            }
-          }}
           onScroll={(event) => {
             const node = event.currentTarget;
             stick.current = node.scrollHeight - node.scrollTop - node.clientHeight < 96;
@@ -1592,7 +1586,6 @@ export function App() {
                     key={group.id}
                     messages={group.messages}
                     workspace={workspace}
-                    active={running && isLastGroup}
                     errorRecovered={recovered}
                     recoverableFailStreak={recoverableStreaks[index] ?? 0}
                     onOpenFile={setPreview}
@@ -1605,7 +1598,7 @@ export function App() {
               {waiting && (
                 <article className="turn">
                   <div className="turn-trace">
-                    <AgentActivity
+                    <Thinking
                       text=""
                       work={[]}
                       tools={[]}
