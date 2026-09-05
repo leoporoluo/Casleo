@@ -1144,6 +1144,7 @@ export function StreamingText({
 export const AssistantTurn = memo(function AssistantTurn({
   messages,
   workspace,
+  active = false,
   onOpenFile,
   errorRecovered = false,
   recoverableFailStreak = 0,
@@ -1151,6 +1152,7 @@ export const AssistantTurn = memo(function AssistantTurn({
 }: {
   messages: ChatMessage[];
   workspace?: string;
+  active?: boolean;
   onOpenFile?(file: FileChange): void;
   errorRecovered?: boolean;
   recoverableFailStreak?: number;
@@ -1169,7 +1171,7 @@ export const AssistantTurn = memo(function AssistantTurn({
       : "strong")
     : "hidden";
   const error = errorTone === "hidden" ? undefined : rawError;
-  const live = messages.some((item) => item.streaming) || tools.some((item) => item.status === "running");
+  const live = active || messages.some((item) => item.streaming) || tools.some((item) => item.status === "running");
   const started = messages.find((item) => item.timestamp)?.timestamp ?? tools[0]?.startedAt;
   const ended = Math.max(0, ...messages.map((item) => item.timestamp ?? 0), ...tools.map((item) => item.endedAt ?? 0));
   const changes = collectFileChanges(tools);
@@ -1206,6 +1208,7 @@ export const AssistantTurn = memo(function AssistantTurn({
   );
 }, (previous, next) => (
   previous.workspace === next.workspace
+  && previous.active === next.active
   && previous.errorRecovered === next.errorRecovered
   && previous.recoverableFailStreak === next.recoverableFailStreak
   && previous.onOpenFile === next.onOpenFile
