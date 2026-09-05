@@ -78,10 +78,6 @@ function isSameSession(session: SessionSummary, active?: string) {
   return Boolean(active && (session.path === active || session.storagePath === active));
 }
 
-function encodeCommandDispatch(message: string): string {
-  return `/__casleo_dispatch ${btoa(encodeURIComponent(JSON.stringify({ message })))}`;
-}
-
 function qrLink(text: string): string | undefined {
   const value = text.match(/https?:\/\/[^\s<>"'`]+/u)?.[0];
   return value?.replace(/[。，、；：！？）)】》」』"'`]+$/u, "");
@@ -1010,7 +1006,7 @@ export function App() {
           fillPrompt(text);
           return;
         }
-        await window.harness.agent.command("prompt", { message: encodeCommandDispatch(text) });
+        await window.harness.agent.command("prompt", { message: text, images: promptImages });
       } catch (error) {
         fillPrompt(text);
         setToast(friendlyAgentError(error));
