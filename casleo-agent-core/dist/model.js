@@ -2,7 +2,7 @@ import { createModels, createProvider, envApiKeyAuth, } from "@earendil-works/pi
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { openAIResponsesApi } from "@earendil-works/pi-ai/api/openai-responses.lazy";
 import { modelSupportsVision } from "./model-vision.js";
-import { isOfficialDeepSeekBaseUrl, resolveMaxTokens, } from "./settings.js";
+import { resolveMaxTokens, } from "./settings.js";
 import { resolveRegisteredLimits } from "./pi-model-limits.js";
 export function createDeepSeekModels(config) {
     if (config.transport === "responses") {
@@ -40,9 +40,7 @@ function createChatModels(config) {
                 ? {}
                 : {
                     requiresReasoningContentOnAssistantMessages: true,
-                    thinkingFormat: isOfficialDeepSeekBaseUrl(config.baseUrl)
-                        ? "deepseek"
-                        : "openai",
+                    thinkingFormat: "openai",
                 }),
         },
     };

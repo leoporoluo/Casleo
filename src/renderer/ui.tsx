@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PREVIEW_HOST, PREVIEW_SCHEME, type AgentSessionStats, type AppPreferences, type ExtensionUiRequest, type PermissionMode } from "../shared/types";
 import { agentSlashCommand, skillSlashCommand, skillUserDisplay, type AgentSlashCommand } from "../shared/skills";
-import { API_TRANSPORTS, DEEPSEEK_PRESET, DEFAULT_CONTEXT_WINDOW, activeCustomProfile, defaultCustomProfile, isDeepSeekUrl, type CustomApiProfile } from "../shared/chat-profiles";
+import { API_TRANSPORTS, DEFAULT_CONTEXT_WINDOW, activeCustomProfile, defaultCustomProfile, type CustomApiProfile } from "../shared/chat-profiles";
 import { applyTheme, readStoredTheme, THEMES, type ThemeId } from "../shared/theme";
 import { effortLabelKey, pickEffortOptions, reasoningLevelsAvailable } from "../shared/thinking";
 import { approvalTitle, baseName, cacheHitRate, collectFileChanges, collapseThinking, delegateProgress, delegateStatusLabel, filterMentionPaths, formatCommand, isRecoverableRequestError, liveStatus, omitFinalReply, repairMarkdownTables, splitHttpUrls, splitPatch, stripEmptyMarkdown, terminalLabel, toolCommand, toolSummary, toolWritePreview, traceRows, turnWork, assistantReplyText, webSearchCard, workspaceRelative, type ChatImage, type ChatMessage, type FileChange, type SessionFile, type SessionTerminal, type SessionTodo, type ToolActivity, type TraceRow, type WorkItem } from "./conversation";
@@ -3490,13 +3490,8 @@ export function Login({
           setBusy(true);
           try {
             if (customProfiles.length === 0 || Boolean(activeCustom?.url && activeCustom.model && activeCustom.apiKey)) {
-              const official = customProfiles.find((item) => isDeepSeekUrl(item.url));
               await window.harness.auth.saveProfiles({
                 kind: "custom",
-                deepseek: {
-                  model: official?.model || DEEPSEEK_PRESET.model,
-                  apiKey: official?.apiKey || "",
-                },
                 customProfiles,
                 activeCustomId: activeCustom?.id ?? "",
               });

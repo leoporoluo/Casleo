@@ -8,15 +8,20 @@ describe("casleo system prompt suffix", () => {
     const pi = "You are an expert coding assistant operating inside pi, a coding agent harness.";
     const next = applyCasleoSystemPrompt(pi, { sandbox: "workspace-write", sandboxLabel: "workspace-write", network: false });
     expect(next.startsWith(pi)).toBe(true);
-    expect(next).toContain("# Casleo");
+    expect(next).toContain("Casleo rules:");
     expect(next).not.toMatch(/DeepSeek/i);
-    expect(next.indexOf("# Casleo")).toBeGreaterThan(pi.length);
+    expect(next.indexOf("Casleo rules:")).toBeGreaterThan(pi.length);
   });
 
   it("puts dynamic sandbox lines after the stable Casleo block", () => {
-    const suffix = casleoPromptSuffix({ sandbox: "read-only", sandboxLabel: "Seatbelt read-only", network: true, projectCommands: ["pnpm test"] });
+    const suffix = casleoPromptSuffix({ sandbox: "read-only", sandboxLabel: "Seatbelt read-only", network: true });
     expect(suffix.indexOf("You are Casleo")).toBeLessThan(suffix.indexOf("Seatbelt read-only"));
-    expect(suffix.indexOf("Seatbelt read-only")).toBeLessThan(suffix.indexOf("pnpm test"));
+  });
+
+  it("preserves the official prompt bytes before the Casleo suffix", () => {
+    const pi = "official prompt\n";
+    const next = applyCasleoSystemPrompt(pi, { sandbox: "workspace-write", network: true });
+    expect(next.startsWith(pi)).toBe(true);
   });
 });
 
@@ -55,7 +60,6 @@ describe("chat profile token overrides", () => {
   it("drops the old baked-in 272k/32k defaults", () => {
     const parsed = parseChatProfiles({
       kind: "custom",
-      deepseek: { model: "deepseek-v4-flash", apiKey: "" },
       customProfiles: [{
         id: "custom_1",
         name: "默认",

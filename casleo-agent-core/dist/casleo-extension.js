@@ -7,7 +7,6 @@ import { classifyCommand } from "./approval.js";
 import { brandBlue } from "./brand.js";
 import { capturePatchCheckpoint, captureWorkspaceCheckpoint, restoreCheckpoint, } from "./checkpoint.js";
 import { permissionSchema } from "./config.js";
-import { modelSupportsVision } from "./model-vision.js";
 import { registerDiagnosticsTool } from "./diagnostics.js";
 import { registerNaturalExit } from "./exit.js";
 import { registerHooks } from "./hooks.js";
@@ -17,16 +16,14 @@ import { ManagedProcessRegistry, } from "./managed-process.js";
 import { MCPManager } from "./mcp.js";
 import { applyWorkspacePatch } from "./patch.js";
 import { formatPlanForExecution, PLAN_STATE_ENTRY, planWidgetLines, registerPlanTool, restorePlanState, } from "./plan.js";
-import { discoverProjectCommands } from "./project-profile.js";
 import { registerCasleoProjectTrust } from "./project-trust.js";
-import { defaultModelForProvider } from "./providers.js";
 import { executeSandboxedCommand, sandboxDescription } from "./sandbox.js";
 import { applyCasleoSystemPrompt } from "./prompt.js";
 import { findPiModel, resolveRegisteredLimits } from "./pi-model-limits.js";
 import { execCommandParameterDescription, shellPromptRules, } from "./shell.js";
 import { registerSessionCommands } from "./session-commands.js";
 import { formatStatusReport } from "./status.js";
-import { normalizeDeepSeekBaseUrl, saveDeepSeekBaseUrl } from "./settings.js";
+import { normalizeApiBaseUrl, saveApiBaseUrl } from "./settings.js";
 import { ASK_USER_TOOL, registerAskUserTool } from "./ask-user.js";
 import { clipForModel, registerSubagentTools } from "./subagents.js";
 import { oneLine, renderCollapsibleToolResult, renderToolCall, } from "./tool-ui.js";
@@ -37,6 +34,7 @@ const CHECKPOINT_ENTRY = "casleo-checkpoint";
 const CHECKPOINT_UNDO_ENTRY = "casleo-checkpoint-undone";
 const DIFF_ENTRY = "casleo-diff";
 const planAllowedTools = new Set([
+    "search_tools",
     "read_file",
     "list_files",
     "search_files",
@@ -56,8 +54,7 @@ const askWithoutPromptTools = new Set([
     "language_diagnostics",
     ASK_USER_TOOL,
 ]);
-const TOOL_ACTIVATION_NAME = "casleo_activate_tools";
-const COMMAND_DISPATCH_NAME = "__casleo_dispatch";
+const TOOL_ACTIVATION_NAME = "search_tools";
 const INLINE_SOURCE_NAMES = new Set(["builtin", "sdk", "inline", "temporary", "casleo"]);
 const execCommandParameters = Type.Object({
     cmd: Type.String({
@@ -100,7 +97,6 @@ export function createCasleoExtension(options) {
             const checkpoints = [];
             const undone = new Set();
             let toolsBeforePlan;
-            let projectCommands = [];
             let lastAgentFailed = false;
             let sessionPartition = Promise.resolve();
             let planState;
@@ -207,7 +203,6 @@ export function createCasleoExtension(options) {
                 checkpoints.length = 0;
                 undone.clear();
                 contextWarningLevel = "none";
-                projectCommands = await discoverProjectCommands(ctx.cwd);
                 restoreCheckpointState(ctx.sessionManager.getBranch(), checkpoints, undone);
                 planState = restorePlanState(ctx.sessionManager.getBranch());
                 lastOfferedPlanRevision = planState?.revision ?? 0;
@@ -264,7 +259,6 @@ export function createCasleoExtension(options) {
                         network: currentAccess.network,
                     }),
                     network: currentAccess.network,
-                    projectCommands,
                 });
                 if (permission !== "plan")
                     return { systemPrompt };
@@ -572,8 +566,8 @@ export function createCasleoExtension(options) {
                     if (requested === undefined)
                         return;
                     try {
-                        const baseUrl = normalizeDeepSeekBaseUrl(requested || options.baseUrl);
-                        await saveDeepSeekBaseUrl(baseUrl);
+                        const baseUrl = normalizeApiBaseUrl(requested || options.baseUrl);
+                        await saveApiBaseUrl(baseUrl);
                         ctx.ui.notify(`${baseUrl}\nSaved. Restart Casleo to use this API endpoint.`, "info");
                     }
                     catch (error) {
@@ -756,36 +750,6 @@ export function createCasleoExtension(options) {
         },
     };
 }
-function inferDeepSeekReasoning(modelId) {
-    const id = modelId.toLowerCase();
-    if (!/deepseek|reasoner|\br1\b|v4-flash|v4-pro/.test(id))
-        return false;
-    if (/deepseek-chat|deepseek-coder/.test(id))
-        return false;
-    if (/(?:^|[-_])(chat|coder|lite|distill|embed|vision|ocr|instruct)(?:$|[-_])/.test(id)) {
-        return false;
-    }
-    return true;
-}
-function isDeepSeekNativeModel(modelId) {
-    return /deepseek|reasoner|\br1\b|v4-flash|v4-pro/.test(modelId.toLowerCase());
-}
-function deepSeekThinkingLevelMap(modelId) {
-    if (!inferDeepSeekReasoning(modelId))
-        return undefined;
-    const id = modelId.toLowerCase();
-    const base = {
-        off: null,
-        minimal: null,
-        low: "low",
-        medium: "high",
-        high: "high",
-    };
-    if (/flash/.test(id) && !/pro/.test(id)) {
-        return { ...base, xhigh: null, max: null };
-    }
-    return { ...base, xhigh: "high", max: "max" };
-}
 function registerCasleoProvider(pi, options) {
     const api = options.transport === "responses" || options.transport === "openai-responses"
         ? "openai-responses"
@@ -813,36 +777,23 @@ function registerCasleoProvider(pi, options) {
         api,
         authHeader: api === "openai-responses" || api === "openai-completions",
         models: models.map((model) => {
+            const piModel = findPiModel(model.id);
+            const isSelectedModel = model.id === options.modelId;
             return {
                 id: model.id,
-                name: model.name,
+                name: piModel?.name ?? model.name,
                 api,
-                reasoning: true,
-                input: findPiModel(model.id)?.input ?? (modelSupportsVision(model.id) ? ["text", "image"] : ["text"]),
-                cost: model.cost,
-                ...resolveRegisteredLimits(model.id, {
-                    contextWindow: options.contextWindow,
-                    maxTokens: options.maxTokens,
-                }),
-                thinkingLevelMap: {
-                    off: null,
-                    minimal: "minimal",
-                    low: "low",
-                    medium: "medium",
-                    high: "high",
-                    xhigh: "xhigh",
-                    max: "max",
-                },
-                ...(api === "openai-responses" ? { compat: {
-                        supportsDeveloperRole: true,
-                        supportsLongCacheRetention: false,
-                        supportsStrictMode: false,
-                        supportsOpenAIGrammarTools: true,
-                        sessionAffinityFormat: "openai-nosession",
-                    } } : api === "openai-completions" ? { compat: {
-                        supportsStore: false,
-                        supportsDeveloperRole: false,
-                    } } : {}),
+                reasoning: piModel?.reasoning ?? false,
+                input: piModel?.input ?? ["text"],
+                cost: piModel?.cost ?? model.cost,
+                ...resolveRegisteredLimits(model.id, isSelectedModel
+                    ? {
+                        contextWindow: options.contextWindow,
+                        maxTokens: options.maxTokens,
+                    }
+                    : {}),
+                ...(piModel?.thinkingLevelMap ? { thinkingLevelMap: piModel.thinkingLevelMap } : {}),
+                ...(piModel?.compat ? { compat: piModel.compat } : {}),
             };
         }),
     });
@@ -1091,93 +1042,86 @@ function registerPatchTool(pi, checkpoints) {
 }
 function createToolActivationRouter(pi, options) {
     const activated = new Set();
-    const externalTools = () => pi.getAllTools().filter((tool) => {
+    const searchableTools = () => pi.getAllTools().filter((tool) => {
         const source = tool.sourceInfo?.source;
         return tool.name !== TOOL_ACTIVATION_NAME &&
             (tool.name.startsWith("mcp__") || !INLINE_SOURCE_NAMES.has(source ?? ""));
     });
+    const searchableToolNames = () => new Set(searchableTools()
+        .filter((tool) => !options.activeTools.includes(tool.name))
+        .map((tool) => tool.name));
     const activeTools = () => {
-        const names = new Set(options.activeTools);
-        names.add(TOOL_ACTIVATION_NAME);
-        for (const tool of externalTools()) {
-            if (activated.has(tool.name)) names.add(tool.name);
-        }
+        const names = new Set([
+            ...options.activeTools,
+            TOOL_ACTIVATION_NAME,
+            ...activated,
+        ]);
         return [...names];
     };
     const sync = () => {
-        if (!options.toolsExplicit) pi.setActiveTools(activeTools());
+        if (options.toolsExplicit)
+            return;
+        const deferred = searchableToolNames();
+        const names = new Set(pi.getActiveTools().filter((name) => !deferred.has(name)));
+        for (const name of options.activeTools)
+            names.add(name);
+        for (const name of activated)
+            names.add(name);
+        names.add(TOOL_ACTIVATION_NAME);
+        pi.setActiveTools([...names]);
     };
     const refresh = () => {
-        const catalog = externalTools()
-            .map((tool) => {
-            const description = (tool.description ?? "").replace(/\s+/g, " ").trim().slice(0, 180);
-            return description ? `${tool.name} — ${description}` : tool.name;
-        })
-            .join("\n");
-        pi.registerTool({
-            name: TOOL_ACTIVATION_NAME,
-            label: "Activate tools",
-            description: `Activate only the external tools needed for the current task. This changes the active tool set for the following turn. Available tools:\n${catalog || "(none)"}`,
-            promptSnippet: "casleo_activate_tools: activate selected external tools only when needed",
-            parameters: Type.Object({
-                tools: Type.Array(Type.String({ minLength: 1 }), {
-                    minItems: 1,
-                    description: "Names of the external tools to activate.",
+        if (!pi.getAllTools().some((tool) => tool.name === TOOL_ACTIVATION_NAME))
+            pi.registerTool({
+                name: TOOL_ACTIVATION_NAME,
+                label: "Search tools",
+                description: "Search for and enable tools relevant to a task.",
+                promptSnippet: "Search for additional tools when the active tools cannot perform the task.",
+                promptGuidelines: [
+                    "Use search_tools when a task requires a capability that is not currently available.",
+                ],
+                parameters: Type.Object({
+                    query: Type.String({ minLength: 1, description: "Capability or task to search for" }),
+                    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 10 })),
                 }),
-            }),
-            executionMode: "sequential",
-            async execute(_id, params) {
-                const available = new Set(externalTools().map((tool) => tool.name));
-                const requested = Array.isArray(params.tools)
-                    ? params.tools.filter((name) => typeof name === "string" && available.has(name))
-                    : [];
-                if (requested.length === 0) {
+                executionMode: "sequential",
+                async execute(_id, params) {
+                    const terms = params.query.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+                    const matches = searchableTools()
+                        .map((tool) => ({
+                        tool,
+                        score: terms.reduce((score, term) => score +
+                            (`${tool.name} ${tool.description ?? ""}`.toLowerCase().includes(term) ? 1 : 0), 0),
+                    }))
+                        .filter((match) => match.score > 0)
+                        .sort((left, right) => right.score - left.score)
+                        .slice(0, params.limit ?? 3)
+                        .map((match) => match.tool.name);
+                    if (matches.length === 0) {
+                        return {
+                            content: [{ type: "text", text: `No tools found for: ${params.query}` }],
+                            details: { matches: [], added: [] },
+                        };
+                    }
+                    const active = pi.getActiveTools();
+                    const added = matches.filter((name) => !active.includes(name));
+                    if (added.length > 0)
+                        pi.setActiveTools([...new Set([...active, ...added])]);
+                    for (const name of added)
+                        activated.add(name);
                     return {
-                        content: [{ type: "text", text: `No valid external tool names. Available: ${[...available].join(", ") || "none"}` }],
-                        isError: true,
-                        details: { added: [] },
+                        content: [{
+                                type: "text",
+                                text: added.length > 0
+                                    ? `Loaded tools: ${added.join(", ")}`
+                                    : `Matching tools already active: ${matches.join(", ")}`,
+                            }],
+                        details: { matches, added },
                     };
-                }
-                for (const name of requested) activated.add(name);
-                sync();
-                return {
-                    content: [{ type: "text", text: `Activated for the next turn: ${[...new Set(requested)].join(", ")}` }],
-                    details: { added: [...new Set(requested)] },
-                };
-            },
-        });
+                },
+            });
         sync();
     };
-    const activateCommand = (text) => {
-        const commandName = text.trim().replace(/^\/+/, "").split(/\s+/, 1)[0];
-        const command = pi.getCommands().find((item) => item.source === "extension" && item.name === commandName);
-        if (!command) return;
-        const commandTokens = toolTokens(`${command.name} ${command.description ?? ""}`);
-        const candidates = externalTools().filter((tool) => sourceInfoKey(tool.sourceInfo) === sourceInfoKey(command.sourceInfo));
-        const tokenFrequency = new Map();
-        for (const tool of candidates) {
-            for (const token of toolTokens(tool.name)) tokenFrequency.set(token, (tokenFrequency.get(token) ?? 0) + 1);
-        }
-        for (const tool of candidates) {
-            if ([...toolTokens(tool.name)].some((token) => commandTokens.has(token) && tokenFrequency.get(token) === 1)) {
-                activated.add(tool.name);
-            }
-        }
-        sync();
-    };
-    pi.registerCommand(COMMAND_DISPATCH_NAME, {
-        description: "Casleo internal command dispatcher",
-        handler: async (encoded) => {
-            try {
-                const payload = JSON.parse(decodeURIComponent(Buffer.from(encoded.trim(), "base64").toString("utf8")));
-                if (typeof payload?.message !== "string") return;
-                activateCommand(payload.message);
-                pi.sendUserMessage(payload.message, { expandPromptTemplates: true });
-            }
-            catch {
-            }
-        },
-    });
     return {
         reset() {
             activated.clear();
@@ -1186,18 +1130,6 @@ function createToolActivationRouter(pi, options) {
         refresh,
         activeTools,
     };
-}
-function sourceInfoKey(sourceInfo) {
-    return [sourceInfo?.source, sourceInfo?.scope, sourceInfo?.origin, sourceInfo?.path, sourceInfo?.baseDir]
-        .map((value) => value ?? "")
-        .join("\u0000");
-}
-function toolTokens(value) {
-    return new Set(value
-        .replace(/([a-z])([A-Z])/g, "$1_$2")
-        .toLowerCase()
-        .split(/[^a-z0-9]+/)
-        .filter((token) => token.length >= 3));
 }
 function registerSafeHarness(pi, initialCwd) {
     const initialWorkspace = new Workspace(initialCwd);

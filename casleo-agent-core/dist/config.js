@@ -1,7 +1,7 @@
 import path from "node:path";
 import { z } from "zod";
 import { casleoEnv } from "./env.js";
-import { DEFAULT_DEEPSEEK_BASE_URL, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, resolveMaxTokens, } from "./settings.js";
+import { DEFAULT_API_BASE_URL, getStoredApiBaseUrl, getStoredMaxTokens, normalizeApiBaseUrl, resolveMaxTokens, } from "./settings.js";
 export const effortSchema = z.enum(["low", "high", "max"]);
 export const transportSchema = z.enum([
     "openai-responses",
@@ -21,15 +21,15 @@ export function loadConfig(options) {
     const permission = options.yes
         ? "full"
         : permissionSchema.parse(options.permission ?? casleoEnv("PERMISSION") ?? "auto");
-    const baseUrl = normalizeDeepSeekBaseUrl(options.baseUrl ??
+    const baseUrl = normalizeApiBaseUrl(options.baseUrl ??
         process.env.OPENAI_BASE_URL ??
-        getStoredDeepSeekBaseUrl() ??
-        "https://api.openai.com/v1");
+        getStoredApiBaseUrl() ??
+        DEFAULT_API_BASE_URL);
     return {
         workspace,
         apiKey,
         baseUrl,
-        maxTokens: resolveMaxTokens(baseUrl, getStoredDeepSeekMaxTokens()),
+        maxTokens: resolveMaxTokens(baseUrl, getStoredMaxTokens()),
         modelId: options.model ?? casleoEnv("MODEL") ?? "gpt-5.6-sol",
         effort,
         transport,

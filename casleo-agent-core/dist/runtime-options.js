@@ -4,7 +4,7 @@ import { z } from "zod";
 import { harnessSchema, permissionSchema, transportSchema, } from "./config.js";
 import { casleoEnv } from "./env.js";
 import { CASLEO_VERSION } from "./version.js";
-import { DEFAULT_DEEPSEEK_BASE_URL, getCasleoStorageSettings, getStoredDeepSeekBaseUrl, getStoredDeepSeekMaxTokens, normalizeDeepSeekBaseUrl, parseMaxTokens, resolveMaxTokens, } from "./settings.js";
+import { DEFAULT_API_BASE_URL, getCasleoStorageSettings, getStoredApiBaseUrl, getStoredMaxTokens, normalizeApiBaseUrl, parseMaxTokens, resolveMaxTokens, } from "./settings.js";
 import { ASK_USER_TOOL } from "./ask-user.js";
 import { defaultEffortForProvider, defaultModelForProvider, getStoredModelSelection, parseSupportedProviderId, SUPPORTED_PROVIDER_IDS, } from "./providers.js";
 const require = createRequire(import.meta.url);
@@ -31,9 +31,9 @@ export function parseRuntimeArgs(argv) {
     const storedSelection = getStoredModelSelection();
     let cwd = process.cwd();
     let baseUrl = process.env.OPENAI_BASE_URL ??
-        getStoredDeepSeekBaseUrl() ??
-        DEFAULT_DEEPSEEK_BASE_URL;
-    let maxTokens = getStoredDeepSeekMaxTokens();
+        getStoredApiBaseUrl() ??
+        DEFAULT_API_BASE_URL;
+    let maxTokens = getStoredMaxTokens();
     let providerId = parseSupportedProviderId(casleoEnv("PROVIDER") ?? storedSelection?.providerId ?? "openai");
     let modelExplicit = casleoEnv("MODEL") !== undefined;
     let modelId = casleoEnv("MODEL") ??
@@ -169,7 +169,7 @@ export function parseRuntimeArgs(argv) {
         options: {
             cwd,
             providerId,
-            baseUrl: normalizeDeepSeekBaseUrl(baseUrl),
+            baseUrl: normalizeApiBaseUrl(baseUrl),
             maxTokens: resolveMaxTokens(baseUrl, maxTokens),
             ...(contextWindow ? { contextWindow } : {}),
             modelId,
@@ -222,7 +222,7 @@ Usage:
 Casleo Runtime options:
   -C, --cwd <dir>                  Workspace directory
   --provider <id>                 ${SUPPORTED_PROVIDER_IDS.join("|")}
-  --base-url <url>                 DeepSeek API base URL
+  --base-url <url>                 API base URL
   --model <id>                     Model ID (provider default when omitted)
   --effort <level>                 Alias for --thinking; defaults by provider
   --transport <api>                openai-responses|openai-completions|anthropic-messages
@@ -230,7 +230,7 @@ Casleo Runtime options:
   --permission <mode>              plan|ask|auto|full (full grants host + network)
   --sandbox <mode>                 read-only|workspace-write|danger-full-access
   --network                        Pre-authorize command network access for this run
-  --web                            Enable DeepSeek server-side web search
+  --web                            Enable provider web search
   -y, --yes                        YOLO: trust project, skip approvals, allow host + network
 
 Session and editor features:

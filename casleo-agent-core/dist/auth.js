@@ -6,7 +6,7 @@ import pc from "picocolors";
 import { createCasleoCredentialStore } from "./credential-store.js";
 import { getCasleoHome } from "./home.js";
 import { defaultModelForProvider, providerDisplayName, providerEnvironmentKey, SUPPORTED_PROVIDER_IDS, } from "./providers.js";
-import { getCasleoSettingsPath, getCasleoStorageSettings, normalizeDeepSeekBaseUrl, saveDeepSeekBaseUrl, } from "./settings.js";
+import { getCasleoSettingsPath, getCasleoStorageSettings, normalizeApiBaseUrl, saveApiBaseUrl, } from "./settings.js";
 const PROVIDER_ID = "deepseek";
 export function getCasleoAgentDir() {
     return getCasleoHome();
@@ -160,7 +160,7 @@ async function promptAndStoreKey(baseUrl, modelId) {
             }
         }
         await saveDeepSeekKey(key);
-        await saveDeepSeekBaseUrl(selectedBaseUrl);
+        await saveApiBaseUrl(selectedBaseUrl);
         await saveDefaultModelSelection("deepseek", modelId);
         process.stdout.write(`${pc.green("✓")} API key saved securely. Start coding with ${pc.bold("casleo")}.\n`);
         return selectedBaseUrl;
@@ -311,7 +311,7 @@ async function promptBaseUrl(defaultBaseUrl) {
         while (true) {
             const value = (await readline.question(formatBaseUrlPrompt(defaultBaseUrl))).trim();
             try {
-                return normalizeDeepSeekBaseUrl(value || defaultBaseUrl);
+                return normalizeApiBaseUrl(value || defaultBaseUrl);
             }
             catch (error) {
                 process.stdout.write(`${pc.red(error.message)}. Try again.\n`);

@@ -20,7 +20,7 @@ import {
   createCasleoCredentialStore,
   ensureSessionRuntimeLink,
   getCasleoHome,
-  getStoredDeepSeekBaseUrl,
+  getStoredApiBaseUrl,
   getStoredModelSelection,
   initializeCasleoHome,
   listCasleoThreads,
@@ -43,7 +43,6 @@ import {
   activeChat,
   activeCustomProfile,
   clampMaxTokens,
-  isDeepSeekUrl,
   mergeChatProfiles,
   migrateChatProfiles,
   parseChatProfiles,
@@ -743,7 +742,7 @@ function registerIpc(): void {
     const profiles = await loadChatProfiles();
     const chat = activeChat(profiles);
     const key = chat.apiKey;
-    if (!key || !isDeepSeekUrl(chat.url)) return null;
+    if (!key || !/^https:\/\/api\.deepseek\.com(?:\/v1)?\/?$/i.test(chat.url)) return null;
     const response = await fetch("https://api.deepseek.com/user/balance", {
       headers: { authorization: `Bearer ${key}` },
     });
@@ -1149,7 +1148,7 @@ async function loadChatProfiles(): Promise<ChatProfiles> {
       : "";
   const selected = getStoredModelSelection();
   const migrated = migrateChatProfiles({
-    url: getStoredDeepSeekBaseUrl() ?? "",
+    url: getStoredApiBaseUrl() ?? "",
     model: selected?.providerId === "deepseek" ? (selected.modelId ?? "") : "",
     apiKey,
   });

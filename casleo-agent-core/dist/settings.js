@@ -5,32 +5,21 @@ import path from "node:path";
 import process from "node:process";
 import { getCasleoHome } from "./home.js";
 import { casleoEnv } from "./env.js";
-export const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
-export const DEEPSEEK_MAX_TOKENS = 384_000;
+export const DEFAULT_API_BASE_URL = "https://api.openai.com/v1";
 export function parseMaxTokens(value) {
     const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value.trim()) : Number.NaN;
     if (!Number.isFinite(n) || n < 1)
         return undefined;
     return Math.min(Math.floor(n), 2_000_000);
 }
-export function isOfficialDeepSeekBaseUrl(baseUrl) {
-    try {
-        return new URL(normalizeDeepSeekBaseUrl(baseUrl)).hostname === "api.deepseek.com";
-    }
-    catch {
-        return false;
-    }
-}
 export function resolveMaxTokens(baseUrl, configured) {
-    const parsed = parseMaxTokens(configured);
-    if (isOfficialDeepSeekBaseUrl(baseUrl))
-        return parsed ?? DEEPSEEK_MAX_TOKENS;
-    return parsed;
+    void baseUrl;
+    return parseMaxTokens(configured);
 }
 export function getCasleoSettingsPath() {
     return casleoEnv("CONFIG_PATH") ?? path.join(getCasleoHome(), "config.json");
 }
-export function getStoredDeepSeekBaseUrl(settingsPath = getCasleoSettingsPath()) {
+export function getStoredApiBaseUrl(settingsPath = getCasleoSettingsPath()) {
     try {
         return baseUrlFromSettings(JSON.parse(fs.readFileSync(settingsPath, "utf8")));
     }
@@ -43,12 +32,12 @@ export function getStoredDeepSeekBaseUrl(settingsPath = getCasleoSettingsPath())
         throw error;
     }
 }
-export function getStoredDeepSeekMaxTokens(settingsPath = getCasleoSettingsPath()) {
+export function getStoredMaxTokens(settingsPath = getCasleoSettingsPath()) {
     try {
         const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-        if (!isRecord(settings) || !isRecord(settings.deepseek))
+        if (!isRecord(settings) || !isRecord(settings.model))
             return undefined;
-        return parseMaxTokens(settings.deepseek.maxTokens);
+        return parseMaxTokens(settings.model.maxTokens);
     }
     catch (error) {
         if (isNodeError(error) && error.code === "ENOENT")
@@ -84,22 +73,22 @@ export function parseHistoryPersistence(value) {
         return value;
     throw new Error("history.persistence must be save-all or none");
 }
-export async function saveDeepSeekBaseUrl(baseUrl, settingsPath = getCasleoSettingsPath()) {
-    const normalized = normalizeDeepSeekBaseUrl(baseUrl);
+export async function saveApiBaseUrl(baseUrl, settingsPath = getCasleoSettingsPath()) {
+    const normalized = normalizeApiBaseUrl(baseUrl);
     const settings = await readSettings(settingsPath);
-    settings.deepseek = { ...(settings.deepseek ?? {}), baseUrl: normalized };
+    settings.api = { ...(settings.api ?? {}), baseUrl: normalized };
     await persistSettings(settings, settingsPath);
     return normalized;
 }
-export async function saveDeepSeekMaxTokens(maxTokens, settingsPath = getCasleoSettingsPath()) {
+export async function saveMaxTokens(maxTokens, settingsPath = getCasleoSettingsPath()) {
     const settings = await readSettings(settingsPath);
-    const next = { ...(settings.deepseek ?? {}) };
+    const next = { ...(settings.model ?? {}) };
     const parsed = parseMaxTokens(maxTokens);
     if (parsed === undefined)
         delete next.maxTokens;
     else
         next.maxTokens = parsed;
-    settings.deepseek = next;
+    settings.model = next;
     await persistSettings(settings, settingsPath);
 }
 async function persistSettings(settings, settingsPath) {
@@ -117,7 +106,7 @@ async function persistSettings(settings, settingsPath) {
         await unlink(temporaryPath).catch(() => undefined);
     }
 }
-export function normalizeDeepSeekBaseUrl(value) {
+export function normalizeApiBaseUrl(value) {
     const trimmed = value.trim().replace(/\/+$/, "");
     if (!trimmed)
         throw new Error("API base URL cannot be empty");
@@ -174,10 +163,10 @@ function resolveConfiguredPath(value) {
     return path.resolve(trimmed);
 }
 function baseUrlFromSettings(value) {
-    if (!isRecord(value) || !isRecord(value.deepseek))
+    if (!isRecord(value) || !isRecord(value.api))
         return undefined;
-    const baseUrl = value.deepseek.baseUrl;
-    return typeof baseUrl === "string" ? normalizeDeepSeekBaseUrl(baseUrl) : undefined;
+    const baseUrl = value.api.baseUrl;
+    return typeof baseUrl === "string" ? normalizeApiBaseUrl(baseUrl) : undefined;
 }
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
