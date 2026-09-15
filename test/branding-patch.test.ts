@@ -25,7 +25,7 @@ describe('Casleo sidebar branding', () => {
     expect(main).toContain("height: '24px'")
   })
 
-  it('drops the wide-sidebar brand row and keeps only the rail mark', async () => {
+  it('shows the wordmark in the wide sidebar, keeps the rail mark, and draws the compose glyph', async () => {
     const [patch, client, composition, installedSidebar] = await Promise.all([
       readFile(patchPath('@deepseek-ai/dsh-client-ui-sidebar'), 'utf8'),
       readFile(path.join(projectRoot, 'packages', 'dsh-desktop-client-ui', 'client.js'), 'utf8'),
@@ -44,8 +44,9 @@ describe('Casleo sidebar branding', () => {
     ])
 
     expect(client).toContain("ctx.slots.inject('sidebar.brand.mark'")
-    expect(client).not.toContain("ctx.slots.inject('sidebar.brand.name'")
+    expect(client).toContain("ctx.slots.inject('sidebar.brand.name'")
     expect(client).not.toContain("ctx.slots.inject('conversation.hero.brand.mark'")
+    expect(client).toContain("'Casleo'")
     expect(client).toContain('const BRAND_MARK_PATH = "M500 219L750 625L500 797L250 625Z')
     expect(client).toContain("React.createElement('path', { d: BRAND_MARK_PATH, fill: 'currentColor' })")
     expect(client).not.toContain('BrandWordmark')
@@ -64,17 +65,18 @@ describe('Casleo sidebar branding', () => {
     expect(patch).toContain('navigator.userAgent.includes("Macintosh")')
     expect(patch).toContain('padding-top:28px')
     expect(patch).toContain('padding:32px 22px 6px')
-    // The desktop patch removes the clickable wide-mode brand identity. The
-    // only remaining mark seat is the collapsed rail's toggle button.
-    expect(patch).toMatch(
-      /^\+\s*children: \[\(0, react_jsx_runtime\.jsx\)\(_deepseek_ai_dsh_client_ui_primitives\.Tooltip, \{/mu
-    )
-    expect(patch).not.toContain('data-dsh-sidebar-brand-identity')
-    expect(installedSidebar).not.toContain('data-dsh-sidebar-brand-identity')
+    // The wide row shows the wordmark only; the mark remains the collapsed
+    // rail's toggle glyph.
+    expect(patch).toContain('[data-dsh-sidebar-brand-identity]{flex:1;min-width:0}')
+    expect(installedSidebar).toContain('data-dsh-sidebar-brand-identity')
     expect(installedSidebar).toContain('renderSlot("sidebar.brand.mark"')
-    expect(installedSidebar).not.toContain('renderSlot("sidebar.brand.name"')
+    expect(installedSidebar).toContain('renderSlot("sidebar.brand.name"')
     expect(installedSidebar).not.toContain('DshDesktopBrand')
     expect(installedSidebar).not.toContain('brandWordmark')
+    // The new-session glyph is the local compose mark, not the stock chat icon.
+    expect(patch).toContain('function ComposeIcon')
+    expect(installedSidebar).toContain('(0, react_jsx_runtime.jsx)(ComposeIcon, { size: wide ? 14 : 18 })')
+    expect(installedSidebar).not.toContain('IconNewChatOutline16, { size: wide ? 14 : 18 }')
   })
 
   it('leaves no hero headline block in the conversation shell', async () => {

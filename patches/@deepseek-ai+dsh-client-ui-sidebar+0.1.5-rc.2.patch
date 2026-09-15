@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js
-index bcb8e04..eb55573 100644
+index bcb8e04..1c54146 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js
 @@ -31,7 +31,7 @@ window.__ModuleLoader__.load({
@@ -7,11 +7,40 @@ index bcb8e04..eb55573 100644
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-sidebar";
  			tag.dataset.pluginCss = tagId;
 -			tag.textContent = css;
-+			tag.textContent = css + "[data-dsh-sidebar-root][data-dsh-sidebar-wide=\"true\"]{padding-top:32px}" + (navigator.userAgent.includes("Macintosh") ? "[data-dsh-sidebar-root][data-dsh-sidebar-wide=\"true\"]{padding-top:28px}[data-dsh-sidebar-root][data-dsh-sidebar-wide=\"false\"]{padding:32px 22px 6px}" : "");
++			tag.textContent = css + "[data-dsh-sidebar-root][data-dsh-sidebar-wide=\"true\"]{padding-top:32px}[data-dsh-sidebar-brand-identity]{flex:1;min-width:0}" + (navigator.userAgent.includes("Macintosh") ? "[data-dsh-sidebar-root][data-dsh-sidebar-wide=\"true\"]{padding-top:28px}[data-dsh-sidebar-root][data-dsh-sidebar-wide=\"false\"]{padding:32px 22px 6px}" : "");
  			document.head.appendChild(tag);
  		}
  		var SidebarRoot_module_css_default = {
-@@ -188,6 +188,8 @@ window.__ModuleLoader__.load({
+@@ -136,6 +136,28 @@ window.__ModuleLoader__.load({
+ 		* @param props - composed slot props (runtime share + injected callbacks, contract/slots.ts).
+ 		* @returns the sidebar element tree.
+ 		*/
++		/** Compose mark for the new-session button: a rounded square with a pen. */
++		function ComposeIcon({ size = 16, className }) {
++			return (0, react_jsx_runtime.jsxs)("svg", {
++				width: size,
++				height: size,
++				className,
++				viewBox: "0 0 16 16",
++				fill: "none",
++				"aria-hidden": "true",
++				children: [(0, react_jsx_runtime.jsx)("path", {
++					d: "M8 2H3.3A1.3 1.3 0 0 0 2 3.3v9.4A1.3 1.3 0 0 0 3.3 14h9.4a1.3 1.3 0 0 0 1.3-1.3V8",
++					stroke: "currentColor",
++					strokeWidth: 1.35,
++					strokeLinecap: "round"
++				}), (0, react_jsx_runtime.jsx)("path", {
++					d: "M12.25 1.75a0.71 0.71 0 0 1 2 2l-6 6a1.4 1.4 0 0 1-.6.36l-1.92.56a0.35 0.35 0 0 1-.43-.43l.56-1.92a1.4 1.4 0 0 1 .36-.6z",
++					stroke: "currentColor",
++					strokeWidth: 1.35,
++					strokeLinejoin: "round"
++				})]
++			});
++		}
+ 		function SidebarRoot({ collapsed, width, startSession, toggleSidebar, selectPanel, usePanels, usePanelInfo, t, renderSlot }) {
+ 			const panels = usePanels((snapshot) => snapshot);
+ 			const [settled, setSettled] = (0, react.useState)(collapsed);
+@@ -188,6 +210,8 @@ window.__ModuleLoader__.load({
  			const buildVersion = localBuildVersion();
  			return (0, react_jsx_runtime.jsxs)("div", {
  				ref: column,
@@ -20,7 +49,7 @@ index bcb8e04..eb55573 100644
  				className: clsx(SidebarRoot_module_css_default.root, !wide && SidebarRoot_module_css_default.collapsed, !wide && everWide.current && SidebarRoot_module_css_default.railIn, collapsed && wide && SidebarRoot_module_css_default.fading, !pointerInside && SidebarRoot_module_css_default.quietBars),
  				style: wide ? { width: collapsed ? lastWideWidth.current : width } : void 0,
  				onPointerEnter: () => {
-@@ -200,37 +202,7 @@ window.__ModuleLoader__.load({
+@@ -200,35 +224,12 @@ window.__ModuleLoader__.load({
  				children: [
  					(0, react_jsx_runtime.jsxs)("div", {
  						className: SidebarRoot_module_css_default.logoRow,
@@ -53,13 +82,25 @@ index bcb8e04..eb55573 100644
 -										})]
 -									}) })
 -								})]
--							})
--						}), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-+						children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
++						children: [wide && (0, react_jsx_runtime.jsxs)("span", {
++							className: SidebarRoot_module_css_default.brandIdentity,
++							"data-dsh-sidebar-brand-identity": "",
++							children: (0, react_jsx_runtime.jsx)("span", {
++								className: SidebarRoot_module_css_default.brandName,
++								children: renderSlot("sidebar.brand.name", {})
+ 							})
+ 						}), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
  							label: collapsed ? t("toggle.open") : t("toggle.collapse"),
- 							delayMs: 500,
- 							children: (0, react_jsx_runtime.jsxs)("button", {
-@@ -295,6 +267,7 @@ window.__ModuleLoader__.load({
+@@ -262,7 +263,7 @@ window.__ModuleLoader__.load({
+ 							onClick: () => {
+ 								startSession();
+ 							},
+-							children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconNewChatOutline16, { size: wide ? 14 : 18 }), wide && (0, react_jsx_runtime.jsx)("span", {
++							children: [(0, react_jsx_runtime.jsx)(ComposeIcon, { size: wide ? 14 : 18 }), wide && (0, react_jsx_runtime.jsx)("span", {
+ 								className: clsx(SidebarRoot_module_css_default.newSessionLabel, SidebarRoot_module_css_default.wide),
+ 								children: t("session.new")
+ 							})]
+@@ -295,6 +296,7 @@ window.__ModuleLoader__.load({
  							className: SidebarRoot_module_css_default.footerActions,
  							children: renderSlot("sidebar.footer.action", { wide })
  						}), (0, react_jsx_runtime.jsx)("div", {

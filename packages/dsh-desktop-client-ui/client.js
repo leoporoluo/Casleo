@@ -10,8 +10,8 @@ window.__ModuleLoader__.load({
     // Tight bounds of the mark inside its 1000x1000 source artwork.
     const BRAND_MARK_VIEWBOX = { x: 250, y: 219, width: 500, height: 578 }
     // Casleo mark: a notched delta ring, drawn in currentColor so it follows
-    // the sidebar text color in both themes. The wide sidebar shows no brand
-    // row; this mark renders in the collapsed rail's toggle button.
+    // the sidebar text color in both themes. The wide sidebar shows only the
+    // wordmark; this mark renders in the collapsed rail's toggle button.
     const BRAND_MARK_PATH = "M500 219L750 625L500 797L250 625ZM500 330L365 609L500 690L635 609Z"
 
     function CasleoMark(props) {
@@ -30,10 +30,28 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function DesktopBrandName() {
+      return React.createElement(
+        'span',
+        {
+          style: {
+            fontSize: '17px',
+            fontWeight: 650,
+            letterSpacing: '-0.02em',
+            lineHeight: 1
+          }
+        },
+        'Casleo'
+      )
+    }
+
     const inject = ['slots']
     function apply(ctx) {
       ctx.slots.inject('sidebar.brand.mark', () =>
-        ctx.slots.register({ name: 'sidebar.brand.mark' }, CasleoMark)
+        ctx.slots.inject('sidebar.brand.name', function* () {
+          yield ctx.slots.register({ name: 'sidebar.brand.mark' }, CasleoMark)
+          yield ctx.slots.register({ name: 'sidebar.brand.name' }, DesktopBrandName)
+        })
       )
     }
 

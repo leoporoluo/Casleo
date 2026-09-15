@@ -8,6 +8,7 @@ const projectRoot = path.resolve(import.meta.dirname, '..')
 const chatClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-chat', 'lib', 'client.js')
 const feedbackClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-message-feedback', 'lib', 'client.js')
 const layoutClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-layout', 'lib', 'client.js')
+const conversationClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-conversation', 'lib', 'client.js')
 
 describe('Casleo interface trims', () => {
   it('shows the neutral thinking copy as plain gray instead of a brand shimmer', async () => {
@@ -38,6 +39,30 @@ describe('Casleo interface trims', () => {
     expect(client).not.toContain('commandUi')
     expect(patch).toMatch(/-\s*ctx\.slots\.inject\("conversation\.chat\.assistant-actions"/u)
     expect(patch).toMatch(/-\s*ctx\.slots\.inject\("conversation\.input\.overlay"/u)
+  })
+
+  it('keeps the workspace composer ring invisible until hover', async () => {
+    const [client, patch] = await Promise.all([
+      readFile(conversationClient, 'utf8'),
+      readFile(patchPath('@deepseek-ai/dsh-client-ui-conversation'), 'utf8')
+    ])
+
+    expect(client).toMatch(
+      /\.uV2eYG_cardWorkspaceTrigger:after\{content:\\"\\";background:transparent;/u
+    )
+    expect(client).toContain(
+      '.uV2eYG_cardWorkspaceTrigger:hover:after{background:var(--dsw-alias-border-l3)}'
+    )
+    // The ring is one continuous stroke: the dashed mask is gone.
+    expect(client).not.toContain("stroke-dasharray='4 4'")
+    expect(client).toContain("stroke-width='1.5'")
+    expect(client).not.toMatch(
+      /\.uV2eYG_cardWorkspaceTrigger:hover:after\{background:var\(--dsw-alias-state-business-primary\)/u
+    )
+    expect(patch).toContain('background:transparent;pointer-events:none;border-radius:22px')
+    expect(patch).toContain(
+      '.uV2eYG_cardWorkspaceTrigger:hover:after{background:var(--dsw-alias-border-l3)}'
+    )
   })
 
   it('renders no column drag handles around the sidebar or right panel', async () => {

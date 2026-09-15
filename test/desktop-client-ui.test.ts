@@ -11,7 +11,7 @@ interface Registration {
 }
 
 describe('Casleo client slot occupants', () => {
-  it('registers only the collapsed-rail brand mark', async () => {
+  it('registers the rail mark and the wordmark', async () => {
     const source = await readFile(
       path.join(projectRoot, 'packages', 'dsh-desktop-client-ui', 'client.js'),
       'utf8'
@@ -80,9 +80,18 @@ describe('Casleo client slot occupants', () => {
     plugin.apply({ slots })
 
     expect(plugin.inject).toEqual(['slots'])
-    expect(registrations.map(({ config }) => config.name)).toEqual(['sidebar.brand.mark'])
+    expect(registrations.map(({ config }) => config.name)).toEqual([
+      'sidebar.brand.mark',
+      'sidebar.brand.name'
+    ])
     // The mark is drawn in currentColor, so no theme stylesheet is injected.
     expect(appended).toHaveLength(0)
+
+    const sidebarName = registrations.find(
+      ({ config }) => config.name === 'sidebar.brand.name'
+    )!.component({}) as { type: unknown; props: Record<string, unknown> }
+    expect(sidebarName.type).toBe('span')
+    expect(sidebarName.props.children).toEqual(['Casleo'])
 
     const sidebarMark = registrations.find(
       ({ config }) => config.name === 'sidebar.brand.mark'
