@@ -1,0 +1,47 @@
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js
+index 3ff0ed7..4bcc2b4 100644
+--- a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js
++++ b/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js
+@@ -72,6 +72,31 @@ window.__ModuleLoader__.load({
+ 		* to the step, so a mounted-but-deciding step paints nothing here.
+ 		*/
+ 		const RECOVERY_CONFIRMATION_MS = 2e3;
++		/** Plugin market glyph: a Casleo-marked shopping bag. */
++		function MarketGlyph({ className, size }) {
++			return (0, react_jsx_runtime.jsxs)("svg", {
++				className,
++				width: size,
++				height: size,
++				viewBox: "0 0 16 16",
++				fill: "none",
++				"aria-hidden": true,
++				children: [(0, react_jsx_runtime.jsx)("path", {
++					d: "M3.6 5.5h8.8l-.7 8H4.3l-.7-8Z",
++					stroke: "currentColor",
++					strokeWidth: 1.4,
++					strokeLinejoin: "round"
++				}), (0, react_jsx_runtime.jsx)("path", {
++					d: "M6 5.5V4.2a2 2 0 0 1 4 0v1.3",
++					stroke: "currentColor",
++					strokeWidth: 1.4,
++					strokeLinecap: "round"
++				}), (0, react_jsx_runtime.jsx)("path", {
++					d: "M8 8L10.2 11.4H5.8L8 8Z",
++					fill: "currentColor"
++				})]
++			});
++		}
+ 		/** Nav glyph by section id; unknown ids fall back to the settings gear. */
+ 		function navIcon(id) {
+ 			if (id === "models") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDataOutline16, {
+@@ -86,6 +111,10 @@ window.__ModuleLoader__.load({
+ 				className: SettingsRoot_module_css_default.navIcon,
+ 				size: 16
+ 			});
++			if (id === "market") return (0, react_jsx_runtime.jsx)(MarketGlyph, {
++				className: SettingsRoot_module_css_default.navIcon,
++				size: 16
++			});
+ 			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSettingsOutline16, {
+ 				className: SettingsRoot_module_css_default.navIcon,
+ 				size: 16

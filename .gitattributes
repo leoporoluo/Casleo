@@ -1,0 +1,7 @@
+# Dependency patches preserve the upstream bundle's mixed indentation and line
+# endings byte-for-byte so that patch-package can match and replay them exactly.
+patches/*.patch -text whitespace=-space-before-tab
+
+# Preserve pinned third-party inputs byte-for-byte, including upstream whitespace.
+packages/ppt-runtime/upstream/** -text -whitespace
+packages/ppt-runtime/templates/** -text -whitespace
