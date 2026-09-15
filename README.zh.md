@@ -13,7 +13,7 @@ Casleo 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) �
 - 检测启动与前端插件故障，把诊断写入 `harness.log` 并提供引导式恢复
 - 提供非破坏性的安全模式，临时屏蔽第三方插件
 - 适配 macOS 与 Windows 的原生菜单、标题栏、窗口焦点、主题和品牌
-- 侧边栏品牌文字、应用图标、启动动画和插件市场图标均为 Casleo 品牌
+- 应用图标、折叠侧边栏图标和插件市场图标均为 Casleo 品牌
 
 ## 下载
 
@@ -59,7 +59,7 @@ src/preload/    沙箱渲染进程接口与桌面端 UI 增强
 src/shared/     共享契约与桌面菜单定义
 packages/       内置桌面支撑包（客户端 UI、市场安装器、预设、PPT）
 patches/        对固定版本 Harness 包的可复现 patch-package 补丁
-build/          打包用 HTML 界面、图标、加载动画与 Harness 入口文件
+build/          打包用 HTML 界面、图标与 Harness 入口文件
 test/           单元与源码契约回归测试
 ```
 

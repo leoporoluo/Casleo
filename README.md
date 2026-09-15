@@ -13,7 +13,7 @@ Casleo is a local-first desktop app for [DeepSeek Harness](https://github.com/de
 - Detects startup and frontend plugin failures, keeps diagnostics in `harness.log`, and offers guided recovery actions
 - Provides a non-destructive Safe Mode that temporarily blocks third-party plugins
 - Adapts native menus, titlebar behavior, window focus, theme, and application branding for macOS and Windows
-- Ships a Casleo-branded sidebar wordmark, app icon, loading animation, and plugin-market glyph
+- Ships a Casleo-branded app icon, collapsed-rail mark, and plugin-market glyph
 
 ## Download
 
@@ -59,7 +59,7 @@ src/preload/    Sandboxed renderer seams and desktop UI additions
 src/shared/     Shared contracts and desktop menu definitions
 packages/       Bundled desktop support packages (client UI, market installer, presets, PPT)
 patches/        Reproducible patch-package patches for the pinned Harness packages
-build/          Packaged HTML surfaces, icons, loaders, and Harness entry files
+build/          Packaged HTML surfaces, icons, and Harness entry files
 test/           Unit and source-contract regression coverage
 ```
 

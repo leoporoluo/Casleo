@@ -11,7 +11,7 @@ interface Registration {
 }
 
 describe('Casleo client slot occupants', () => {
-  it('registers one occupant per brand seat with the Casleo mark and wordmark', async () => {
+  it('registers only the collapsed-rail brand mark', async () => {
     const source = await readFile(
       path.join(projectRoot, 'packages', 'dsh-desktop-client-ui', 'client.js'),
       'utf8'
@@ -80,19 +80,9 @@ describe('Casleo client slot occupants', () => {
     plugin.apply({ slots })
 
     expect(plugin.inject).toEqual(['slots'])
-    expect(registrations.map(({ config }) => config.name)).toEqual([
-      'sidebar.brand.mark',
-      'sidebar.brand.name',
-      'conversation.hero.brand.mark'
-    ])
+    expect(registrations.map(({ config }) => config.name)).toEqual(['sidebar.brand.mark'])
     // The mark is drawn in currentColor, so no theme stylesheet is injected.
     expect(appended).toHaveLength(0)
-
-    const sidebarName = registrations.find(
-      ({ config }) => config.name === 'sidebar.brand.name'
-    )!.component({}) as { type: unknown; props: Record<string, unknown> }
-    expect(sidebarName.type).toBe('span')
-    expect(sidebarName.props.children).toEqual(['Casleo'])
 
     const sidebarMark = registrations.find(
       ({ config }) => config.name === 'sidebar.brand.mark'
@@ -105,11 +95,5 @@ describe('Casleo client slot occupants', () => {
     expect(markPath.type).toBe('path')
     expect(markPath.props.fill).toBe('currentColor')
     expect(String(markPath.props.d)).toContain('M500 219L750 625L500 797L250 625Z')
-
-    const heroMark = registrations.find(
-      ({ config }) => config.name === 'conversation.hero.brand.mark'
-    )!.component({ size: 48 }) as { type: unknown; props: Record<string, unknown> }
-    expect(heroMark.type).toBe('svg')
-    expect(heroMark.props.height).toBe(48)
   })
 })

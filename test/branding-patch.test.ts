@@ -25,7 +25,7 @@ describe('Casleo sidebar branding', () => {
     expect(main).toContain("height: '24px'")
   })
 
-  it('fills the stock brand slots instead of replacing Sidebar structure', async () => {
+  it('drops the wide-sidebar brand row and keeps only the rail mark', async () => {
     const [patch, client, composition, installedSidebar] = await Promise.all([
       readFile(patchPath('@deepseek-ai/dsh-client-ui-sidebar'), 'utf8'),
       readFile(path.join(projectRoot, 'packages', 'dsh-desktop-client-ui', 'client.js'), 'utf8'),
@@ -44,15 +44,12 @@ describe('Casleo sidebar branding', () => {
     ])
 
     expect(client).toContain("ctx.slots.inject('sidebar.brand.mark'")
-    expect(client).toContain("ctx.slots.inject('sidebar.brand.name'")
-    expect(client).toContain("ctx.slots.inject('conversation.hero.brand.mark'")
-    expect(client).toContain("'Casleo'")
+    expect(client).not.toContain("ctx.slots.inject('sidebar.brand.name'")
+    expect(client).not.toContain("ctx.slots.inject('conversation.hero.brand.mark'")
     expect(client).toContain('const BRAND_MARK_PATH = "M500 219L750 625L500 797L250 625Z')
     expect(client).toContain("React.createElement('path', { d: BRAND_MARK_PATH, fill: 'currentColor' })")
     expect(client).not.toContain('BrandWordmark')
     expect(client).not.toContain('FishLogo')
-    expect(client).not.toContain('/casleo-logo-light.png')
-    expect(client).not.toContain('translateX')
     const normalizedComposition = composition.replaceAll('\r\n', '\n')
     expect(normalizedComposition).toMatch(/- id: ui-brand-official\n  disabled: true/u)
     expect(normalizedComposition).toMatch(
@@ -64,14 +61,47 @@ describe('Casleo sidebar branding', () => {
     expect(patch).not.toContain('brandWordmark')
     expect(patch).toContain('[data-dsh-sidebar-root]')
     expect(patch).toContain('padding-top:32px')
-    expect(patch).toContain('[data-dsh-sidebar-brand-identity]{gap:4px}')
     expect(patch).toContain('navigator.userAgent.includes("Macintosh")')
     expect(patch).toContain('padding-top:28px')
     expect(patch).toContain('padding:32px 22px 6px')
+    // The desktop patch removes the clickable wide-mode brand identity. The
+    // only remaining mark seat is the collapsed rail's toggle button.
+    expect(patch).toMatch(
+      /^\+\s*children: \[\(0, react_jsx_runtime\.jsx\)\(_deepseek_ai_dsh_client_ui_primitives\.Tooltip, \{/mu
+    )
+    expect(patch).not.toContain('data-dsh-sidebar-brand-identity')
+    expect(installedSidebar).not.toContain('data-dsh-sidebar-brand-identity')
     expect(installedSidebar).toContain('renderSlot("sidebar.brand.mark"')
-    expect(installedSidebar).toContain('renderSlot("sidebar.brand.name"')
+    expect(installedSidebar).not.toContain('renderSlot("sidebar.brand.name"')
     expect(installedSidebar).not.toContain('DshDesktopBrand')
     expect(installedSidebar).not.toContain('brandWordmark')
+  })
+
+  it('leaves no hero headline block in the conversation shell', async () => {
+    const [patch, installed] = await Promise.all([
+      readFile(patchPath('@deepseek-ai/dsh-client-ui-conversation'), 'utf8'),
+      readFile(
+        path.join(
+          projectRoot,
+          'node_modules',
+          '@deepseek-ai',
+          'dsh-client-ui-conversation',
+          'lib',
+          'client.js'
+        ),
+        'utf8'
+      )
+    ])
+
+    expect(patch).toContain('HeroShell_module_css_default.headline')
+    const heroShell = installed.slice(
+      installed.indexOf('function HeroShell'),
+      installed.indexOf('function HeroShell') + 600
+    )
+    expect(heroShell).toContain('className: HeroShell_module_css_default.body')
+    expect(heroShell).not.toContain('HeroShell_module_css_default.headline')
+    expect(heroShell).not.toContain('hero.headline')
+    expect(heroShell).not.toContain('conversation.hero.brand.mark')
   })
 
   it('uses an 80px macOS rail that clears the traffic lights', async () => {

@@ -45,7 +45,7 @@ src/preload/              Narrow renderer-to-main IPC and desktop UI seams
 src/shared/               Shared contracts and desktop menu definitions
 packages/                 Bundled desktop support packages
 patches/                  Reproducible patches for the pinned Harness packages
-build/                    Packaged HTML, icons, loaders, and Harness entry files
+build/                    Packaged HTML, icons, and Harness entry files
 scripts/                  Build, icon, and target verification tools
 test/                     Unit and source-contract regression coverage
 .github/workflows/        Windows installer build workflow

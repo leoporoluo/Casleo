@@ -274,7 +274,7 @@ Desktop 提供自己打包的 Node/pnpm 和 PATH shim，避免依赖用户机器
 
 0.7.0 不只是改了插件落盘方式，还借 Harness `0.1.2-alpha.1` 收缩了 Desktop 对上游构建产物的直接修改：
 
-- 上游正式提供 `sidebar.brand.mark`、`sidebar.brand.name`、`conversation.hero.brand.mark` 等 Slot 后，Desktop 品牌从修改编译产物改成 `dsh-desktop-client-ui` Client Module，通过 Slot 注册 occupant。
+- 上游正式提供 `sidebar.brand.mark` 等 Slot 后，`dsh-desktop-client-ui` Client Module 只为折叠侧边栏注册 Casleo 图标；宽侧边栏品牌行与主区标题品牌块已由依赖补丁移除。
 - `dsh-host-apiproxy` 被上游删除后，预设导入/导出不再寄生在该包的 patch-package 补丁里，改由 `dsh-desktop-preset-transfer` 使用公开的 Connection Fetch Route 接缝注册。
 - `dsh-desktop-market-installer`、`dsh-desktop-hmr-fallback` 等 Desktop 自有 Cordis 插件继续由 `build/dsh-desktop.patch.yml` 插入。
 - Desktop 自有插件必须同时进入根应用依赖和 `@deepseek-ai/dsh` 的安装闭包；只在 patch 中写 `name` 而没有可解析的包，会让整个 Profile 组合失败。

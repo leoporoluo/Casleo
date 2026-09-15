@@ -1,6 +1,6 @@
 {
   "name": "casleo",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Casleo — a local-first desktop app for DeepSeek Harness.",
   "private": true,
   "type": "module",
@@ -27,7 +27,6 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "icons:generate": "node scripts/generate-app-icons.mjs",
-    "loader:generate": "node scripts/generate-loader-gifs.mjs",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
@@ -366,14 +365,6 @@
       {
         "from": "build/splash.html",
         "to": "splash.html"
-      },
-      {
-        "from": "build/casleo-loader.gif",
-        "to": "casleo-loader.gif"
-      },
-      {
-        "from": "build/casleo-loader-dark.gif",
-        "to": "casleo-loader-dark.gif"
       },
       {
         "from": "build/plugin-recovery.html",
