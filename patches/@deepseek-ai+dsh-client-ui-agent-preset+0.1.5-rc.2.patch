@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
-index 393afbe..2478a0f 100644
+index 393afbe..ecbb0ea 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
 @@ -99,7 +99,28 @@ window.__ModuleLoader__.load({
@@ -111,7 +111,7 @@ index 393afbe..2478a0f 100644
  			const toastSeq = (0, react.useRef)(0);
  			const [toast, setToast] = (0, react.useState)(null);
  			(0, react.useEffect)(() => {
-@@ -321,30 +381,86 @@ window.__ModuleLoader__.load({
+@@ -321,30 +381,87 @@ window.__ModuleLoader__.load({
  					children: character
  				}, index))
  			}) : label;
@@ -202,12 +202,12 @@ index 393afbe..2478a0f 100644
 -						})
 -					};
 -				}),
--				selectedId: state.current,
-+				items: entries state.current,
++				items: entries,
+ 				selectedId: state.current,
  				onSelect: (id) => {
  					setOpen(false);
 +					setQuery("");
-+										const nextRecent = [id, ...recentIds.filter((recentId) => recentId !== id)].slice(0, 4);
++					const nextRecent = [id, ...recentIds.filter((recentId) => recentId !== id)].slice(0, 4);
 +					setRecentIds(nextRecent);
 +					try {
 +						window.localStorage.setItem(RECENT_PRESETS_KEY, JSON.stringify(nextRecent));
@@ -215,7 +215,7 @@ index 393afbe..2478a0f 100644
  					const picked = state.options.find((option) => option.id === id);
  					/* v8 ignore next */
  					const name = picked === void 0 ? id : presetDisplayText(picked, t).name;
-@@ -361,8 +477,10 @@ window.__ModuleLoader__.load({
+@@ -361,8 +478,10 @@ window.__ModuleLoader__.load({
  					});
  				},
  				align: "start",
@@ -227,7 +227,7 @@ index 393afbe..2478a0f 100644
  				anchor: (0, react_jsx_runtime.jsxs)("button", {
  					type: "button",
  					className: AgentPresetSeat_module_css_default.seat,
-@@ -564,6 +682,8 @@ window.__ModuleLoader__.load({
+@@ -564,6 +683,8 @@ window.__ModuleLoader__.load({
  			rows: [],
  			copy: null,
  			view: null,
@@ -236,7 +236,7 @@ index 393afbe..2478a0f 100644
  			pendingDelete: null,
  			deleting: false,
  			revealedPaths: {}
-@@ -581,6 +701,17 @@ window.__ModuleLoader__.load({
+@@ -581,6 +702,17 @@ window.__ModuleLoader__.load({
  			if (!PRESET_ID.test(draft.id)) return "idInvalid";
  			if (rows.some((row) => row.id === draft.id)) return "idTaken";
  		}
@@ -254,7 +254,7 @@ index 393afbe..2478a0f 100644
  		/** Reads the roster and drives the copy dialog, viewer, and location reveals. */
  		var AgentPresetSectionController = class {
  			ctx;
-@@ -752,6 +883,143 @@ window.__ModuleLoader__.load({
+@@ -752,6 +884,143 @@ window.__ModuleLoader__.load({
  					[id]: path
  				} });
  			}
@@ -398,7 +398,7 @@ index 393afbe..2478a0f 100644
  			/**
  			* Ask for confirmation before deleting one preset.
  			* @param id - the preset to delete, or null to dismiss the confirmation.
-@@ -808,15 +1076,23 @@ window.__ModuleLoader__.load({
+@@ -808,15 +1077,23 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-agent-preset/src/client/AgentPresetSection.module.css.mjs
  		const css = ".rtSEdW_section{max-width:720px;color:var(--dsw-alias-label-primary);flex-direction:column;gap:12px;display:flex}.rtSEdW_title{margin:0;font-size:18px;font-weight:600}.rtSEdW_intro{color:var(--dsw-alias-label-tertiary);margin:0;font-size:13px}.rtSEdW_group{flex-direction:column;gap:10px;display:flex}.rtSEdW_group+.rtSEdW_group{margin-top:20px}.rtSEdW_groupHead{letter-spacing:.06em;text-transform:uppercase;color:var(--dsw-alias-label-tertiary);margin:0;font-size:12px;font-weight:600}.rtSEdW_cards{grid-template-columns:repeat(auto-fill,minmax(268px,1fr));grid-auto-rows:1fr;gap:12px;margin:0;padding:0;list-style:none;display:grid}.rtSEdW_card{border:.5px solid var(--dsw-alias-border-l4);background:0 0;border-radius:20px;flex-direction:column;transition:border-color .16s,background .16s;display:flex}.rtSEdW_card:hover:not(.rtSEdW_cardActive){background:var(--dsw-alias-interactive-bg-hover)}.rtSEdW_cardActive{background:var(--dsw-alias-bg-module-platform);border-color:var(--dsw-static-neutral-bluish-400)}.rtSEdW_cardBroken,.rtSEdW_cardBroken:hover{border-color:var(--dsw-alias-state-error-primary)}.rtSEdW_brokenBadge{corner-shape:round;white-space:nowrap;background:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-bg-layer-3);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:500;line-height:17px}.rtSEdW_brokenTip{z-index:1;background:var(--dsw-alias-label-primary);width:max-content;max-width:100%;color:var(--dsw-alias-bg-layer-3);text-align:left;white-space:pre-line;overflow-wrap:anywhere;opacity:0;pointer-events:none;border-radius:6px;padding:6px 8px;font-size:11px;font-weight:400;line-height:1.5;transition:opacity .12s;position:absolute;top:calc(100% + 6px);left:0}.rtSEdW_brokenBadge:hover .rtSEdW_brokenTip,.rtSEdW_cardMain:focus-visible .rtSEdW_brokenTip{opacity:1}.rtSEdW_cardMain[aria-disabled=true]{cursor:default}.rtSEdW_cardBrokenReason{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}.rtSEdW_cardMain{appearance:none;font:inherit;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;border-radius:12px 12px 0 0;flex-direction:column;flex:1;gap:8px;padding:14px 16px 12px;display:flex}.rtSEdW_cardMain:disabled{cursor:default}.rtSEdW_cardMain:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px}.rtSEdW_cardHead{align-items:center;gap:8px;display:flex;position:relative}.rtSEdW_cardName{font-size:15px;font-weight:600;line-height:1.4}.rtSEdW_inUse{margin-left:auto}.rtSEdW_cardDesc{color:var(--dsw-alias-label-secondary);-webkit-line-clamp:4;overflow-wrap:anywhere;-webkit-box-orient:vertical;min-height:42px;font-size:13px;line-height:1.55;display:-webkit-box;overflow:hidden}.rtSEdW_cardId{font-family:var(--dsw-font-mono,ui-monospace, SFMono-Regular, Menlo, monospace);color:var(--dsw-alias-label-tertiary);margin-top:auto;font-size:11px}.rtSEdW_cardFoot{border-top:.5px solid var(--dsw-alias-border-l2);justify-content:flex-end;gap:2px;padding:6px 10px;display:flex}.rtSEdW_iconButton{appearance:none;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:0;border-radius:7px;align-items:center;padding:6px;display:inline-flex;position:relative}.rtSEdW_iconButton:disabled{opacity:.4;cursor:default}.rtSEdW_iconButton:hover:not(:disabled){background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary)}.rtSEdW_iconButton:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-1px}.rtSEdW_iconButton:after{content:attr(data-tip);background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-3);white-space:nowrap;opacity:0;pointer-events:none;border-radius:6px;padding:3px 8px;font-size:11px;line-height:17px;transition:opacity .12s;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translate(-50%)}.rtSEdW_iconButton:hover:after,.rtSEdW_iconButton:focus-visible:after{opacity:1}.rtSEdW_iconDanger:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger);color:var(--dsw-alias-state-error-primary)}.rtSEdW_revealedPath{color:var(--dsw-alias-label-tertiary);align-items:baseline;gap:6px;margin:0;padding:6px 16px 10px;font-size:11px;display:flex}.rtSEdW_revealedPath code{font-family:var(--dsw-font-mono,ui-monospace, SFMono-Regular, Menlo, monospace);color:var(--dsw-alias-label-secondary);user-select:all;overflow-wrap:anywhere}.rtSEdW_revealedPathLabel{white-space:nowrap}.rtSEdW_secondaryButton{color:var(--dsw-alias-label-secondary);font:inherit;cursor:pointer;background:0 0;border:none;border-radius:7px;padding:5px 8px;font-size:12.5px}.rtSEdW_secondaryButton:hover:not(:disabled){background:var(--dsw-alias-bg-layer-1)}.rtSEdW_secondaryButton:disabled{opacity:.5;cursor:default}.rtSEdW_field{flex-direction:column;gap:6px;display:flex}.rtSEdW_fieldLabel{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500}.rtSEdW_input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);font:inherit;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);border-radius:10px;padding:9px 12px;font-size:13px}.rtSEdW_input:focus{border-color:var(--dsw-alias-brand-primary);outline:none}.rtSEdW_input::placeholder{color:var(--dsw-alias-label-dimmed)}.rtSEdW_dialog{width:min(560px,100%)}.rtSEdW_dialogFields{flex-direction:column;gap:12px;display:flex}.rtSEdW_viewerCode{border:.5px solid var(--dsw-alias-border-l4);background:var(--dsw-alias-bg-layer-2);max-height:min(52vh,480px);color:var(--dsw-alias-label-secondary);font-family:var(--dsw-font-mono,ui-monospace, SFMono-Regular, Menlo, monospace);white-space:pre;tab-size:2;--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:10px;margin:0;padding:12px;font-size:12.5px;line-height:1.5;overflow:auto}.rtSEdW_error{color:var(--dsw-alias-state-error-primary);margin:0;font-size:12px}.rtSEdW_deleteDialog{width:min(480px,100%)}.rtSEdW_deleteConfirm:not(:disabled){border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}.rtSEdW_deleteConfirm:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger)}.rtSEdW_creatorButton{box-sizing:border-box;border:1px dashed var(--dsw-alias-border-l3);height:44px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;background:0 0;border-radius:20px;justify-content:center;align-self:stretch;align-items:center;gap:6px;font-size:14px;line-height:22px;display:flex}.rtSEdW_creatorButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rtSEdW_creatorButton:disabled{opacity:.4;cursor:default}";
@@ -423,7 +423,7 @@ index 393afbe..2478a0f 100644
  			"brokenBadge": "rtSEdW_brokenBadge",
  			"brokenTip": "rtSEdW_brokenTip",
  			"card": "rtSEdW_card",
-@@ -937,6 +1213,84 @@ window.__ModuleLoader__.load({
+@@ -937,6 +1214,84 @@ window.__ModuleLoader__.load({
  				})
  			});
  		}
@@ -508,7 +508,7 @@ index 393afbe..2478a0f 100644
  		/**
  		* Render one card's description, clamped by CSS and offered in full on hover.
  		* The tooltip is attached only while the text is actually cut off, so a short
-@@ -984,6 +1338,7 @@ window.__ModuleLoader__.load({
+@@ -984,6 +1339,7 @@ window.__ModuleLoader__.load({
  		function AgentPresetSection(props) {
  			const { useAgentPresetSection, t, load } = props;
  			const state = useAgentPresetSection((snapshot) => snapshot);
@@ -516,7 +516,7 @@ index 393afbe..2478a0f 100644
  			const viewedId = state.view?.id;
  			const viewedRow = viewedId === void 0 ? void 0 : state.rows.find((row) => row.id === viewedId);
  			const viewedTitle = state.view === null ? "" : viewedRow === void 0 ? state.view.title : presetDisplayText(viewedRow, t).name;
-@@ -1024,9 +1379,34 @@ window.__ModuleLoader__.load({
+@@ -1024,9 +1380,34 @@ window.__ModuleLoader__.load({
  			return (0, react_jsx_runtime.jsxs)("div", {
  				className: AgentPresetSection_module_css_default.section,
  				children: [
@@ -554,7 +554,7 @@ index 393afbe..2478a0f 100644
  					}),
  					(0, react_jsx_runtime.jsx)("p", {
  						className: AgentPresetSection_module_css_default.intro,
-@@ -1137,6 +1517,17 @@ window.__ModuleLoader__.load({
+@@ -1137,6 +1518,17 @@ window.__ModuleLoader__.load({
  														},
  														children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutline16, {})
  													}),
@@ -572,7 +572,7 @@ index 393afbe..2478a0f 100644
  													row.trust === "user" ? (0, react_jsx_runtime.jsx)("button", {
  														type: "button",
  														className: `${AgentPresetSection_module_css_default.iconButton} ${AgentPresetSection_module_css_default.iconDanger}`,
-@@ -1173,6 +1564,15 @@ window.__ModuleLoader__.load({
+@@ -1173,6 +1565,15 @@ window.__ModuleLoader__.load({
  							setCopyName: props.setCopyName
  						}
  					}),
@@ -588,7 +588,7 @@ index 393afbe..2478a0f 100644
  					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
  						open: state.view !== null,
  						onClose: () => {
-@@ -1509,6 +1909,15 @@ window.__ModuleLoader__.load({
+@@ -1509,6 +1910,15 @@ window.__ModuleLoader__.load({
  				},
  				confirmCopy: () => section.confirmCopy(),
  				openLocation: (id) => section.openLocation(id),
