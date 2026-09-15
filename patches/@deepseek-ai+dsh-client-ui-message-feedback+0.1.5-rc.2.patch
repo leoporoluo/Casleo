@@ -1,0 +1,86 @@
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-message-feedback/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-message-feedback/lib/client.js
+index c235cf0..76e9cbe 100644
+--- a/node_modules/@deepseek-ai/dsh-client-ui-message-feedback/lib/client.js
++++ b/node_modules/@deepseek-ai/dsh-client-ui-message-feedback/lib/client.js
+@@ -767,11 +767,10 @@ window.__ModuleLoader__.load({
+ 		//#endregion
+ 		//#region lib/types/client/index.js
+ 		/**
+-		* Feedback surface plugin, browser half: the Like/Dislike entry in the
+-		* conversation.chat.assistant-actions strip, the feedback dialog and its
+-		* acknowledgement and failure toasts in conversation.input.overlay, and the `/feedback`
+-		* decoration that opens the dialog from the composer menu or a bare typed
+-		* command. One FeedbackSurface per Session backs every entry in that Session.
++		* Feedback surface plugin, browser half. Casleo removes the Like/Dislike
++		* strip, the rating dialog and the `/feedback` command, so this build keeps
++		* only the per-Session feedback state and Remote plumbing and registers no
++		* visible surface.
+ 		* @module @deepseek-ai/dsh-client-ui-message-feedback/client
+ 		*/
+ 		/** Dictionary namespace owned by this plugin. */
+@@ -810,65 +809,6 @@ window.__ModuleLoader__.load({
+ 			ctx.on("connection/reset", () => {
+ 				for (const { feedback } of surfaces.values()) if (feedback.getSnapshot().status !== "cold") feedback.resync();
+ 			});
+-			ctx.slots.inject("conversation.chat.assistant-actions", () => ctx.slots.register({
+-				name: "conversation.chat.assistant-actions",
+-				id: "feedback",
+-				order: 10,
+-				locale: NS,
+-				inject: (sessionId) => {
+-					const { feedback, dialog } = surfaceFor(sessionId);
+-					return {
+-						hooks: { feedback },
+-						ensure: () => feedback.ensure(),
+-						current: (messageId) => feedback.getSnapshot().items.get(messageId),
+-						retract: (messageId, rating) => feedback.retract(messageId, rating),
+-						openDialog: (messageId, rating) => {
+-							dialog.open({
+-								kind: "message",
+-								messageId,
+-								rating
+-							});
+-						}
+-					};
+-				}
+-			}, MessageFeedbackActions));
+-			ctx.slots.inject("conversation.input.overlay", () => ctx.slots.register({
+-				name: "conversation.input.overlay",
+-				id: "feedback-dialog",
+-				order: 2,
+-				locale: NS,
+-				inject: (sessionId) => {
+-					const { dialog } = surfaceFor(sessionId);
+-					return {
+-						hooks: { dialog: dialog.state },
+-						edit: (draft) => {
+-							dialog.edit(draft);
+-						},
+-						submit: () => dialog.submitDraft(),
+-						dismiss: () => {
+-							dialog.dismiss();
+-						},
+-						dismissFailure: () => {
+-							dialog.dismissFailure();
+-						},
+-						dismissToast: (seq) => {
+-							dialog.dismissToast(seq);
+-						}
+-					};
+-				}
+-			}, FeedbackDialog));
+-			ctx.inject(["commandUi"], (scope) => {
+-				scope.effect(() => scope.commandUi.decorate({
+-					name: "feedback",
+-					available: () => true,
+-					ui: {
+-						kind: "action",
+-						run: (session) => {
+-							surfaceFor(session.sessionId).dialog.open({ kind: "session" });
+-						}
+-					}
+-				}), "ui-message-feedback: /feedback decoration");
+-			});
+ 		}
+ 		//#endregion
+ 		exports.apply = apply;

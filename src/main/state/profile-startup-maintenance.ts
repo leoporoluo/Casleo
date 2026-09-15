@@ -33,11 +33,11 @@ export interface ProfileStartupMaintenanceDeps {
  * prune, or repair after the failure. Startup never performs destructive
  * package repair or declaration pruning; it only reports inconsistencies for
  * an explicit recovery flow to handle later.
- * The market's verified baseline is the targeted exception: dshmarket is a
- * core bundle, never a generation, and the app cannot boot without a working
- * one — so it is demoted out of any generation and brought to the baseline in
- * the shared tree ahead of projection and ahead of the removal-verification
- * gate, while Harness is stopped.
+ * The market's install is the targeted exception: dshmarket is a core bundle,
+ * never a generation, and the app cannot boot without a working one — so it is
+ * demoted out of any generation and repaired in the shared tree ahead of
+ * projection and ahead of the removal-verification gate, while Harness is
+ * stopped. A healthy install is left at its own version.
  */
 export async function runProfileStartupMaintenance(
   deps: ProfileStartupMaintenanceDeps

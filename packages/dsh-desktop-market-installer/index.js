@@ -24,7 +24,8 @@ import { resolveMarketRegistry } from './market-registry.mjs'
 import { SIDELINE_MARKER } from './pnpm-runner.mjs'
 import { removeTree } from './remove-tree.mjs'
 
-export const RECOMMENDED_MARKET_VERSION = '^1.45.1'
+/** Install spec: the registry resolves the newest published market. */
+export const RECOMMENDED_MARKET_VERSION = 'latest'
 export const MARKET_PACKAGE = 'dshmarket'
 export const MARKET_PROFILE = 'web'
 export const STATUS_PATH = '/dsh-desktop/market-installer/status'

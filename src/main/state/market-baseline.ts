@@ -2,12 +2,18 @@ import { lstat, readFile, readlink, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { healProfilesModuleFallback } from '@deepseek-ai/dsh-app-boot'
 import { listGenerations, readDesired, writeDesired } from 'dsh-desktop-market-installer/generations/registry'
-import { compareSemver, parseSemver, readInstalledPluginVersion } from './plugin-market-check'
+import { parseSemver, readInstalledPluginVersion } from './plugin-market-check'
 import { profilePackageJsonPath } from './plugin-recovery'
 import { clearProfileInstallMarker } from './profile-install-marker'
 import { upgradeMarketInSharedTree, type MarketSharedTreeUpgradeOptions } from './plugin-upgrade'
 
-export const VERIFIED_MARKET_BASELINE = '1.45.1'
+/**
+ * The spec a missing or broken market is installed with. `latest` lets the
+ * registry resolve the newest published dsh-market, so a fresh install never
+ * starts on the build the app happened to ship with; an already-installed
+ * market is left at whatever version the user is on.
+ */
+export const MARKET_INSTALL_SPEC = 'latest'
 
 const MARKET_PACKAGE = 'dshmarket'
 
@@ -75,7 +81,7 @@ export async function demoteMarketGeneration(
   // Keep the declaration: dropping it would read as "the market was
   // uninstalled" and every later repair would decline to reinstall it.
   manifest.dependencies ??= {}
-  manifest.dependencies[MARKET_PACKAGE] = owned?.visibleVersion ?? VERIFIED_MARKET_BASELINE
+  manifest.dependencies[MARKET_PACKAGE] = owned?.visibleVersion ?? MARKET_INSTALL_SPEC
   if (owned !== undefined) {
     delete manifest.dsh!.desktop!.generationProjection!.plugins![MARKET_PACKAGE]
     if (Object.keys(manifest.dsh!.desktop!.generationProjection!.plugins!).length === 0) {
@@ -128,8 +134,10 @@ export async function ensureMarketBaseline(
   // A removed/disabled market stays removed. First-install UI owns adding it.
   if (!manifest.dependencies?.dshmarket || !manifest.dsh?.profile?.bundles?.includes('dshmarket')) return
 
-  const meetsBaseline = (version: string | undefined): boolean =>
-    !!version && !!parseSemver(version) && compareSemver(version, VERIFIED_MARKET_BASELINE) >= 0
+  // Any parseable installed version counts as healthy: the market updates
+  // itself, so the desktop only repairs what is missing or unreadable.
+  const isInstalled = (version: string | undefined): boolean =>
+    !!version && !!parseSemver(version)
   const installed = await readInstalledPluginVersion(options.dshHome, 'dshmarket')
   // dshmarket must never be a generation (it is a core bundle the migration
   // keeps hoisted — see KEEP_IN_SHARED_TREE in generation-migration.ts). A
@@ -145,12 +153,12 @@ export async function ensureMarketBaseline(
       return target.includes('.generations')
     })
     .catch(() => false)
-  if (meetsBaseline(installed) && !isGenerationLink) return
+  if (isInstalled(installed) && !isGenerationLink) return
 
   options.note?.(
     isGenerationLink
       ? `[market-baseline] dshmarket ${installed ?? '(unknown)'} is a generation link; reinstalling into the shared tree`
-      : `[market-baseline] upgrading dshmarket ${installed ?? '(missing)'} to ${VERIFIED_MARKET_BASELINE}`
+      : `[market-baseline] installing dshmarket ${installed ?? '(missing)'} from ${MARKET_INSTALL_SPEC}`
   )
   // This normally happens inside Harness boot, which has not run yet. Ensure
   // generation peer validation sees this installation's host packages first.
@@ -159,12 +167,12 @@ export async function ensureMarketBaseline(
     home: options.dshHome
   })
   await clearProfileInstallMarker(options.dshHome)
-  const result = await upgrade({ ...options, targetVersion: VERIFIED_MARKET_BASELINE })
+  const result = await upgrade({ ...options, targetVersion: MARKET_INSTALL_SPEC })
   if (!result.ok) throw new Error(result.detail ?? 'dshmarket installation failed')
 
   const actual = await readInstalledPluginVersion(options.dshHome, 'dshmarket')
-  if (!meetsBaseline(actual)) {
-    throw new Error(`dshmarket installation reported success, but the active version is ${actual ?? 'missing'}; requires >=${VERIFIED_MARKET_BASELINE}`)
+  if (!isInstalled(actual)) {
+    throw new Error(`dshmarket installation reported success, but the active version is ${actual ?? 'missing'}; expected a readable version`)
   }
   options.note?.(`[market-baseline] verified active dshmarket ${actual}`)
 }

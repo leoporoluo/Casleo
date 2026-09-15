@@ -24,7 +24,7 @@ import {
 } from '../packages/dsh-desktop-market-installer/index.js'
 
 describe('desktop plugin market installer', () => {
-  it('pins the only install target accepted by the host', () => {
+  it('targets the newest published market for the only install the host accepts', () => {
     expect(buildInstallArguments('/app/dsh/bin.js')).toEqual([
       '/app/dsh/bin.js',
       'plugin',
@@ -32,10 +32,10 @@ describe('desktop plugin market installer', () => {
       'web',
       'add',
       '--workspace-root',
-      'dshmarket@^1.45.1'
+      'dshmarket@latest'
     ])
     expect(MARKET_PACKAGE).toBe('dshmarket')
-    expect(RECOMMENDED_MARKET_VERSION).toBe('^1.45.1')
+    expect(RECOMMENDED_MARKET_VERSION).toBe('latest')
     expect(STATUS_PATH).toBe('/dsh-desktop/market-installer/status')
     expect(INSTALL_PATH).toBe('/dsh-desktop/market-installer/install')
     expect(UNINSTALL_PATH).toBe('/dsh-desktop/market-installer/uninstall')
