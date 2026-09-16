@@ -51,44 +51,47 @@ describe('Casleo available-model picker', () => {
 })
 
 describe('Casleo model image-input declarations', () => {
-  it('renders one shared per-model control for both adapter field names', async () => {
+  it('renders one shared tri-state field for both adapter field names', async () => {
     const client = await readFile(settingsModelsClient, 'utf8')
 
-    expect(client).toContain('function ModelImageInputToggle(props)')
+    expect(client).toContain('function ModelImageInputField(props)')
     expect(client).toContain('field: "inputModalities"')
     expect(client).toContain('field: "input"')
-    expect(client.match(/compact: true/g)).toHaveLength(2)
-    expect(client).toContain('dshModelModalityToggleCompact')
-    expect(client).toContain(
-      '"data-tooltip": props.compact ? `${props.t("modelImageInput")}: ${props.t("modelImageInputHint")}`'
-    )
-    expect(client).toContain('.dshModelModalityToggleCompact:hover:after')
-    expect(client).toContain('.dshModelModalityToggleCompact:focus-within:after')
-    expect(client).toContain(
-      'children: props.t(props.compact ? "modelImageInputShort" : "modelImageInput")'
-    )
-    expect(client).toContain('return enabled ? ["text", "image"] : ["text"]')
+    // "auto" leaves the adapter-owned field undeclared, so the installed model
+    // catalog or the provider's defaultInput keeps deciding for that model.
+    expect(client).toContain('if (state === "auto") return void 0')
+    expect(client).toContain('return state === "image" ? ["text", "image"] : ["text"]')
+    // The field reuses the shared disclosure classes so it matches the other
+    // advanced fields of the row instead of a desktop-only control.
+    expect(client).toContain('ModelsSection_module_css_default["selectInput"]')
+    expect(client).toContain('ModelsSection_module_css_default["modelFieldLabel"]')
+    expect(client).not.toContain('ModelImageInputToggle')
   })
 
-  it('ships localized capability copy and an endpoint warning', async () => {
+  it('ships localized tri-state copy and an endpoint warning', async () => {
     const client = await readFile(settingsModelsClient, 'utf8')
 
     expect(client).toContain('modelImageInput: "Image input"')
-    expect(client).toContain('modelImageInputShort: "Vision"')
+    expect(client).toContain('modelImageInputAuto: "Auto"')
+    expect(client).toContain('modelImageInputImage: "Images"')
+    expect(client).toContain('modelImageInputText: "Text only"')
     expect(client).toContain('the endpoint must support them')
     expect(client).toContain('modelImageInput: "支持图片输入"')
-    expect(client).toContain('modelImageInputShort: "视觉"')
+    expect(client).toContain('modelImageInputAuto: "自动"')
+    expect(client).toContain('modelImageInputImage: "支持图片"')
+    expect(client).toContain('modelImageInputText: "仅文本"')
     expect(client).toContain('请确认接口实际支持')
   })
 
-  it('captures the image-input control in the reproducible dependency patch', async () => {
+  it('captures the image-input field in the reproducible dependency patch', async () => {
     const patch = await readFile(
       patchPath('@deepseek-ai/dsh-client-ui-settings-models'),
       'utf8'
     )
 
-    expect(patch).toContain('ModelImageInputToggle')
+    expect(patch).toContain('ModelImageInputField')
     expect(patch).toContain('field: "inputModalities"')
     expect(patch).toContain('field: "input"')
+    expect(patch).not.toContain('ModelImageInputToggle')
   })
 })

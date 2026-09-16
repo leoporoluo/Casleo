@@ -98,6 +98,17 @@ function installLayout(document: Document): void {
       align-items: center !important;
       gap: 8px !important;
     }
+    /*
+     * Closing the settings panel with Escape can hand focus back to a sidebar
+     * row or to the settings trigger, where the shell's 2px label-primary
+     * outline reads as a stray white box. The hover background stays as the
+     * focus affordance instead.
+     */
+    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-root] [class*="panelRow"]:focus-visible,
+    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-settings] :focus-visible {
+      outline: none !important;
+      background: var(--dsw-alias-interactive-bg-hover) !important;
+    }
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="headerUtilities"]:has(+ [data-conversation-header-corner]:empty),
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="headerUtilities"]:has(+ [class*="headerCorner"]:empty),
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="headerUtilities"]:has(+ div:empty),
@@ -119,18 +130,28 @@ function installLayout(document: Document): void {
     body.dsh-desktop-windows-titlebar-layout select,
     body.dsh-desktop-windows-titlebar-layout textarea,
     body.dsh-desktop-windows-titlebar-layout [role="button"],
+    body.dsh-desktop-windows-titlebar-layout [role="tab"],
+    body.dsh-desktop-windows-titlebar-layout [role="menuitem"],
     body.dsh-desktop-windows-titlebar-layout [data-dsh-no-drag] {
       -webkit-app-region: no-drag !important;
     }
+    /*
+     * The drag region sits at z-index 10: below the header's own action,
+     * utility and corner clusters (z-index 20, which stay clickable) and far
+     * below modal overlays, which must still cover the header.
+     */
+    body.dsh-desktop-windows-titlebar-layout [class*="headerActions"] {
+      position: relative !important;
+      z-index: 20 !important;
+    }
     #${DRAG_REGION_ID} {
       position: fixed;
-      z-index: 2147483644;
+      z-index: 10;
       top: 0;
       left: 0;
       right: calc(var(${CAPTION_WIDTH_PROPERTY}, 140px) + 44px);
       height: 36px;
       background: transparent;
-      pointer-events: none;
       user-select: none;
       -webkit-app-region: drag;
     }
@@ -144,6 +165,35 @@ function installDragRegion(document: Document): void {
   dragRegion.id = DRAG_REGION_ID
   dragRegion.setAttribute('aria-hidden', 'true')
   document.body.appendChild(dragRegion)
+
+  // While any modal or dialog is open, hide the drag region completely so every
+  // control around the top caption strip stays clickable.
+  const modalSelector =
+    'dialog[open], [role="dialog"], [aria-modal="true"], [class*="modal" i], [class*="dialog" i]'
+
+  const updateDragRegionVisibility = (): void => {
+    const hasModal = Array.from(document.querySelectorAll<HTMLElement>(modalSelector)).some((element) => {
+      if (element.id === DRAG_REGION_ID) return false
+      const style = window.getComputedStyle(element)
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity !== '0' &&
+        element.offsetWidth > 0 &&
+        element.offsetHeight > 0
+      )
+    })
+    dragRegion.style.display = hasModal ? 'none' : 'block'
+  }
+
+  const observer = new MutationObserver(() => updateDragRegionVisibility())
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['open', 'style', 'class', 'hidden', 'aria-hidden']
+  })
+  updateDragRegionVisibility()
 }
 
 function trackSidebarLayout(document: Document): void {

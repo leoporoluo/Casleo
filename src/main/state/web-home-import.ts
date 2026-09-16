@@ -23,8 +23,20 @@ const KEEP_IN_SHARED_TREE = new Set([
 ])
 
 const HOME_FILES = ['settings.yaml', '.credentials.yaml'] as const
-const HOME_DIRECTORIES = ['sessions', 'storages', '.agent-presets', 'skills'] as const
-const PROFILE_FILES = ['package.json', 'cordis.patch.yml', '.npmrc'] as const
+const HOME_DIRECTORIES = [
+  'sessions',
+  'storages',
+  '.agent-presets',
+  'skills',
+  'attachments',
+  'plugins'
+] as const
+const PROFILE_FILES = [
+  'package.json',
+  'cordis.patch.yml',
+  '.npmrc',
+  'pnpm-workspace.yaml'
+] as const
 const WORKSPACE_REGISTRY = 'workspace.json'
 
 export type WebImportDecisionKind = 'imported' | 'skipped'
@@ -205,6 +217,18 @@ async function copyHomePayload(
   const destProfile = join(dest, 'profiles', 'web')
   for (const name of PROFILE_FILES) {
     await copyIfPresent(join(sourceProfile, name), join(destProfile, name), dest, note)
+  }
+  // pnpm only treats the profile as a workspace root when this manifest is
+  // present. A source home that carried none of the files above would not have
+  // created the directory either, so it is made here rather than left to fail.
+  const destWorkspaceYaml = join(destProfile, 'pnpm-workspace.yaml')
+  if (!(await exists(destWorkspaceYaml))) {
+    await mkdir(destProfile, { recursive: true })
+    await writeFile(
+      destWorkspaceYaml,
+      'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\n',
+      'utf8'
+    )
   }
 
   const plugins = await plannedCommunityPlugins(source)

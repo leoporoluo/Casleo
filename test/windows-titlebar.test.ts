@@ -42,7 +42,17 @@ describe('Windows titlebar menu', () => {
     expect(preload).toContain('-webkit-app-region: drag')
     expect(preload).toContain('body.dsh-desktop-windows-titlebar-layout > #root')
     expect(preload).toContain('left: 0')
-    expect(preload).toContain('pointer-events: none')
+    // The caption strip sits below the header's own clusters and below modals,
+    // so their controls stay clickable while the strip itself still drags.
+    expect(preload).toContain('z-index: 10')
+    expect(preload).toContain('[class*="headerActions"]')
+    expect(preload).toContain('z-index: 20 !important')
+    expect(preload).toContain('modalSelector')
+    expect(preload).toContain('updateDragRegionVisibility')
+    // Leaving the settings panel must not leave the shell's white focus box on
+    // a sidebar row.
+    expect(preload).toContain('[class*="panelRow"]:focus-visible')
+    expect(preload).toContain('[data-dsh-sidebar-settings] :focus-visible')
     expect(preload).toContain('body.dsh-desktop-windows-titlebar-layout button')
     expect(preload).toContain('-webkit-app-region: no-drag !important')
     expect(preload).toContain("document.documentElement.style.setProperty(SIDEBAR_WIDTH_PROPERTY, '0px')")

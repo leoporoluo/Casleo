@@ -60,4 +60,27 @@ describe('desktop plugin closure', () => {
       expect(manifest.dependencies[row.name]).toMatch(/^file:packages\//u)
     }
   })
+
+  /**
+   * The injected rows have to name packages this app still ships. A leftover row
+   * for a removed desktop plugin reads as a missing dependency when Harness
+   * mirrors the closure, so the profile fails to mount instead of falling back.
+   */
+  it('injects no desktop package the app no longer ships', async () => {
+    const dshPatch = await readFile(patchPath('@deepseek-ai/dsh'), 'utf8')
+
+    const injected = [...dshPatch.matchAll(/^\+\s*"(dsh-[^"]+)":/gmu)]
+      .map((match) => match[1])
+      .filter((name): name is string => typeof name === 'string')
+
+    expect(injected.length).toBeGreaterThan(0)
+
+    const manifest = JSON.parse(
+      await readFile(path.join(projectRoot, 'package.json'), 'utf8')
+    ) as { dependencies: Record<string, string> }
+
+    for (const name of injected) {
+      expect(manifest.dependencies[name]).toMatch(/^file:packages\//u)
+    }
+  })
 })

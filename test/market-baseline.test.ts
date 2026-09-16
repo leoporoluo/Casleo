@@ -66,6 +66,8 @@ describe('market install at normal startup', () => {
     const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
     expect(manifest.dependencies['other-plugin']).toBe('1.0.0')
     await expect(readFile(join(profile, '.install-complete'))).rejects.toMatchObject({ code: 'ENOENT' })
+    // The repair runs pnpm with --workspace-root, which needs this manifest.
+    expect(await readFile(join(profile, 'pnpm-workspace.yaml'), 'utf8')).toContain('nodeLinker: hoisted')
     await runProfileStartupMaintenance(deps)
     expect(upgrade).toHaveBeenCalledTimes(1)
   })
@@ -166,7 +168,7 @@ describe('market install at normal startup', () => {
     expect(await demoteMarketGeneration(home)).toBe(false)
   })
 
-  it('falls back to the latest install spec when a stray link has no recorded version', async () => {
+  it('preserves the version already on disk when a stray link has no recorded version', async () => {
     const { home, profile, market } = await fixture()
     const generationDir = join(registryLayout(home).generations, 'dshmarket+stray+deadbeef')
     const generationPackage = join(generationDir, 'node_modules', 'dshmarket')
@@ -174,6 +176,26 @@ describe('market install at normal startup', () => {
     await writeFile(join(generationPackage, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.30.0' }))
     await writeGenerationMeta(generationDir, { pluginName: 'dshmarket', version: '1.30.0' })
     await writeDesired(home, ['dshmarket+stray+deadbeef'])
+    await rm(market, { recursive: true, force: true })
+    await symlink(generationPackage, market, 'junction')
+
+    expect(await demoteMarketGeneration(home)).toBe(true)
+    const after = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
+    // Nothing recorded ownership of the projection, so the readable install is
+    // what the declaration keeps: the market is never dragged back to a
+    // baseline it has already passed. The install spec resolves upward from
+    // here, so keeping the local version cannot pin the profile down.
+    expect(after.dependencies.dshmarket).toBe('1.30.0')
+  })
+
+  it('falls back to the install spec when no version can be read at all', async () => {
+    const { home, profile, market } = await fixture()
+    const generationDir = join(registryLayout(home).generations, 'dshmarket+unreadable+deadbeef')
+    const generationPackage = join(generationDir, 'node_modules', 'dshmarket')
+    await mkdir(generationPackage, { recursive: true })
+    await writeFile(join(generationPackage, 'package.json'), JSON.stringify({ name: 'dshmarket', version: UNREADABLE_VERSION }))
+    await writeGenerationMeta(generationDir, { pluginName: 'dshmarket', version: UNREADABLE_VERSION })
+    await writeDesired(home, ['dshmarket+unreadable+deadbeef'])
     await rm(market, { recursive: true, force: true })
     await symlink(generationPackage, market, 'junction')
 

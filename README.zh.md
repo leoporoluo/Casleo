@@ -8,7 +8,6 @@ Casleo 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) �
 - 使用系统原生目录选择器添加和管理项目工作区
 - 支持 DeepSeek 官方模型和主流第三方模型服务商
 - 通过 `.dshpreset` 预设包导入、导出完整的自定义 Agent 预设
-- 内置 PPT 模式，把素材生成可编辑的 PPTX
 - 应用升级时保留配置档案、插件、工作区、会话和模型设置
 - 检测启动与前端插件故障，把诊断写入 `harness.log` 并提供引导式恢复
 - 提供非破坏性的安全模式，临时屏蔽第三方插件
@@ -57,7 +56,7 @@ npm run build
 src/main/       Electron 主进程与应用编排
 src/preload/    沙箱渲染进程接口与桌面端 UI 增强
 src/shared/     共享契约与桌面菜单定义
-packages/       内置桌面支撑包（客户端 UI、市场安装器、预设、PPT）
+packages/       内置桌面支撑包（客户端 UI、市场安装器、预设）
 patches/        对固定版本 Harness 包的可复现 patch-package 补丁
 build/          打包用 HTML 界面、图标与 Harness 入口文件
 test/           单元与源码契约回归测试

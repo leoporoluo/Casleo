@@ -1,6 +1,7 @@
 # Recovery composition: keep only Desktop branding and the runtime adapter
 # required by packaged Electron. Do not import the normal Desktop patch here:
-# PPT, market installation and preset transfer must not block safe-mode boot.
+# Optional desktop plugins, market installation, and preset transfer must not
+# block safe-mode boot.
 - id: ui-brand-official
   disabled: true
 

@@ -8,7 +8,6 @@ Casleo is a local-first desktop app for [DeepSeek Harness](https://github.com/de
 - Uses the native system directory picker to add and manage project workspaces
 - Supports official DeepSeek models and mainstream third-party model providers
 - Imports and exports complete custom Agent presets as portable `.dshpreset` packages
-- Turns source material into editable PPTX decks through the built-in PPT mode
 - Preserves profiles, plugins, workspaces, sessions, and model settings across app upgrades
 - Detects startup and frontend plugin failures, keeps diagnostics in `harness.log`, and offers guided recovery actions
 - Provides a non-destructive Safe Mode that temporarily blocks third-party plugins
@@ -57,7 +56,7 @@ See the [development guide](docs/development.md) for patch maintenance and packa
 src/main/       Electron main process and application orchestration
 src/preload/    Sandboxed renderer seams and desktop UI additions
 src/shared/     Shared contracts and desktop menu definitions
-packages/       Bundled desktop support packages (client UI, market installer, presets, PPT)
+packages/       Bundled desktop support packages (client UI, market installer, presets)
 patches/        Reproducible patch-package patches for the pinned Harness packages
 build/          Packaged HTML surfaces, icons, and Harness entry files
 test/           Unit and source-contract regression coverage

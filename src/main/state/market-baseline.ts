@@ -2,7 +2,7 @@ import { lstat, readFile, readlink, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { healProfilesModuleFallback } from '@deepseek-ai/dsh-app-boot'
 import { listGenerations, readDesired, writeDesired } from 'dsh-desktop-market-installer/generations/registry'
-import { parseSemver, readInstalledPluginVersion } from './plugin-market-check'
+import { compareSemver, parseSemver, readInstalledPluginVersion } from './plugin-market-check'
 import { profilePackageJsonPath } from './plugin-recovery'
 import { clearProfileInstallMarker } from './profile-install-marker'
 import { upgradeMarketInSharedTree, type MarketSharedTreeUpgradeOptions } from './plugin-upgrade'
@@ -28,6 +28,54 @@ interface MarketManifest {
     profile?: { bundles?: string[] }
   }
   pnpm?: { overrides?: Record<string, string> }
+}
+
+/** Drop a range prefix (`^1.2.3` → `1.2.3`); undefined when nothing is left. */
+function stripRangePrefix(version: string | undefined): string | undefined {
+  const clean = version?.replace(/^[~^v=><\s]+/g, '')
+  return clean ? clean : undefined
+}
+
+/**
+ * Whether a version already on disk or declared in the manifest is at or above
+ * the version a repair installs.
+ *
+ * `MARKET_INSTALL_SPEC` is the floating `latest` tag rather than a pinned
+ * version, and it names no floor a local build could fall short of: whatever
+ * the registry serves is at least as new as anything installed. Any readable
+ * version therefore meets it. A pinned spec compares numerically — the shape
+ * upstream ships, where a build below the verified baseline is replaced.
+ */
+function meetsMarketTarget(version: string | undefined): boolean {
+  const clean = stripRangePrefix(version)
+  if (!clean || !parseSemver(clean)) return false
+  const target = stripRangePrefix(MARKET_INSTALL_SPEC)
+  if (!target || !parseSemver(target)) return true
+  return compareSemver(clean, target) >= 0
+}
+
+/**
+ * The version a repair installs. Upstream keeps a declaration that exceeds the
+ * pinned baseline and falls back to the baseline otherwise.
+ *
+ * Casleo's spec is the floating `latest` tag (see `MARKET_INSTALL_SPEC`), which
+ * always resolves to the newest published build and so can never pull a profile
+ * below what it already declares; it therefore stays the target, and a
+ * declaration only wins where the spec is pinned and the declaration exceeds
+ * it. The cleaned exact version is returned, because the caller verifies the
+ * installed version by equality.
+ */
+function resolveMarketTargetVersion(declaredVersion: string | undefined): string {
+  const declared = stripRangePrefix(declaredVersion)
+  const pinned = stripRangePrefix(MARKET_INSTALL_SPEC)
+  if (
+    declared !== undefined && !!parseSemver(declared) &&
+    pinned !== undefined && !!parseSemver(pinned) &&
+    compareSemver(declared, pinned) > 0
+  ) {
+    return declared
+  }
+  return MARKET_INSTALL_SPEC
 }
 
 /**
@@ -79,9 +127,26 @@ export async function demoteMarketGeneration(
   note?.(`[market-baseline] dshmarket is projected as a generation; restoring it to the shared tree`)
 
   // Keep the declaration: dropping it would read as "the market was
-  // uninstalled" and every later repair would decline to reinstall it.
+  // uninstalled" and every later repair would decline to reinstall it. An
+  // already-installed market is never dragged back to a baseline, so the
+  // version on disk or in the manifest is kept ahead of the install spec —
+  // which, being `latest`, still resolves upward on the next repair.
+  let actualInstalledVersion: string | undefined
+  try {
+    actualInstalledVersion = await readInstalledPluginVersion(dshHome, MARKET_PACKAGE)
+  } catch {
+    // Missing or unreadable: the fallbacks below decide.
+  }
+  const generationVersion = generations.find((generation) => generation.pluginName === MARKET_PACKAGE)?.version
+  const candidateVersion =
+    owned?.visibleVersion ??
+    (meetsMarketTarget(actualInstalledVersion) ? actualInstalledVersion : undefined) ??
+    (meetsMarketTarget(manifest.dependencies?.[MARKET_PACKAGE]) ? manifest.dependencies?.[MARKET_PACKAGE] : undefined) ??
+    (meetsMarketTarget(generationVersion) ? generationVersion : undefined) ??
+    MARKET_INSTALL_SPEC
+
   manifest.dependencies ??= {}
-  manifest.dependencies[MARKET_PACKAGE] = owned?.visibleVersion ?? MARKET_INSTALL_SPEC
+  manifest.dependencies[MARKET_PACKAGE] = candidateVersion
   if (owned !== undefined) {
     delete manifest.dsh!.desktop!.generationProjection!.plugins![MARKET_PACKAGE]
     if (Object.keys(manifest.dsh!.desktop!.generationProjection!.plugins!).length === 0) {
@@ -155,11 +220,23 @@ export async function ensureMarketBaseline(
     .catch(() => false)
   if (isInstalled(installed) && !isGenerationLink) return
 
+  // A declaration newer than the install spec is what pnpm is asked for; with
+  // the floating `latest` spec the declaration cannot beat it, so the repair
+  // still resolves the newest published market.
+  const targetVersion = resolveMarketTargetVersion(manifest.dependencies?.dshmarket)
   options.note?.(
     isGenerationLink
       ? `[market-baseline] dshmarket ${installed ?? '(unknown)'} is a generation link; reinstalling into the shared tree`
-      : `[market-baseline] installing dshmarket ${installed ?? '(missing)'} from ${MARKET_INSTALL_SPEC}`
+      : `[market-baseline] installing dshmarket ${installed ?? '(missing)'} from ${targetVersion}`
   )
+  // pnpm only treats the profile as a workspace root when this manifest is
+  // present, and the install below asks for exactly that.
+  const workspaceYamlPath = join(dirname(profilePackageJsonPath(options.dshHome)), 'pnpm-workspace.yaml')
+  try {
+    await readFile(workspaceYamlPath, 'utf8')
+  } catch {
+    await writeFile(workspaceYamlPath, 'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\n', 'utf8')
+  }
   // This normally happens inside Harness boot, which has not run yet. Ensure
   // generation peer validation sees this installation's host packages first.
   await healProfilesModuleFallback({
@@ -167,7 +244,7 @@ export async function ensureMarketBaseline(
     home: options.dshHome
   })
   await clearProfileInstallMarker(options.dshHome)
-  const result = await upgrade({ ...options, targetVersion: MARKET_INSTALL_SPEC })
+  const result = await upgrade({ ...options, targetVersion })
   if (!result.ok) throw new Error(result.detail ?? 'dshmarket installation failed')
 
   const actual = await readInstalledPluginVersion(options.dshHome, 'dshmarket')
