@@ -179,6 +179,7 @@ const PLUGIN_RECOVERY_ACTIONS = new Set<PluginRecoveryAction>([
 let mainWindow: BrowserWindow | undefined
 let windowsMenuView: WebContentsView | undefined
 let windowsMenuOpen = false
+let windowsMenuOpenedAt = 0
 let windowsMenuDark = false
 let tray: Tray | undefined
 let runtime: HarnessRuntime
@@ -472,6 +473,7 @@ function updateWindowsMenuViewBounds(window: BrowserWindow): void {
 
 function setWindowsMenuOpen(window: BrowserWindow, open: boolean, notifyRenderer = false): void {
   windowsMenuOpen = open
+  if (open) windowsMenuOpenedAt = Date.now()
   updateWindowsMenuViewBounds(window)
   if (notifyRenderer && windowsMenuView && !windowsMenuView.webContents.isDestroyed()) {
     windowsMenuView.webContents.send('desktop-titlebar:close-menu')
@@ -507,10 +509,11 @@ function attachWindowsMenuView(window: BrowserWindow): void {
   window.on('enter-full-screen', updateBounds)
   window.on('leave-full-screen', updateBounds)
   // Opening the menu focuses its first item, and that focus lives in the menu's
-  // own child view; on Windows the window can report a blur for it, which would
-  // tear the menu down one frame after it opens. Ignore a blur the menu itself
-  // owns.
+  // own child view; growing that view is itself enough to report a blur here on
+  // Windows. Ignore a blur the menu owns or one that lands while it is still
+  // settling open, or the menu would be torn down a frame after it appears.
   window.on('blur', () => {
+    if (windowsMenuOpen && Date.now() - windowsMenuOpenedAt < 500) return
     if (
       windowsMenuView &&
       !windowsMenuView.webContents.isDestroyed() &&

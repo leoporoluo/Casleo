@@ -31,6 +31,7 @@ function mountWindowsMenu(): void {
   menu.setAttribute('role', 'menu')
   menu.setAttribute('aria-label', locale === 'zh' ? '应用菜单' : 'Application menu')
   let zoomDisplay: HTMLButtonElement | null = null
+  let openedAt = 0
 
   const applyZoomState = (result: unknown): void => {
     const zoomFactor = readZoomFactor(result)
@@ -44,9 +45,17 @@ function mountWindowsMenu(): void {
     })
   }
 
-  function openMenu(): void {
-    void ipcRenderer.invoke('desktop-titlebar:set-menu-open', true)
+  // The menu lives in a child view whose bounds grow with it. Asking the main
+  // process to resize first keeps the panel from painting inside the 44px button
+  // view and then jumping to its full width once the resize lands.
+  async function openMenu(): Promise<void> {
+    openedAt = Date.now()
     refreshZoomState()
+    try {
+      await ipcRenderer.invoke('desktop-titlebar:set-menu-open', true)
+    } catch (error: unknown) {
+      console.warn('[desktop-menu] unable to open the application menu', error)
+    }
     menu.hidden = false
     menuButton.classList.add('isOpen')
     menuButton.setAttribute('aria-expanded', 'true')
@@ -64,7 +73,10 @@ function mountWindowsMenu(): void {
 
   zoomDisplay = renderMenu(menu, menuEntries(locale), () => closeMenu(false), applyZoomState)
   menuButton.addEventListener('pointerdown', (event) => event.preventDefault())
-  menuButton.addEventListener('click', () => (menu.hidden ? openMenu() : closeMenu()))
+  menuButton.addEventListener('click', () => {
+    if (menu.hidden) void openMenu()
+    else closeMenu()
+  })
   menu.addEventListener('keydown', (event) => {
     const buttons = [...menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
     const current = buttons.indexOf(document.activeElement as HTMLButtonElement)
@@ -82,7 +94,12 @@ function mountWindowsMenu(): void {
   ipcRenderer.on('desktop-titlebar:theme-changed', (_event, isDark: unknown) => {
     if (typeof isDark === 'boolean') applyTheme(isDark)
   })
-  window.addEventListener('blur', () => closeMenu(false))
+  // Growing the view can report a blur for this page before the menu is even
+  // shown, so ignore one that lands while the open is still settling.
+  window.addEventListener('blur', () => {
+    if (Date.now() - openedAt < 500) return
+    closeMenu(false)
+  })
 
   const style = document.createElement('style')
   style.textContent = menuStyles
