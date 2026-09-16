@@ -10,6 +10,7 @@ const feedbackClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'd
 const layoutClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-layout', 'lib', 'client.js')
 const conversationClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-conversation', 'lib', 'client.js')
 const settingsModelsClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-settings-models', 'lib', 'client.js')
+const modelSelectionClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-model-selection', 'lib', 'client.js')
 
 describe('Casleo interface trims', () => {
   it('shows the neutral thinking copy with a gray shimmer instead of a brand one', async () => {
@@ -89,9 +90,25 @@ describe('Casleo interface trims', () => {
     const splash = await readFile(path.join(projectRoot, 'build', 'splash.html'), 'utf8')
 
     expect(splash).toContain('<h1 class="title">Casleo</h1>')
+    expect(splash).toContain('font-size: 32px')
     expect(splash).not.toContain('<img')
     expect(splash).not.toContain('casleo-loader')
     expect(splash).not.toContain('Starting Casleo')
+  })
+
+  it('hides the official DeepSeek group from the model picker', async () => {
+    const [client, patch] = await Promise.all([
+      readFile(modelSelectionClient, 'utf8'),
+      readFile(patchPath('@deepseek-ai/dsh-client-ui-model-selection'), 'utf8')
+    ])
+
+    expect(client).toContain(
+      'groups: catalog.value.groups.filter((group) => group.id !== "deepseek-official")'
+    )
+    expect(client).toContain(
+      'directory.groups.filter((candidate) => candidate.id !== "deepseek-official")'
+    )
+    expect(patch).toContain('group.id !== "deepseek-official"')
   })
 
   it('renders no column drag handles around the sidebar or right panel', async () => {
