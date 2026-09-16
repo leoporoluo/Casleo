@@ -61,12 +61,16 @@ describe('Casleo model image-input declarations', () => {
     // catalog or the provider's defaultInput keeps deciding for that model.
     expect(client).toContain('if (state === "auto") return void 0')
     expect(client).toContain('return state === "image" ? ["text", "image"] : ["text"]')
-    // The field reuses the shared disclosure classes so it matches the other
-    // advanced fields of the row instead of a desktop-only control.
-    expect(client).toContain('ModelsSection_module_css_default["selectInput"]')
+    // The field renders through the shared primitives dropdown, so the control
+    // matches the other advanced fields of the row and the rest of the app
+    // instead of opening an OS-drawn native select popup.
+    expect(client).toContain('function ModelDropdown(props)')
+    expect(client).toContain('_deepseek_ai_dsh_client_ui_primitives.Menu')
+    expect(client).toContain('className: "dshModelImageInput"')
+    expect(client).not.toContain('("select", {')
     expect(client).toContain('ModelsSection_module_css_default["modelFieldLabel"]')
-    // The native select popup follows color-scheme, so the control carries its own
-    // desktop-owned class and a dark-scheme rule for the dark palette.
+    // The control carries its own desktop-owned class and a dark-scheme rule for
+    // the dark palette.
     expect(client).toContain('dshModelImageInput')
     expect(client).toContain(
       'html[data-ds-dark-theme] .dshModelImageInput,body[data-ds-dark-theme] .dshModelImageInput{color-scheme:dark}'

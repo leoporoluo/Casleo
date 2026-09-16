@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-sidebar-right/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-sidebar-right/lib/client.js
-index 4640bc2..53e7fea 100644
+index 4640bc2..13b4bc6 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-sidebar-right/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-sidebar-right/lib/client.js
 @@ -605,7 +605,7 @@ window.__ModuleLoader__.load({
@@ -11,3 +11,12 @@ index 4640bc2..53e7fea 100644
  		const tagId = "@deepseek-ai/dsh-client-ui-sidebar-right/SidebarRight.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
  			const tag = document.createElement("style");
+@@ -860,7 +860,7 @@ window.__ModuleLoader__.load({
+ 					className: SidebarRight_module_css_default.panelBody,
+ 					children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_dockkit.DockSurface, {
+ 						state: surface.layout,
+-						canSplit: (0, _deepseek_ai_dsh_client_ui_dockkit.canSplit)(surface.layout) && (0, _deepseek_ai_dsh_client_ui_dockkit.dockPaneIds)(surface.layout).length < 2,
++						canSplit: false,
+ 						hideSplitWhenBlocked: true,
+ 						dropZones: "horizontal",
+ 						minPaneFraction: .2,

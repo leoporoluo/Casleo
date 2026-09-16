@@ -63,6 +63,10 @@ describe('Windows titlebar menu', () => {
     // thin strip so it can never cover the header's own controls again.
     expect(preload).toContain('conversation.session.header"] > header,')
     expect(preload).toContain('conversation.session.header"] > header button,')
+    // The sidebar's logo row drags the window as well: its collapse button is the
+    // row's only control, so the top-left corner carries the gesture instead of
+    // leaving the 8px strip as the only handle there.
+    expect(preload).toMatch(/\[data-dsh-sidebar-root\] \[class\*="logoRow"\]\s*\{[^}]*app-region: drag/u)
     expect(preload).toContain('height: 8px;')
     expect(preload).not.toContain('background: none !important')
     expect(preload).toContain('body.dsh-desktop-windows-titlebar-layout button')
@@ -164,6 +168,18 @@ describe('Windows titlebar menu', () => {
     expect(layoutPreload).not.toContain('INVERSE_ZOOM_PROPERTY')
     expect(layoutPreload).not.toContain('menuButton')
     expect(viteConfig).toContain("'windows-menu': resolve('src/preload/windows-menu.ts')")
+  })
+
+  it('reports the open menu panel as its border box so it never scrolls', async () => {
+    const menuPreload = await readFile('src/preload/windows-menu.ts', 'utf8')
+
+    // `scrollHeight` stops at the padding: a view sized to it was one border
+    // short of the panel it hosts, so the panel — which scrolls — painted a
+    // scrollbar with nothing to scroll on every open.
+    expect(menuPreload).toContain('Math.ceil(menu.scrollHeight + panelBorderHeight(menu))')
+    expect(menuPreload).toContain('borderTopWidth')
+    expect(menuPreload).toContain('borderBottomWidth')
+    expect(menuPreload).not.toMatch(/const height = menu\.scrollHeight/u)
   })
 
   it('keeps the closed menu button aligned beside native caption controls at every page zoom', () => {

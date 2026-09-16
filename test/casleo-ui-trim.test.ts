@@ -11,6 +11,7 @@ const layoutClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh
 const conversationClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-conversation', 'lib', 'client.js')
 const settingsModelsClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-settings-models', 'lib', 'client.js')
 const modelSelectionClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-model-selection', 'lib', 'client.js')
+const sidebarRightClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-sidebar-right', 'lib', 'client.js')
 
 describe('Casleo interface trims', () => {
   it('shows the neutral thinking copy with a gray shimmer instead of a brand one', async () => {
@@ -138,14 +139,33 @@ describe('Casleo interface trims', () => {
     expect(composition.replace(/\r\n/gu, '\n')).toContain('- id: llm-deepseek\n  disabled: true')
   })
 
-  it('renders no column drag handles around the sidebar or right panel', async () => {
+  it('resizes the right panel from its divider and leaves the sidebar rail fixed', async () => {
     const [client, patch] = await Promise.all([
       readFile(layoutClient, 'utf8'),
       readFile(patchPath('@deepseek-ai/dsh-client-ui-layout'), 'utf8')
     ])
 
-    expect(client).not.toContain('(0, react_jsx_runtime.jsx)(DragHandle, {')
+    // The right panel is widened by dragging the 8px divider on its left edge.
+    // The sidebar keeps its fixed rail, so its handle is the one the patch drops
+    // and the right panel's survives as ordinary context.
+    expect(client).toContain('side: "rightbar"')
+    expect(client).not.toContain('side: "sidebar"')
     expect(patch).toMatch(/-\s*!sidebarCollapsed && \(0, react_jsx_runtime\.jsx\)\(DragHandle, \{/u)
-    expect(patch).toMatch(/-\s*layoutInfo\.rightbarShown && !layoutInfo\.rightbarFullscreen/u)
+    expect(patch).toMatch(/^\s+layoutInfo\.rightbarShown && !layoutInfo\.rightbarFullscreen/mu)
+  })
+
+  it('offers no split-pane control in the right panel chrome', async () => {
+    const [client, patch] = await Promise.all([
+      readFile(sidebarRightClient, 'utf8'),
+      readFile(patchPath('@deepseek-ai/dsh-client-ui-sidebar-right'), 'utf8')
+    ])
+
+    // The docking kit drops its 分栏 button when the surface refuses to split, so
+    // declaring the panel single-pane retires the control and drag-to-split along
+    // with it while the tab strip keeps reordering and moving tabs between panes.
+    expect(client).toContain('canSplit: false,')
+    expect(client).toContain('hideSplitWhenBlocked: true,')
+    expect(client).not.toContain('_deepseek_ai_dsh_client_ui_dockkit.canSplit)(surface.layout)')
+    expect(patch).toMatch(/-\s*canSplit: \(0, _deepseek_ai_dsh_client_ui_dockkit\.canSplit\)/u)
   })
 })

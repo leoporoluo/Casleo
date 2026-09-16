@@ -139,8 +139,12 @@ function mountPanel(locale: 'en' | 'zh'): void {
   // The view shrinks to the panel so its transparent remainder no longer covers
   // the window: a click just outside the panel then reaches the window and closes
   // the menu, which is what "click outside to close" means here.
+  //
+  // The reported height is the panel's *border box*. `scrollHeight` stops at the
+  // padding, so a report built on it left the view one border short of the panel
+  // it hosts, and every open menu painted a scrollbar that had nothing to scroll.
   const reportHeight = (): void => {
-    const height = menu.scrollHeight
+    const height = Math.ceil(menu.scrollHeight + panelBorderHeight(menu))
     if (height <= 0) return
     void ipcRenderer
       .invoke('desktop-titlebar:panel-height', height)
@@ -250,6 +254,18 @@ function renderMenu(
     menu.appendChild(item)
   }
   return zoomDisplay
+}
+
+/**
+ * The panel's vertical border, which `scrollHeight` leaves out. A content-sized
+ * view has to add it back: without it the panel is taller than the view holding
+ * it, and its `overflow:auto` paints a scrollbar with nothing to scroll.
+ */
+function panelBorderHeight(element: HTMLElement): number {
+  const styles = window.getComputedStyle(element)
+  const top = Number.parseFloat(styles.borderTopWidth)
+  const bottom = Number.parseFloat(styles.borderBottomWidth)
+  return (Number.isFinite(top) ? top : 0) + (Number.isFinite(bottom) ? bottom : 0)
 }
 
 function readZoomFactor(result: unknown): number | undefined {

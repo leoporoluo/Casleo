@@ -499,24 +499,25 @@ describe('agent preset package transfer', () => {
     }
   })
 
-  it('keeps a large mode roster searchable, grouped, and compact', async () => {
+  it('keeps a large mode roster grouped and compact without a search field', async () => {
     const patch = await readFile(
       patchPath('@deepseek-ai/dsh-client-ui-agent-preset'),
       'utf8'
     )
 
-    expect(patch).toContain('searchPresets: "Search modes…"')
     expect(patch).toContain('recentPresets: "Recent"')
     expect(patch).toContain('RECENT_PRESETS_KEY')
     expect(patch).toContain('option.trust === "system"')
     expect(patch).toContain('option.trust === "user"')
     expect(patch).toContain('text-overflow:ellipsis')
-    expect(patch).toContain('IconSearchOutline16')
     expect(patch).toContain('selectedItem')
-    expect(patch).toContain(':focus-within')
-    expect(patch).toContain('[role=menu]:has(')
-    expect(patch).toContain('max-height:min(360px')
     expect(patch).toContain('side: "bottom"')
+    // Modes are chosen from the list itself: the picker carries no search field,
+    // so the roster stays grouped instead of filtered down to a single match.
+    expect(patch).not.toContain('searchPresets')
+    expect(patch).not.toContain('IconSearchOutline16')
+    expect(patch).not.toContain('type: "search"')
+    expect(patch).not.toContain('preset-search')
     expect(patch).not.toContain('AWESOME_PRESETS_ID')
     expect(patch).not.toContain('browseAwesomePresets')
   })

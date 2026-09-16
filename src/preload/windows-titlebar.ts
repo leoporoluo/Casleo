@@ -161,6 +161,17 @@ function installLayout(document: Document): void {
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header > div:first-child {
       -webkit-app-region: drag;
     }
+    /*
+     * The sidebar's logo row is the second place the window is dragged from. Its
+     * only control is the collapse button, which the button rule above already
+     * excludes, so the rest of the row — the mark and the whole empty width beside
+     * it — is free to carry the gesture. Without it the top-left corner offers
+     * nothing but the 8px strip, which is easy to miss and, on a restored window,
+     * sits under the native sizing border.
+     */
+    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-root] [class*="logoRow"] {
+      -webkit-app-region: drag;
+    }
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header button,
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header a,
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header input,

@@ -1,8 +1,8 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
-index aa8ef80..7160391 100644
+index aa8ef80..5be3429 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
-@@ -64,6 +64,38 @@ window.__ModuleLoader__.load({
+@@ -64,6 +64,46 @@ window.__ModuleLoader__.load({
  			tag.textContent = css$3;
  			document.head.appendChild(tag);
  		}
@@ -38,10 +38,18 @@ index aa8ef80..7160391 100644
 +			tag.textContent = "html[data-ds-dark-theme] .dshModelImageInput,body[data-ds-dark-theme] .dshModelImageInput{color-scheme:dark}.dshModelImageInput option{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2)}.dshModelReasoningField{grid-column:auto;flex-direction:column;gap:6px;display:flex}.dshModelReasoningHint{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}";
 +			document.head.appendChild(tag);
 +		}
++		const modelDropdownTagId = "@deepseek-ai/dsh-client-ui-settings-models/ModelDropdown";
++		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(modelDropdownTagId) + "]") === null) {
++			const tag = document.createElement("style");
++			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-settings-models";
++			tag.dataset.pluginCss = modelDropdownTagId;
++			tag.textContent = ".dshModelDropdown{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.dshModelDropdown:hover{background:var(--dsw-alias-interactive-bg-hover)}.dshModelDropdown:disabled{opacity:.6;cursor:default}.dshModelDropdownChevron{color:var(--dsw-alias-label-secondary)}";
++			document.head.appendChild(tag);
++		}
  		var ModelsSection_module_css_default = {
  			"addActions": "zGbnIq_addActions",
  			"addBlock": "zGbnIq_addBlock",
-@@ -157,6 +189,148 @@ window.__ModuleLoader__.load({
+@@ -157,6 +197,200 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -65,19 +73,19 @@ index aa8ef80..7160391 100644
 +				children: [(0, react_jsx_runtime.jsx)("span", {
 +					className: ModelsSection_module_css_default["modelFieldLabel"],
 +					children: props.t("modelImageInput")
-+				}), (0, react_jsx_runtime.jsx)("select", {
-+					className: `dshModelImageInput ${ModelsSection_module_css_default["input"]} ${ModelsSection_module_css_default["selectInput"]}`,
++				}), (0, react_jsx_runtime.jsx)(ModelDropdown, {
 +					value: imageInputState(props.model, props.field),
-+					title: props.t("modelImageInputHint"),
-+					"aria-label": `${props.t("modelImageInput")} ${String(props.index + 1)}`,
-+					disabled: props.disabled,
-+					onChange: (event) => {
-+						props.onChange(imageInputValue(event.target.value));
++					options: ["auto", "image", "text"].map((option) => ({
++						id: option,
++						label: props.t(option === "auto" ? "modelImageInputAuto" : option === "image" ? "modelImageInputImage" : "modelImageInputText")
++					})),
++					onChange: (next) => {
++						props.onChange(imageInputValue(next));
 +					},
-+					children: ["auto", "image", "text"].map((option) => (0, react_jsx_runtime.jsx)("option", {
-+						value: option,
-+						children: props.t(option === "auto" ? "modelImageInputAuto" : option === "image" ? "modelImageInputImage" : "modelImageInputText")
-+					}, option))
++					ariaLabel: `${props.t("modelImageInput")} ${String(props.index + 1)}`,
++					title: props.t("modelImageInputHint"),
++					className: "dshModelImageInput",
++					disabled: props.disabled
 +				})]
 +			});
 +		}
@@ -187,10 +195,62 @@ index aa8ef80..7160391 100644
 +				]
 +			});
 +		}
++		//#endregion
++		//#region lib/types/client/ModelDropdown.js
++		/**
++		* Render one field's choices through the shared primitives menu, so the
++		* option list is the app's own dropdown card instead of the OS-drawn
++		* native select popup. The owner keeps the selected id and the write
++		* path; only the open state lives here.
++		* @param props.value - the selected option id.
++		* @param props.options - the selectable ids and their displayed copy.
++		* @param props.onChange - writer called with the picked id.
++		* @param props.ariaLabel - accessible name of the trigger.
++		* @param props.className - extra trigger class the owning field supplies.
++		* @param props.title - native tooltip for the trigger.
++		* @param props.disabled - whether the trigger is inert.
++		* @returns the trigger button with its anchored menu.
++		*/
++		function ModelDropdown(props) {
++			const [open, setOpen] = (0, react.useState)(false);
++			const closeMenu = () => {
++				setOpen(false);
++			};
++			const selected = props.options.find((option) => option.id === props.value);
++			const trigger = (0, react_jsx_runtime.jsxs)("button", {
++				type: "button",
++				className: props.className === void 0 ? "dshModelDropdown" : `dshModelDropdown ${props.className}`,
++				"aria-haspopup": "menu",
++				"aria-expanded": open,
++				"aria-label": props.ariaLabel,
++				title: props.title,
++				disabled: props.disabled,
++				onClick: () => {
++					setOpen((value) => !value);
++				},
++				children: [selected === void 0 ? props.value : selected.label, (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: "dshModelDropdownChevron" })]
++			});
++			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
++				open,
++				onClose: closeMenu,
++				items: props.options.map((option) => ({
++					id: option.id,
++					label: option.label
++				})),
++				selectedId: props.value,
++				onSelect: (id) => {
++					closeMenu();
++					props.onChange(id);
++				},
++				align: "end",
++				portal: true,
++				anchor: trigger
++			});
++		}
  		//#endregion
  		//#region lib/types/client/DeepSeekModelsEditor.js
  		/**
-@@ -259,6 +433,7 @@ window.__ModuleLoader__.load({
+@@ -259,6 +493,7 @@ window.__ModuleLoader__.load({
  		function DeepSeekModelsEditor(props) {
  			const [editing, setEditing] = (0, react.useState)(() => /* @__PURE__ */ new Map());
  			const [expanded, setExpanded] = (0, react.useState)(() => /* @__PURE__ */ new Set());
@@ -198,7 +258,7 @@ index aa8ef80..7160391 100644
  			const update = (index, key, value) => {
  				const next = props.models.map((model, at) => {
  					const copy = { ...model };
-@@ -367,12 +542,20 @@ window.__ModuleLoader__.load({
+@@ -367,12 +602,20 @@ window.__ModuleLoader__.load({
  							children: props.t("resetModels")
  						}) : null]
  					}),
@@ -220,7 +280,7 @@ index aa8ef80..7160391 100644
  							className: ModelsSection_module_css_default["modelEntry"],
  							children: [(0, react_jsx_runtime.jsxs)("div", {
  								className: ModelsSection_module_css_default["modelRow"],
-@@ -398,12 +581,12 @@ window.__ModuleLoader__.load({
+@@ -398,12 +641,12 @@ window.__ModuleLoader__.load({
  										value: typeof model["name"] === "string" ? model["name"] : "",
  										placeholder: props.t("modelName"),
  										"aria-label": `${props.t("modelName")} ${String(index + 1)}`,
@@ -239,7 +299,7 @@ index aa8ef80..7160391 100644
  										type: "button",
  										className: ModelsSection_module_css_default["iconButton"],
  										"aria-label": `${props.t("modelAdvanced")} ${String(index + 1)}`,
-@@ -428,18 +611,9 @@ window.__ModuleLoader__.load({
+@@ -428,18 +671,9 @@ window.__ModuleLoader__.load({
  								]
  							}), expanded.has(index) ? (0, react_jsx_runtime.jsxs)("div", {
  								className: ModelsSection_module_css_default["modelAdvanced"],
@@ -259,7 +319,7 @@ index aa8ef80..7160391 100644
  					})
  				]
  			});
-@@ -557,6 +731,7 @@ window.__ModuleLoader__.load({
+@@ -557,6 +791,7 @@ window.__ModuleLoader__.load({
  			const [candidateQuery, setCandidateQuery] = (0, react.useState)("");
  			const [expanded, setExpanded] = (0, react.useState)(/* @__PURE__ */ new Set());
  			const [editing, setEditing] = (0, react.useState)(/* @__PURE__ */ new Map());
@@ -267,7 +327,7 @@ index aa8ef80..7160391 100644
  			/** Buffer key for one capacity field; the row half moves when rows do. */
  			const bufferKey = (index, field) => `${String(index)}:${field}`;
  			const editCapacity = (index, field, text) => {
-@@ -691,11 +866,19 @@ window.__ModuleLoader__.load({
+@@ -691,11 +926,19 @@ window.__ModuleLoader__.load({
  							})
  						]
  					}),
@@ -288,7 +348,7 @@ index aa8ef80..7160391 100644
  						className: ModelsSection_module_css_default["modelEntry"],
  						children: [(0, react_jsx_runtime.jsxs)("div", {
  							className: ModelsSection_module_css_default["modelRow"],
-@@ -717,12 +900,12 @@ window.__ModuleLoader__.load({
+@@ -717,12 +960,12 @@ window.__ModuleLoader__.load({
  									value: textOf(model, "name"),
  									placeholder: t("modelName"),
  									"aria-label": `${t("modelName")} ${index + 1}`,
@@ -307,7 +367,7 @@ index aa8ef80..7160391 100644
  									type: "button",
  									className: ModelsSection_module_css_default["iconButton"],
  									"aria-label": `${t("modelAdvanced")} ${index + 1}`,
-@@ -788,18 +971,17 @@ window.__ModuleLoader__.load({
+@@ -788,18 +1031,17 @@ window.__ModuleLoader__.load({
  										editCapacity(index, "maxTokens", event.target.value);
  									}
  								})]
@@ -334,7 +394,7 @@ index aa8ef80..7160391 100644
  					failure !== void 0 ? (0, react_jsx_runtime.jsx)("p", {
  						className: ModelsSection_module_css_default["error"],
  						children: failure
-@@ -1164,6 +1346,7 @@ window.__ModuleLoader__.load({
+@@ -1164,6 +1406,7 @@ window.__ModuleLoader__.load({
  			const [protocol, setProtocol] = (0, react.useState)(protocols[0] ?? "");
  			const [keyDraft, setKeyDraft] = (0, react.useState)("");
  			const [models, setModels] = (0, react.useState)([]);
@@ -342,7 +402,7 @@ index aa8ef80..7160391 100644
  			const [busy, setBusy] = (0, react.useState)(false);
  			const [failure, setFailure] = (0, react.useState)(void 0);
  			/**
-@@ -1223,6 +1406,11 @@ window.__ModuleLoader__.load({
+@@ -1223,6 +1466,11 @@ window.__ModuleLoader__.load({
  					setBusy(false);
  				}
  			};
@@ -354,7 +414,35 @@ index aa8ef80..7160391 100644
  			return (0, react_jsx_runtime.jsxs)("div", {
  				className: ModelsSection_module_css_default["editor"],
  				children: [
-@@ -1343,6 +1531,8 @@ window.__ModuleLoader__.load({
+@@ -1301,18 +1549,17 @@ window.__ModuleLoader__.load({
+ 						children: [(0, react_jsx_runtime.jsx)("span", {
+ 							className: ModelsSection_module_css_default["fieldLabel"],
+ 							children: t("customApi")
+-						}), (0, react_jsx_runtime.jsx)("select", {
+-							className: `${ModelsSection_module_css_default["input"]} ${ModelsSection_module_css_default["selectInput"]}`,
++						}), (0, react_jsx_runtime.jsx)(ModelDropdown, {
+ 							value: protocol,
+-							"aria-label": t("customApi"),
+-							disabled: profileDisabled,
+-							onChange: (event) => {
+-								setProtocol(event.target.value);
++							options: protocols.map((choice) => ({
++								id: choice,
++								label: choice
++							})),
++							onChange: (next) => {
++								setProtocol(next);
+ 							},
+-							children: protocols.map((choice) => (0, react_jsx_runtime.jsx)("option", {
+-								value: choice,
+-								children: choice
+-							}, choice))
++							ariaLabel: t("customApi"),
++							disabled: profileDisabled
+ 						})]
+ 					}),
+ 					(0, react_jsx_runtime.jsxs)("div", {
+@@ -1343,6 +1590,8 @@ window.__ModuleLoader__.load({
  					(0, react_jsx_runtime.jsx)(ModelListEditor, {
  						models,
  						onChange: setModels,
@@ -363,7 +451,7 @@ index aa8ef80..7160391 100644
  						probe: {
  							settingsNs: NS$1,
  							baseURL: normalizedBaseURL,
-@@ -1362,18 +1552,27 @@ window.__ModuleLoader__.load({
+@@ -1362,18 +1611,27 @@ window.__ModuleLoader__.load({
  						className: ModelsSection_module_css_default["advancedHint"],
  						children: hint
  					}),
@@ -403,7 +491,7 @@ index aa8ef80..7160391 100644
  					})
  				]
  			});
-@@ -1461,6 +1660,8 @@ window.__ModuleLoader__.load({
+@@ -1461,6 +1719,8 @@ window.__ModuleLoader__.load({
  			const [keyState, setKeyState] = (0, react.useState)(void 0);
  			const [busy, setBusy] = (0, react.useState)(false);
  			const [failure, setFailure] = (0, react.useState)(void 0);
@@ -412,7 +500,7 @@ index aa8ef80..7160391 100644
  			const [committedOriginal, setCommittedOriginal] = (0, react.useState)(() => schema.getPath(namespace.user, settingsPath));
  			const [expectedRevision, setExpectedRevision] = (0, react.useState)(() => namespace.revision);
  			const root = (0, react.useMemo)(() => schema.rehydrate(namespace.schema), [namespace.schema, schema]);
-@@ -1581,6 +1782,15 @@ window.__ModuleLoader__.load({
+@@ -1581,6 +1841,15 @@ window.__ModuleLoader__.load({
  			const inheritedModels = () => {
  				return schema.getPath(namespace.base, [...settingsPath, "models"]) ?? schema.nodeAtPath(root, [...settingsPath, "models"])?.meta.default;
  			};
@@ -428,7 +516,7 @@ index aa8ef80..7160391 100644
  			/**
  			* The curated fields of one known adapter family. The family arrives
  			* narrowed so the per-family branches below are total: an unknown namespace
-@@ -1598,6 +1808,8 @@ window.__ModuleLoader__.load({
+@@ -1598,6 +1867,8 @@ window.__ModuleLoader__.load({
  				const catalogProps = {
  					models,
  					overridden: modelsOverridden,
@@ -437,7 +525,7 @@ index aa8ef80..7160391 100644
  					t,
  					disabled,
  					onChange: (next) => {
-@@ -1636,6 +1848,10 @@ window.__ModuleLoader__.load({
+@@ -1636,6 +1907,10 @@ window.__ModuleLoader__.load({
  					]
  				}), props.credentialOnly === true ? null : (0, react_jsx_runtime.jsxs)("details", {
  					className: ModelsSection_module_css_default["customized"],
@@ -448,7 +536,41 @@ index aa8ef80..7160391 100644
  					children: [(0, react_jsx_runtime.jsx)("summary", {
  						className: ModelsSection_module_css_default["customizedSummary"],
  						children: t("customized")
-@@ -1712,8 +1928,22 @@ window.__ModuleLoader__.load({
+@@ -1681,21 +1956,20 @@ window.__ModuleLoader__.load({
+ 								children: [(0, react_jsx_runtime.jsx)("span", {
+ 									className: ModelsSection_module_css_default["fieldLabel"],
+ 									children: t("customApi")
+-								}), (0, react_jsx_runtime.jsxs)("select", {
+-									className: `${ModelsSection_module_css_default["input"]} ${ModelsSection_module_css_default["selectInput"]}`,
++								}), (0, react_jsx_runtime.jsx)(ModelDropdown, {
+ 									value: probeApi ?? "",
+-									"aria-label": t("customApi"),
+-									disabled,
+-									onChange: (event) => {
+-										setField("api", event.target.value);
++									options: [...(probeApi === void 0 ? [{
++										id: "",
++										label: t("customApiUnset")
++									}] : []), ...protocols.map((choice) => ({
++										id: choice,
++										label: choice
++									}))],
++									onChange: (next) => {
++										setField("api", next);
+ 									},
+-									children: [probeApi === void 0 ? (0, react_jsx_runtime.jsx)("option", {
+-										value: "",
+-										children: t("customApiUnset")
+-									}) : null, protocols.map((choice) => (0, react_jsx_runtime.jsx)("option", {
+-										value: choice,
+-										children: choice
+-									}, choice))]
++									ariaLabel: t("customApi"),
++									disabled
+ 								})]
+ 							}) : null,
+ 							family === "deepseek" ? (0, react_jsx_runtime.jsx)(DeepSeekModelsEditor, {
+@@ -1712,8 +1986,22 @@ window.__ModuleLoader__.load({
  					})]
  				})] });
  			};
@@ -472,7 +594,7 @@ index aa8ef80..7160391 100644
  				children: [
  					props.hideTitle === true ? null : (0, react_jsx_runtime.jsxs)("div", {
  						className: ModelsSection_module_css_default["editorHeader"],
-@@ -1737,19 +1967,15 @@ window.__ModuleLoader__.load({
+@@ -1737,19 +2025,15 @@ window.__ModuleLoader__.load({
  						className: ModelsSection_module_css_default["advancedHint"],
  						children: `${t("model")} ${String(modelFailure.index + 1)}: ${t(modelFailure.key)}`
  					}),
@@ -501,7 +623,7 @@ index aa8ef80..7160391 100644
  					})
  				]
  			});
-@@ -1846,6 +2072,26 @@ window.__ModuleLoader__.load({
+@@ -1846,6 +2130,26 @@ window.__ModuleLoader__.load({
  		function providerCopy(template, target) {
  			return template.replace("{provider}", () => providerTargetLabel(target));
  		}
@@ -528,7 +650,7 @@ index aa8ef80..7160391 100644
  		/**
  		* Render the Models section content column.
  		* @param props - slot-delivered injected dependencies.
-@@ -1875,6 +2121,8 @@ window.__ModuleLoader__.load({
+@@ -1875,6 +2179,8 @@ window.__ModuleLoader__.load({
  			const [deleteFailure, setDeleteFailure] = (0, react.useState)(void 0);
  			const [savedTarget, setSavedTarget] = (0, react.useState)(void 0);
  			const [declaring, setDeclaring] = (0, react.useState)(false);
@@ -537,7 +659,7 @@ index aa8ef80..7160391 100644
  			const [dismissedSetup, setDismissedSetup] = (0, react.useState)(() => /* @__PURE__ */ new Set());
  			const announceSaved = (target) => {
  				controller.load().then(() => {
-@@ -1943,9 +2191,15 @@ window.__ModuleLoader__.load({
+@@ -1943,9 +2249,15 @@ window.__ModuleLoader__.load({
  				displayName: savedRow.entry.displayName
  			};
  			const anyUsable = state.rows.some(providerUsable);
@@ -555,7 +677,7 @@ index aa8ef80..7160391 100644
  			const addTarget = adding ? editing : void 0;
  			const addNamespace = addTarget === void 0 ? void 0 : state.namespaces.get(addTarget.settingsNs);
  			const addRow = addTarget === void 0 ? void 0 : state.rows.find((row) => row.entry.provider === addTarget.provider);
-@@ -2094,20 +2348,62 @@ window.__ModuleLoader__.load({
+@@ -2094,20 +2406,62 @@ window.__ModuleLoader__.load({
  									children: [(0, react_jsx_runtime.jsx)("span", {
  										className: ModelsSection_module_css_default["fieldLabel"],
  										children: t("provider")
@@ -632,7 +754,7 @@ index aa8ef80..7160391 100644
  									})]
  								}),
  								(0, react_jsx_runtime.jsx)(ProviderEditor, {
-@@ -2159,6 +2455,8 @@ window.__ModuleLoader__.load({
+@@ -2159,6 +2513,8 @@ window.__ModuleLoader__.load({
  									setDeclaring(false);
  									setAdding(true);
  									setEditing(targetOf(first));
@@ -641,7 +763,7 @@ index aa8ef80..7160391 100644
  								},
  								children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }), t("add")]
  							}), state.namespaces.has("llm-pi-ai") && (0, react_jsx_runtime.jsxs)("button", {
-@@ -2294,35 +2592,50 @@ window.__ModuleLoader__.load({
+@@ -2294,35 +2650,50 @@ window.__ModuleLoader__.load({
  		function assertNever$1(_value) {
  			throw new Error("unexpected DeepSeek onboarding state");
  		}
@@ -710,7 +832,7 @@ index aa8ef80..7160391 100644
  			const finishCredential = (changed) => {
  				if (!changed) {
  					complete();
-@@ -2660,6 +2973,8 @@ window.__ModuleLoader__.load({
+@@ -2660,6 +3031,8 @@ window.__ModuleLoader__.load({
  			deleting: "Deleting {provider}…",
  			add: "Add provider",
  			provider: "Provider",
@@ -719,7 +841,7 @@ index aa8ef80..7160391 100644
  			close: "Close",
  			cancel: "Cancel",
  			apply: "Apply",
-@@ -2691,7 +3006,15 @@ window.__ModuleLoader__.load({
+@@ -2691,7 +3064,15 @@ window.__ModuleLoader__.load({
  			contextWindowPlaceholder: "Uses the provider default",
  			maxTokens: "Max output tokens",
  			maxTokensPlaceholder: "Uses the provider default",
@@ -736,7 +858,7 @@ index aa8ef80..7160391 100644
  			addModel: "Add model",
  			removeModel: "Delete model",
  			modelsEmpty: "No models will be shown in the selector. Unlisted IDs can still be sent directly.",
-@@ -2740,10 +3063,14 @@ window.__ModuleLoader__.load({
+@@ -2740,10 +3121,14 @@ window.__ModuleLoader__.load({
  			welcomeBody: "DeepSeek Harness 0.1 remains in testing for Harness developers. Many areas need further improvement, and we welcome feedback from the developer community. DeepSeek Harness's core plugins and foundational APIs will continue to evolve rapidly over the coming months.\n\nWe look forward to exploring the limits of intelligence with developers around the world, building on open-source, open, reusable, and composable infrastructure. We welcome Harness developers everywhere to join the DSH plugin ecosystem.",
  			welcomeContinue: "Continue",
  			welcomeError: "The acknowledgement could not be saved. Please try again.",
@@ -754,7 +876,7 @@ index aa8ef80..7160391 100644
  			onboardingSaving: "Saving…",
  			keyRequired: "Enter an API key to continue."
  		};
-@@ -2763,6 +3090,8 @@ window.__ModuleLoader__.load({
+@@ -2763,6 +3148,8 @@ window.__ModuleLoader__.load({
  			deleting: "正在删除 {provider}…",
  			add: "添加提供方",
  			provider: "提供方",
@@ -763,7 +885,7 @@ index aa8ef80..7160391 100644
  			close: "关闭",
  			cancel: "取消",
  			apply: "保存",
-@@ -2794,7 +3123,15 @@ window.__ModuleLoader__.load({
+@@ -2794,7 +3181,15 @@ window.__ModuleLoader__.load({
  			contextWindowPlaceholder: "使用提供方默认值",
  			maxTokens: "最大输出 token 数",
  			maxTokensPlaceholder: "使用提供方默认值",
@@ -780,7 +902,7 @@ index aa8ef80..7160391 100644
  			addModel: "添加模型",
  			removeModel: "删除模型",
  			modelsEmpty: "模型选择器中将不显示任何模型；目录外 ID 仍可直接发送。",
-@@ -2843,10 +3180,14 @@ window.__ModuleLoader__.load({
+@@ -2843,10 +3238,14 @@ window.__ModuleLoader__.load({
  			welcomeBody: "DeepSeek Harness 目前的 0.1 版本仍处在面向 Harness 开发者进行测试的阶段，还有许多地方需要持续改进和打磨，希望听取广大开发者的反馈建议。预计 DeepSeek Harness 的核心插件以及基础 API 都会在接下来的一段时间内快速迭代、持续演化。\n\n我们期待与全球开发者一起，在开源、开放、可复用、可组合的基础设施之上，共同探索智能上限。欢迎全球 Harness 开发者加入 DSH 插件生态。",
  			welcomeContinue: "继续",
  			welcomeError: "暂时无法保存确认状态，请重试。",
@@ -798,7 +920,7 @@ index aa8ef80..7160391 100644
  			onboardingSaving: "保存中…",
  			keyRequired: "请输入 API 密钥后继续。"
  		};
-@@ -2900,22 +3241,10 @@ window.__ModuleLoader__.load({
+@@ -2900,22 +3299,10 @@ window.__ModuleLoader__.load({
  				schema,
  				t
  			});
@@ -821,7 +943,7 @@ index aa8ef80..7160391 100644
  			ctx.effect(() => {
  				const refreshModels = () => {
  					refreshIfLoaded(controller);
-@@ -2950,18 +3279,6 @@ window.__ModuleLoader__.load({
+@@ -2950,18 +3337,6 @@ window.__ModuleLoader__.load({
  					}
  				}
  			}, ModelsSection));
