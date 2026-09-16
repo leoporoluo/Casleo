@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
-index aa8ef80..933d925 100644
+index aa8ef80..504d2c2 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
 @@ -64,6 +64,38 @@ window.__ModuleLoader__.load({
@@ -560,9 +560,12 @@ index aa8ef80..933d925 100644
  			const [dismissedSetup, setDismissedSetup] = (0, react.useState)(() => /* @__PURE__ */ new Set());
  			const announceSaved = (target) => {
  				controller.load().then(() => {
-@@ -1945,7 +2216,13 @@ window.__ModuleLoader__.load({
+@@ -1943,9 +2214,15 @@ window.__ModuleLoader__.load({
+ 				displayName: savedRow.entry.displayName
+ 			};
  			const anyUsable = state.rows.some(providerUsable);
- 			const configured = state.rows.filter((row) => row.configured);
+-			const configured = state.rows.filter((row) => row.configured);
++			const configured = state.rows.filter((row) => row.configured && row.entry.provider !== "deepseek-official");
  			const configurable = state.rows.filter((row) => state.namespaces.has(row.entry.settingsNs));
 -			const addable = configurable.filter((row) => !row.configured);
 +			const addable = configurable.filter((row) => !row.configured).sort((left, right) => {

@@ -9,9 +9,10 @@ const chatClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-c
 const feedbackClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-message-feedback', 'lib', 'client.js')
 const layoutClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-layout', 'lib', 'client.js')
 const conversationClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-conversation', 'lib', 'client.js')
+const settingsModelsClient = path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-settings-models', 'lib', 'client.js')
 
 describe('Casleo interface trims', () => {
-  it('shows the neutral thinking copy as plain gray instead of a brand shimmer', async () => {
+  it('shows the neutral thinking copy with a gray shimmer instead of a brand one', async () => {
     const [client, patch] = await Promise.all([
       readFile(chatClient, 'utf8'),
       readFile(patchPath('@deepseek-ai/dsh-client-ui-chat'), 'utf8')
@@ -22,11 +23,15 @@ describe('Casleo interface trims', () => {
     expect(client).not.toContain('深度求索中')
     expect(client).not.toContain('Deep diving')
     expect(client).not.toContain('--dsw-static-deepseek-500) 0%')
-    expect(client).not.toContain('dsh-turn-status-shimmer;display:inline-flex')
-    const statusRule = client.slice(client.indexOf('.EvIC1a_turnStatus{'), client.indexOf('}', client.indexOf('.EvIC1a_turnStatus{')))
-    expect(statusRule).toContain('color:var(--dsw-alias-label-secondary)')
+    const statusAnchor = client.indexOf('.EvIC1a_turnStatus{height:')
+    const statusRule = client.slice(statusAnchor, client.indexOf('}', statusAnchor))
+    // The running-turn shimmer survives, painted in neutral grays.
+    expect(statusRule).toContain('--dsw-alias-label-secondary) 0%')
+    expect(statusRule).toContain('--dsw-alias-label-primary) 50%')
+    expect(statusRule).toContain('animation:1.8s linear infinite EvIC1a_dsh-turn-status-shimmer')
+    expect(client).toContain('EvIC1a_dsh-turn-status-shimmer{')
     expect(patch).toContain('"chat.deepDiving": "正在思考…"')
-    expect(patch).toContain('color:var(--dsw-alias-label-secondary)')
+    expect(patch).toContain('--dsw-alias-label-primary) 50%')
   })
 
   it('renders no like/dislike entry and no feedback dialog', async () => {
@@ -47,22 +52,46 @@ describe('Casleo interface trims', () => {
       readFile(patchPath('@deepseek-ai/dsh-client-ui-conversation'), 'utf8')
     ])
 
-    expect(client).toMatch(
-      /\.uV2eYG_cardWorkspaceTrigger:after\{content:\\"\\";background:transparent;/u
+    // A real border on a 1.5px-offset box keeps the ring concentric with the
+    // 22px card; the masked SVG ring is gone entirely.
+    expect(client).toContain(
+      '.uV2eYG_cardWorkspaceTrigger:after{content:\\"\\";pointer-events:none;border:1.5px solid transparent;border-radius:23.5px;box-sizing:border-box;transition:border-color .12s;position:absolute;inset:-1.5px}'
     )
     expect(client).toContain(
-      '.uV2eYG_cardWorkspaceTrigger:hover:after{background:var(--dsw-alias-border-l3)}'
+      '.uV2eYG_cardWorkspaceTrigger:hover:after{border-color:var(--dsw-alias-border-l3)}'
     )
-    // The ring is one continuous stroke: the dashed mask is gone.
     expect(client).not.toContain("stroke-dasharray='4 4'")
-    expect(client).toContain("stroke-width='1.5'")
     expect(client).not.toMatch(
-      /\.uV2eYG_cardWorkspaceTrigger:hover:after\{background:var\(--dsw-alias-state-business-primary\)/u
+      /\.uV2eYG_cardWorkspaceTrigger:after\{[^}]*mask:/u
     )
-    expect(patch).toContain('background:transparent;pointer-events:none;border-radius:22px')
+    expect(client).not.toMatch(
+      /\.uV2eYG_cardWorkspaceTrigger:hover:after\{background:/u
+    )
+    expect(patch).toContain('border-radius:23.5px')
     expect(patch).toContain(
-      '.uV2eYG_cardWorkspaceTrigger:hover:after{background:var(--dsw-alias-border-l3)}'
+      '.uV2eYG_cardWorkspaceTrigger:hover:after{border-color:var(--dsw-alias-border-l3)}'
     )
+  })
+
+  it('hides the official DeepSeek provider row from the models settings', async () => {
+    const [client, patch] = await Promise.all([
+      readFile(settingsModelsClient, 'utf8'),
+      readFile(patchPath('@deepseek-ai/dsh-client-ui-settings-models'), 'utf8')
+    ])
+
+    expect(client).toContain(
+      'const configured = state.rows.filter((row) => row.configured && row.entry.provider !== "deepseek-official");'
+    )
+    expect(patch).toContain('row.entry.provider !== \"deepseek-official\"')
+  })
+
+  it('shows the product name on the splash without the loader animation', async () => {
+    const splash = await readFile(path.join(projectRoot, 'build', 'splash.html'), 'utf8')
+
+    expect(splash).toContain('<h1 class="title">Casleo</h1>')
+    expect(splash).not.toContain('<img')
+    expect(splash).not.toContain('casleo-loader')
+    expect(splash).not.toContain('Starting Casleo')
   })
 
   it('renders no column drag handles around the sidebar or right panel', async () => {
