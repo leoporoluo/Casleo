@@ -135,7 +135,7 @@ describe('Casleo interface trims', () => {
     expect(patch).toContain('!catalog.value.routableProviders.includes(fallbackSelection.provider)')
 
     // Casleo ships no built-in model route, so a fresh install has none.
-    expect(composition).toContain('- id: llm-deepseek\n  disabled: true')
+    expect(composition.replace(/\r\n/gu, '\n')).toContain('- id: llm-deepseek\n  disabled: true')
   })
 
   it('renders no column drag handles around the sidebar or right panel', async () => {
