@@ -2,6 +2,7 @@ import type { IpcRenderer } from 'electron'
 
 const LAYOUT_STYLE_ID = 'dsh-desktop-windows-titlebar-layout-style'
 const DRAG_REGION_ID = 'dsh-desktop-windows-drag-region'
+const CAPTION_GUARD_ID = 'dsh-desktop-windows-caption-guard'
 const SIDEBAR_WIDTH_PROPERTY = '--dsh-desktop-windows-sidebar-width'
 const CAPTION_WIDTH_PROPERTY = '--dsh-desktop-windows-caption-width'
 
@@ -189,6 +190,23 @@ function installLayout(document: Document): void {
       user-select: none;
       -webkit-app-region: drag;
     }
+    /*
+     * The header's own drag area reaches the window's right edge, which would put
+     * the caption controls and the application-menu button inside a draggable
+     * rectangle and make them unclickable. This guard paints after every drag
+     * region and subtracts that column from all of them.
+     */
+    #${CAPTION_GUARD_ID} {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: calc(var(${CAPTION_WIDTH_PROPERTY}, 140px) + 44px);
+      height: 36px;
+      background: transparent;
+      pointer-events: none;
+      user-select: none;
+      -webkit-app-region: no-drag;
+    }
   `
   document.head.appendChild(style)
 }
@@ -199,6 +217,15 @@ function installDragRegion(document: Document): void {
   dragRegion.id = DRAG_REGION_ID
   dragRegion.setAttribute('aria-hidden', 'true')
   document.body.appendChild(dragRegion)
+
+  // Painted last on purpose: it subtracts the caption column from every drag
+  // region above it, so the caption controls and the menu button keep the click.
+  if (!document.getElementById(CAPTION_GUARD_ID)) {
+    const captionGuard = document.createElement('div')
+    captionGuard.id = CAPTION_GUARD_ID
+    captionGuard.setAttribute('aria-hidden', 'true')
+    document.body.appendChild(captionGuard)
+  }
 
   // While any modal or dialog is open, hide the drag region completely so every
   // control around the top caption strip stays clickable.
