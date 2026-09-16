@@ -65,6 +65,10 @@ describe('Casleo model image-input declarations', () => {
     // advanced fields of the row instead of a desktop-only control.
     expect(client).toContain('ModelsSection_module_css_default["selectInput"]')
     expect(client).toContain('ModelsSection_module_css_default["modelFieldLabel"]')
+    // The native select popup follows color-scheme, so the control carries its own
+    // desktop-owned class and a dark-scheme rule for the dark palette.
+    expect(client).toContain('dshModelImageInput')
+    expect(client).toContain('body[data-ds-dark-theme] .dshModelImageInput{color-scheme:dark}')
     expect(client).not.toContain('ModelImageInputToggle')
   })
 

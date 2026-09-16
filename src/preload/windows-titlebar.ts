@@ -140,14 +140,20 @@ function installLayout(document: Document): void {
     }
     /*
      * The drag region sits at z-index 10: below the header's own clickable
-     * clusters (z-index 20: the session action cluster and the session crumbs,
-     * which stay clickable) and far below modal overlays, which must still cover
-     * the header.
+     * clusters (z-index 20) and far below modal overlays, which must still cover
+     * the header. Lifting a cluster is not enough on its own — the caption strip's
+     * draggable rectangle has to be punched through with a no-drag region as
+     * well, or the window still claims the click and drags instead.
+     *
+     * The session crumbs carry the lineage chip (the subagent control) and are
+     * matched without an ancestor chain because the slot content lives inside the
+     * crumbs container, not beside it.
      */
     body.dsh-desktop-windows-titlebar-layout [class*="headerActions"],
-    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="crumb"] {
+    body.dsh-desktop-windows-titlebar-layout [class*="crumb"] {
       position: relative !important;
       z-index: 20 !important;
+      -webkit-app-region: no-drag !important;
     }
     #${DRAG_REGION_ID} {
       position: fixed;

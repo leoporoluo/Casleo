@@ -55,6 +55,9 @@ describe('Windows titlebar menu', () => {
     expect(preload).toContain('[class*="panelRow"]:focus-visible')
     expect(preload).toContain('[data-dsh-sidebar-settings] :focus-visible')
     expect(preload).toContain('[class*="crumb"]')
+    // Lifting the cluster is not enough: the caption strip's draggable rectangle
+    // has to be punched through so the lineage chip receives the click.
+    expect(preload).toMatch(/\[class\*="crumb"\]\s*\{[^}]*no-drag/u)
     expect(preload).toContain('background: none !important')
     expect(preload).toContain('body.dsh-desktop-windows-titlebar-layout button')
     expect(preload).toContain('-webkit-app-region: no-drag !important')
