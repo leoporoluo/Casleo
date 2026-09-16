@@ -11,7 +11,9 @@ describe('Casleo sidebar branding', () => {
 
     expect(main).toContain("frame: process.platform !== 'darwin'")
     expect(main).toContain("document.body.hasAttribute('data-ds-dark-theme')")
-    expect(main).toContain("window.setBackgroundColor(isDark ? '#141416' : '#ffffff')")
+    // The reveal background matches the window creation background so a page
+    // transition cannot paint a mismatched frame.
+    expect(main).toContain("window.setBackgroundColor(isDark ? '#141416' : '#f8f8f6')")
     expect(main).toContain('window.setWindowButtonVisibility(true)')
     expect(main).toContain('x: Math.round(16 * window.webContents.getZoomFactor()) - 2')
     expect(main).toContain("titleBarStyle: 'hidden' as const")

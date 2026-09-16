@@ -111,6 +111,20 @@ describe('Casleo interface trims', () => {
     expect(patch).toContain('group.id !== "deepseek-official"')
   })
 
+  it('labels the built-in official model neutrally instead of its raw id', async () => {
+    const [client, patch] = await Promise.all([
+      readFile(modelSelectionClient, 'utf8'),
+      readFile(patchPath('@deepseek-ai/dsh-client-ui-model-selection'), 'utf8')
+    ])
+
+    expect(client).toContain(
+      'state.current.provider === "deepseek-official" ? t("trigger.defaultModel")'
+    )
+    expect(client).toContain('"trigger.defaultModel": "默认模型"')
+    expect(client).toContain('"trigger.defaultModel": "Default model"')
+    expect(patch).toContain('t("trigger.defaultModel")')
+  })
+
   it('renders no column drag handles around the sidebar or right panel', async () => {
     const [client, patch] = await Promise.all([
       readFile(layoutClient, 'utf8'),

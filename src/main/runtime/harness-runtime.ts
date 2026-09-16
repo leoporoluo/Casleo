@@ -126,7 +126,10 @@ export function resolveShellEnvironment(): NodeJS.ProcessEnv {
     const output = execFileSync(capture.file, capture.args, {
       encoding: 'utf8',
       timeout: capture.timeout,
-      stdio: ['ignore', 'pipe', 'ignore']
+      stdio: ['ignore', 'pipe', 'ignore'],
+      // Electron's main process has no console of its own, so a console child
+      // allocates a fresh, briefly visible console window on Windows.
+      windowsHide: true
     })
     resolvedShellEnvironment = capture.parse(output)
   } catch {
@@ -162,7 +165,12 @@ export function prewarmShellEnvironment(): Promise<NodeJS.ProcessEnv> {
     execFile(
       capture.file,
       capture.args,
-      { encoding: 'utf8', timeout: capture.timeout, maxBuffer: 16 * 1024 * 1024 },
+      {
+        encoding: 'utf8',
+        timeout: capture.timeout,
+        maxBuffer: 16 * 1024 * 1024,
+        windowsHide: true
+      },
       (error, stdout) => {
         // A capture the synchronous path already finished wins; otherwise keep
         // the inherited environment on failure, exactly like that path.

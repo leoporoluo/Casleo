@@ -17,16 +17,41 @@ const settingsGeneralClient = path.join(
 const markers = [
   'function MarketGlyph({ className, size })',
   'id === "market"',
-  'M3.6 5.5h8.8l-.7 8H4.3l-.7-8Z',
-  'M6 5.5V4.2a2 2 0 0 1 4 0v1.3',
-  'M8 8L10.2 11.4H5.8L8 8Z'
+  'viewBox: "0 0 16 16"',
+  'transform: "rotate(9 12.39 3.74)"'
 ]
 
+const marketLogoSource = path.join(
+  projectRoot,
+  'node_modules',
+  'dshmarket',
+  'src',
+  'client',
+  'MarketSection.tsx'
+)
+
 describe('settings market nav icon patch', () => {
-  it('installs the Casleo market glyph and keeps the gear fallback intact', async () => {
+  it('installs the market block-grid glyph and keeps the gear fallback intact', async () => {
     const client = await readFile(settingsGeneralClient, 'utf8')
 
     for (const marker of markers) expect(client).toContain(marker)
+    // The nav item shows the market's own brand mark, not a redrawn stand-in.
+    expect(client).not.toContain('M3.6 5.5h8.8')
+    const navGlyph = client.slice(
+      client.indexOf('function MarketGlyph'),
+      client.indexOf('function navIcon')
+    )
+    const marketSource = await readFile(marketLogoSource, 'utf8')
+    const logoBlock = marketSource.slice(
+      marketSource.indexOf('function MarketLogo'),
+      marketSource.indexOf('function MarketLogo') + 2_000
+    )
+    const cells = [...logoBlock.matchAll(/x="([\d.]+)" y="([\d.]+)" width="3\.3" height="3\.3" rx="0\.53"/gu)]
+    expect(cells.length).toBe(9)
+    for (const [, x, y] of cells) {
+      expect(navGlyph).toContain(`x: "${x}"`)
+      expect(navGlyph).toContain(`y: "${y}"`)
+    }
     // The stock fallback stays the last branch for every unregistered section.
     expect(client.indexOf('id === "market"')).toBeLessThan(
       client.indexOf('IconSettingsOutline16', client.indexOf('function navIcon'))

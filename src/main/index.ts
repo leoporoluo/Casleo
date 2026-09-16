@@ -189,6 +189,7 @@ let harnessLaunchOperation: Promise<void> | undefined
 let pluginRecoveryActionResolver: ((action: PluginRecoveryAction) => void) | undefined
 let webImportActionResolver: ((action: WebImportAction) => void) | undefined
 let mainWindowNavigationVersion = 0
+let splashRevealTimer: ReturnType<typeof setTimeout> | undefined
 let rendererPluginFailureLogs: string[] = []
 let pluginRecoveryRemovedPlugins: string[] = []
 let pluginRecoveryResetTimer: ReturnType<typeof setTimeout> | undefined
@@ -428,7 +429,11 @@ function installMainWindowRendererRecovery(window: BrowserWindow): void {
     runtime.note('[desktop] main window webContents became responsive again')
   })
   webContents.on('did-start-navigation', (_event, _url, _isInPlace, isMainFrame) => {
-    if (isMainFrame) clearProfileBootConfirmation()
+    if (!isMainFrame) return
+    clearProfileBootConfirmation()
+    // Any page that replaces the splash is raised by its own caller, so a
+    // scheduled splash reveal must not fire on top of it.
+    clearSplashReveal()
   })
 }
 
@@ -442,7 +447,9 @@ function windowsTitleBarOverlay(isDark: boolean): Electron.TitleBarOverlayOption
 
 function applyWindowChromeTheme(window: BrowserWindow, isDark: boolean): void {
   if (window.isDestroyed()) return
-  window.setBackgroundColor(isDark ? '#141416' : '#ffffff')
+  // Keep this identical to the window's creation background: a page transition
+  // paints it for a frame, and a mismatched value reads as a flash.
+  window.setBackgroundColor(isDark ? '#141416' : '#f8f8f6')
   if (process.platform === 'win32') {
     windowsMenuDark = isDark
     window.setTitleBarOverlay(windowsTitleBarOverlay(isDark))
@@ -702,6 +709,15 @@ function configureGpuFallback(): void {
 const GPU_STABLE_LAUNCH_DELAY_MS = 60_000
 const PROFILE_BOOT_STABILITY_MS = 60_000
 const PROFILE_RENDERER_HEARTBEAT_MAX_AGE_MS = 15_000
+/**
+ * How long a launch may take before its progress page is worth showing.
+ *
+ * The splash is a full-window page in the main window, so revealing it
+ * immediately makes a fast start flash an interface the user never gets to
+ * read. Showing it only once startup has actually become slow keeps the
+ * progress feedback without the flash.
+ */
+const SPLASH_REVEAL_DELAY_MS = 1_200
 
 function clearProfileBootConfirmation(): void {
   if (profileBootConfirmationTimer) clearTimeout(profileBootConfirmationTimer)
@@ -1158,8 +1174,14 @@ async function showWebHomeImport(
   return actionPromise
 }
 
+function clearSplashReveal(): void {
+  if (splashRevealTimer) clearTimeout(splashRevealTimer)
+  splashRevealTimer = undefined
+}
+
 async function showSplash(): Promise<void> {
   clearProfileBootConfirmation()
+  clearSplashReveal()
   const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : createWindow()
   const navigationVersion = ++mainWindowNavigationVersion
   window.webContents.stop()
@@ -1167,7 +1189,13 @@ async function showSplash(): Promise<void> {
     query: { theme: nativeTheme.shouldUseDarkColors ? 'dark' : 'light' }
   })
   if (window.isDestroyed() || navigationVersion !== mainWindowNavigationVersion) return
-  raiseWindowWithoutStealingFocus(window, process.platform, () => app.isActive())
+  // Hold the window back for a moment: a launch that finishes sooner reveals
+  // the Harness page itself, so the splash never flashes by at all.
+  splashRevealTimer = setTimeout(() => {
+    splashRevealTimer = undefined
+    if (window.isDestroyed() || navigationVersion !== mainWindowNavigationVersion) return
+    raiseWindowWithoutStealingFocus(window, process.platform, () => app.isActive())
+  }, SPLASH_REVEAL_DELAY_MS)
 }
 
 /**

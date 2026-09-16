@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js
-index 209a74d..1a0022b 100644
+index 209a74d..799dc80 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js
 @@ -227,7 +227,7 @@ window.__ModuleLoader__.load({
@@ -131,6 +131,15 @@ index 209a74d..1a0022b 100644
  					else close(true);
  					return;
  				}
+@@ -563,7 +629,7 @@ window.__ModuleLoader__.load({
+ 				select(selection).then(settleSelection);
+ 			};
+ 			const waiting = state.current === null && state.status === "loading";
+-			const modelLabel = waiting ? t("trigger.loading") : currentChoice?.model.name ?? (state.current === null ? t("trigger.fallback") : `${state.current.provider}/${state.current.model}`);
++			const modelLabel = waiting ? t("trigger.loading") : currentChoice?.model.name ?? (state.current === null ? t("trigger.fallback") : state.current.provider === "deepseek-official" ? t("trigger.defaultModel") : `${state.current.provider}/${state.current.model}`);
+ 			const triggerLabel = effortLabel === void 0 ? modelLabel : `${modelLabel} · ${effortLabel}`;
+ 			const triggerAria = waiting ? t("trigger.loading") : state.current === null ? t("trigger.selectAria") : effortLabel === void 0 ? t("trigger.aria", { model: modelLabel }) : t("trigger.ariaEffort", {
+ 				model: modelLabel,
 @@ -628,6 +694,7 @@ window.__ModuleLoader__.load({
  								role: "menuitem",
  								className: ModelSelect_module_css_default.cell,
@@ -183,7 +192,14 @@ index 209a74d..1a0022b 100644
  								})
  							] }),
  							pane === "effort" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [state.error !== null && lastActionRef.current === "load" && (0, react_jsx_runtime.jsxs)("div", {
-@@ -805,12 +893,15 @@ window.__ModuleLoader__.load({
+@@ -799,18 +887,22 @@ window.__ModuleLoader__.load({
+ 			"option.deepseekV4Pro.description": "更强的自主编码、知识与复杂推理能力；适合复杂或质量优先的任务，但成本更高。",
+ 			"trigger.fallback": "选择模型",
+ 			"trigger.loading": "正在加载模型…",
++			"trigger.defaultModel": "默认模型",
+ 			"trigger.selectAria": "选择模型",
+ 			"trigger.aria": "选择模型，当前 {model}",
+ 			"trigger.ariaEffort": "选择模型，当前 {model}，推理等级 {effort}",
  			"menu.aria": "模型与推理等级",
  			"menu.model": "模型",
  			"menu.effort": "推理等级",
@@ -199,7 +215,14 @@ index 209a74d..1a0022b 100644
  			"blocked.composer": "当前模型不可用，请先选择模型",
  			"empty.efforts": "当前模型未提供推理等级。"
  		};
-@@ -828,12 +919,15 @@ window.__ModuleLoader__.load({
+@@ -822,18 +914,22 @@ window.__ModuleLoader__.load({
+ 			"option.deepseekV4Pro.description": "Stronger agentic coding, knowledge, and difficult reasoning; suited to complex or quality-critical tasks at higher cost.",
+ 			"trigger.fallback": "Select model",
+ 			"trigger.loading": "Loading models…",
++			"trigger.defaultModel": "Default model",
+ 			"trigger.selectAria": "Select model",
+ 			"trigger.aria": "Select model, current {model}",
+ 			"trigger.ariaEffort": "Select model, current {model}, reasoning effort {effort}",
  			"menu.aria": "Model and reasoning effort",
  			"menu.model": "Model",
  			"menu.effort": "Effort",
@@ -215,7 +238,7 @@ index 209a74d..1a0022b 100644
  			"blocked.composer": "This model is unavailable — select one to continue",
  			"empty.efforts": "This model provides no reasoning effort levels."
  		};
-@@ -854,7 +948,7 @@ window.__ModuleLoader__.load({
+@@ -854,7 +950,7 @@ window.__ModuleLoader__.load({
  		/** Flatten the directory into popup rows; failure rows are listed for visibility but never selectable. */
  		function optionsOf(directory, t) {
  			const rows = [];
