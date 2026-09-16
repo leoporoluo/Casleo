@@ -499,44 +499,38 @@ describe('agent preset package transfer', () => {
     }
   })
 
-  it('keeps a large mode roster grouped and compact without a search field', async () => {
-    const patch = await readFile(
-      patchPath('@deepseek-ai/dsh-client-ui-agent-preset'),
-      'utf8'
-    )
+  it('leaves the mode picker exactly as upstream renders it', async () => {
+    const [client, patch] = await Promise.all([
+      readFile(
+        path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-agent-preset', 'lib', 'client.js'),
+        'utf8'
+      ),
+      readFile(patchPath('@deepseek-ai/dsh-client-ui-agent-preset'), 'utf8')
+    ])
 
-    expect(patch).toContain('recentPresets: "Recent"')
-    expect(patch).toContain('RECENT_PRESETS_KEY')
-    expect(patch).toContain('option.trust === "system"')
-    expect(patch).toContain('option.trust === "user"')
-    expect(patch).toContain('text-overflow:ellipsis')
-    expect(patch).toContain('selectedItem')
-    expect(patch).toContain('side: "bottom"')
-    // Modes are chosen from the list itself: the picker carries no search field,
-    // so the roster stays grouped instead of filtered down to a single match.
-    expect(patch).not.toContain('searchPresets')
-    expect(patch).not.toContain('IconSearchOutline16')
-    expect(patch).not.toContain('type: "search"')
-    expect(patch).not.toContain('preset-search')
+    // The stock flat list, the stock item rows and the stock trailing check: no
+    // grouping, no recents, no desktop re-styling and no search field, so the
+    // picker reads exactly like the one the web build shows.
+    expect(client).toContain('items: state.options.map((option) => {')
+    expect(client).toContain('className: AgentPresetSeat_module_css_default.item,')
+    expect(client).toContain('selectedId: state.current,')
+    // This package's only remaining Casleo business is preset package transfer.
+    expect(patch).toContain('importPreset: "Import"')
+    expect(patch).toContain('exportPreset: "Export preset"')
+    for (const reverted of [
+      'recentPresets',
+      'RECENT_PRESETS_KEY',
+      'seatDesktopCss',
+      'selectedItem',
+      'groupLabel',
+      'searchPresets',
+      'preset-search',
+      'IconSearchOutline16'
+    ]) {
+      expect(patch).not.toContain(reverted)
+    }
     expect(patch).not.toContain('AWESOME_PRESETS_ID')
     expect(patch).not.toContain('browseAwesomePresets')
-  })
-
-  it('keeps the desktop seat CSS balanced so its rules are not swallowed', async () => {
-    const client = await readFile(
-      path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-agent-preset', 'lib', 'client.js'),
-      'utf8'
-    )
-    const block = /const seatDesktopCss = "([^"]*)";/u.exec(client)?.[1] ?? ''
-
-    // The block used to leave its `@media (prefers-reduced-motion:reduce)` open, so
-    // every rule after it — the picker width, the item and group styling — applied
-    // only when the OS asked for reduced motion. It now closes on its own rule.
-    expect(block).not.toBe('')
-    expect(block.match(/\{/gu)?.length).toBe(block.match(/\}/gu)?.length)
-    expect(block).toContain('@media (prefers-reduced-motion:reduce){.cubgiG_item{transition:none}}')
-    // The search field is gone, so nothing may size the menu around it any more.
-    expect(block).not.toContain('[role=menu]:has(')
   })
 
   it('keeps the loopback API discoverable by an explicitly requested online Skill', async () => {

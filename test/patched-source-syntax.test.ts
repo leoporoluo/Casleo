@@ -41,6 +41,26 @@ function syntaxErrors(target: string): string[] {
   )
 }
 
+/**
+ * A stylesheet literal that never closes its last block parses as JavaScript and
+ * passes every other check here, yet the browser nests everything the plugin
+ * appends after the break inside that open block — which silently turns those
+ * rules conditional. One shipped literal did exactly that and painted only when
+ * the OS asked for reduced motion, so the shape is guarded rather than trusted.
+ */
+function unbalancedStylesheets(target: string): string[] {
+  const source = readFileSync(path.join(projectRoot, target), 'utf8')
+  const broken: string[] = []
+  for (const match of source.matchAll(/"((?:[^"\\]|\\.){120,})"/gu)) {
+    const value = match[1] ?? ''
+    if (!/^\s*(?:@media[^{]*\{|\.[A-Za-z0-9_-]+\s*\{)/u.test(value)) continue
+    if ((value.match(/\{/gu)?.length ?? 0) !== (value.match(/\}/gu)?.length ?? 0)) {
+      broken.push(value.slice(0, 48))
+    }
+  }
+  return broken
+}
+
 describe('patched JavaScript parses', () => {
   const targets = patchedJavaScriptTargets()
 
@@ -50,5 +70,9 @@ describe('patched JavaScript parses', () => {
 
   it.each(targets)('%s has no syntax errors', (target) => {
     expect(syntaxErrors(target)).toEqual([])
+  })
+
+  it.each(targets)('%s injects only balanced stylesheet literals', (target) => {
+    expect(unbalancedStylesheets(target)).toEqual([])
   })
 })
