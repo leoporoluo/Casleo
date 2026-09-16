@@ -67,6 +67,27 @@ describe('Harness launch contract', () => {
     }
   })
 
+  it('reclaims the preferred port when it is released inside the retry window', async () => {
+    const occupied = createServer()
+    await new Promise<void>((resolve, reject) => {
+      occupied.once('error', reject)
+      occupied.listen({ host: '127.0.0.1', port: 0 }, resolve)
+    })
+    const address = occupied.address()
+    if (!address || typeof address === 'string') throw new Error('Expected a TCP address')
+
+    const release = setTimeout(() => occupied.close(), 300)
+    try {
+      await expect(reserveLoopbackPort(address.port, 3_000)).resolves.toEqual({
+        port: address.port,
+        usedPreferredPort: true
+      })
+    } finally {
+      clearTimeout(release)
+      await new Promise<void>((resolve) => occupied.close(() => resolve()))
+    }
+  })
+
   it('does not treat a briefly reachable port as a completed Harness startup', () => {
     const firstProbe = updateReadyStability(undefined, true, 1_000)
     expect(firstProbe).toEqual({ readySince: 1_000, ready: false })

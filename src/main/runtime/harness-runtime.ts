@@ -1,13 +1,22 @@
 import { execFile, execFileSync, type SpawnOptionsWithoutStdio } from 'node:child_process'
 import type { EventEmitter } from 'node:events'
-import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs'
-import { mkdir } from 'node:fs/promises'
+import { createWriteStream, existsSync, mkdirSync, writeFileSync, type WriteStream } from 'node:fs'
+import { mkdir, readFile, rm } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { dirname, join, posix, win32 } from 'node:path'
 import { StringDecoder } from 'node:string_decoder'
 import type { RuntimePhase, RuntimeSnapshot } from '../../shared/contracts'
 import { SAFE_MODE_PROFILE } from '../state/safe-mode-profile'
 import { parsePluginStartupFailures, type PluginStartupFailure } from '../../shared/plugin-startup-failure'
+import {
+  HARNESS_PID_FILENAME,
+  StaleHarnessReaper,
+  formatHarnessProcessRecord,
+  isProcessAlive,
+  parseHarnessProcessRecord,
+  queryWindowsProcessIdentity,
+  terminateProcess
+} from './stale-harness'
 
 export interface HarnessRuntimeOptions {
   dshEntryPath: string
@@ -31,6 +40,7 @@ export interface HarnessChildProcess extends EventEmitter {
   readonly stdout: NodeJS.ReadableStream
   readonly stderr: NodeJS.ReadableStream
   readonly exitCode: number | null
+  readonly pid?: number
   kill(signal?: NodeJS.Signals): boolean
 }
 
@@ -446,8 +456,16 @@ export class HarnessRuntime {
     await mkdir(dirname(this.options.logPath), { recursive: true })
     this.logStream ??= createWriteStream(this.options.logPath, { flags: 'a' })
 
+    const reapedStaleHarness = await this.reapStaleHarness()
+
     const preferredPort = this.options.preferredPort ?? DEFAULT_HARNESS_PORT
-    const { port, usedPreferredPort } = await reserveLoopbackPort(preferredPort)
+    // A terminated process releases its listening socket asynchronously, so
+    // give the preferred port a moment back rather than settling for an
+    // ephemeral origin that loses Chromium's frontend cache.
+    const { port, usedPreferredPort } = await reserveLoopbackPort(
+      preferredPort,
+      reapedStaleHarness ? 3_000 : 0
+    )
     const url = `http://127.0.0.1:${port}`
     const args = buildNodeArguments(
       this.options.nodeEntryPath,
@@ -518,7 +536,10 @@ export class HarnessRuntime {
         this.writeLog(`[desktop] failed to stop rejected Harness launch: ${detail}`)
       })
     })
-    child.once('spawn', () => this.writeLog('[desktop] Bundled Node.js Harness process started'))
+    child.once('spawn', () => {
+      this.writeLog('[desktop] Bundled Node.js Harness process started')
+      this.writePidRecord(child.pid, port)
+    })
     child.once('error', (error) => {
       this.writeLog(`[node] ${error.stack ?? error.message}`)
       if (this.child !== child) return
@@ -586,16 +607,68 @@ ${cause}`
   }
 
   private async stopChild(child: HarnessChildProcess): Promise<void> {
-    if (child.exitCode !== null) return
-    const exitPromise = new Promise<boolean>((resolve) =>
-      child.once('exit', () => resolve(true))
+    if (child.exitCode === null) {
+      const exitPromise = new Promise<boolean>((resolve) =>
+        child.once('exit', () => resolve(true))
+      )
+      child.kill('SIGTERM')
+      const exited = await Promise.race([
+        exitPromise,
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 4_000))
+      ])
+      if (!exited && child.exitCode === null) child.kill('SIGKILL')
+    }
+    await this.clearPidRecord(child.pid)
+  }
+
+  private pidRecordPath(): string {
+    return join(dirname(this.options.logPath), HARNESS_PID_FILENAME)
+  }
+
+  /**
+   * Record the running Harness so the next launch can recognise and stop it if
+   * this desktop process never gets to shut it down cleanly (crash, force
+   * quit, or an updater replacing the app underneath it). Written
+   * synchronously because the file is tiny and must never still be held open
+   * while the process that owns the record is being torn down.
+   */
+  private writePidRecord(pid: number | undefined, port: number): void {
+    if (pid === undefined) return
+    try {
+      writeFileSync(this.pidRecordPath(), formatHarnessProcessRecord({ pid, port }), 'utf8')
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      this.writeLog(`[desktop] could not record Harness process (${detail})`)
+    }
+  }
+
+  private async clearPidRecord(pid: number | undefined): Promise<void> {
+    if (pid === undefined) return
+    const recordPath = this.pidRecordPath()
+    try {
+      const record = parseHarnessProcessRecord(await readFile(recordPath, 'utf8'))
+      if (record !== undefined && record.pid !== pid) return
+      await rm(recordPath, { force: true })
+    } catch {
+      // No record to clear.
+    }
+  }
+
+  private async reapStaleHarness(): Promise<boolean> {
+    if (process.platform !== 'win32') return false
+    const reaper = new StaleHarnessReaper(
+      {
+        platform: process.platform,
+        isAlive: isProcessAlive,
+        queryIdentity: queryWindowsProcessIdentity,
+        terminate: terminateProcess
+      },
+      (line) => this.writeLog(line)
     )
-    child.kill('SIGTERM')
-    const exited = await Promise.race([
-      exitPromise,
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 4_000))
-    ])
-    if (!exited && child.exitCode === null) child.kill('SIGKILL')
+    return reaper.reap(this.pidRecordPath(), {
+      nodeExecutablePath: this.options.nodeExecutablePath,
+      nodeEntryPath: this.options.nodeEntryPath
+    })
   }
 
   private setState(phase: RuntimePhase, message: string): void {
@@ -917,15 +990,25 @@ async function reservePort(port: number): Promise<number> {
  * Prefer a stable loopback origin so Chromium can reuse the Harness frontend
  * cache across launches. A conflicting local process must not prevent Desktop
  * from starting, so an ephemeral port remains the fallback.
+ *
+ * @param preferredPort - the stable port to try first.
+ * @param retryWindowMs - how long to keep retrying the preferred port before
+ * falling back; a just-terminated process releases its socket asynchronously.
  */
 export async function reserveLoopbackPort(
-  preferredPort = DEFAULT_HARNESS_PORT
+  preferredPort = DEFAULT_HARNESS_PORT,
+  retryWindowMs = 0
 ): Promise<{ port: number; usedPreferredPort: boolean }> {
-  try {
-    return { port: await reservePort(preferredPort), usedPreferredPort: true }
-  } catch {
-    return { port: await reservePort(0), usedPreferredPort: false }
+  const deadline = Date.now() + retryWindowMs
+  for (;;) {
+    try {
+      return { port: await reservePort(preferredPort), usedPreferredPort: true }
+    } catch {
+      if (Date.now() >= deadline) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
   }
+  return { port: await reservePort(0), usedPreferredPort: false }
 }
 
 async function waitUntilReady(
