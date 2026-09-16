@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1b7f134..86572fe 100644
+index 1b7f134..a2496ed 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -14617,45 +14617,24 @@ window.__ModuleLoader__.load({
@@ -78,7 +78,22 @@ index 1b7f134..86572fe 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -15754,13 +15739,14 @@ window.__ModuleLoader__.load({
+@@ -14954,13 +14939,7 @@ window.__ModuleLoader__.load({
+ 						className: ConversationRoot_module_css_default.scrollBody,
+ 						"data-conversation-scroll": "",
+ 						children: [sessionId === void 0 ? null : renderSlot("conversation.session", {}), composerSeat]
+-					}), phase === "active" && ["left", "right"].map((side) => (0, react_jsx_runtime.jsx)(WidthHandle, {
+-						side,
+-						onStart: onHandleStart,
+-						onDrag: onHandleDrag,
+-						onCommit: onHandleCommit,
+-						onEnd: onHandleEnd
+-					}, side))]
++					}), null]
+ 				})]
+ 			});
+ 		}
+@@ -15754,13 +15733,14 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css.mjs
@@ -95,7 +110,7 @@ index 1b7f134..86572fe 100644
  			document.head.appendChild(tag);
  		}
  		var InputBar_module_css_default = {
-@@ -15779,6 +15765,7 @@ window.__ModuleLoader__.load({
+@@ -15779,6 +15759,7 @@ window.__ModuleLoader__.load({
  			"pending": "uV2eYG_pending",
  			"placeholder": "uV2eYG_placeholder",
  			"primary": "uV2eYG_primary",
@@ -103,7 +118,7 @@ index 1b7f134..86572fe 100644
  			"retry": "uV2eYG_retry",
  			"root": "uV2eYG_root",
  			"row": "uV2eYG_row",
-@@ -15803,7 +15790,7 @@ window.__ModuleLoader__.load({
+@@ -15803,7 +15784,7 @@ window.__ModuleLoader__.load({
  		* The no-session state renders the SAME div inert as the Workspace-picker
  		* trigger instead of a parallel tree.
  		*/
@@ -112,7 +127,7 @@ index 1b7f134..86572fe 100644
  			const input = useInput((s) => s);
  			const notice = useNotices((s) => s);
  			const busyEnter = useBusyEnter((s) => s);
-@@ -16075,10 +16062,6 @@ window.__ModuleLoader__.load({
+@@ -16075,10 +16056,6 @@ window.__ModuleLoader__.load({
  								className: InputBar_module_css_default.overlayAnchor,
  								children: renderSlot("conversation.input.overlay", {})
  							}),
@@ -123,7 +138,7 @@ index 1b7f134..86572fe 100644
  							renderSlot("conversation.input.attachments", {
  								attachments,
  								canAcceptDrop,
-@@ -16095,13 +16078,19 @@ window.__ModuleLoader__.load({
+@@ -16095,13 +16072,19 @@ window.__ModuleLoader__.load({
  									size: imageSizeText(imageLimits.maxImageBytes)
  								}
  							}),
@@ -150,7 +165,7 @@ index 1b7f134..86572fe 100644
  										(0, react_jsx_runtime.jsx)(ComposerContentEditable, {
  											editor: workspaceTrigger ? null : editor,
  											editable,
-@@ -16123,8 +16112,9 @@ window.__ModuleLoader__.load({
+@@ -16123,8 +16106,9 @@ window.__ModuleLoader__.load({
  											children: placeholderText
  										}),
  										(0, react_jsx_runtime.jsx)(DecoratorPortals, { editor: workspaceTrigger ? null : editor })
@@ -162,7 +177,7 @@ index 1b7f134..86572fe 100644
  							}),
  							(0, react_jsx_runtime.jsxs)("div", {
  								className: InputBar_module_css_default.row,
-@@ -16256,7 +16246,7 @@ window.__ModuleLoader__.load({
+@@ -16256,7 +16240,7 @@ window.__ModuleLoader__.load({
  							})
  						]
  					}),
@@ -171,7 +186,7 @@ index 1b7f134..86572fe 100644
  				]
  			});
  		});
-@@ -16641,6 +16631,10 @@ window.__ModuleLoader__.load({
+@@ -16641,6 +16625,10 @@ window.__ModuleLoader__.load({
  					"conversation.hero.agentPreset": {
  						kind: "single",
  						scope: "root"
@@ -182,7 +197,7 @@ index 1b7f134..86572fe 100644
  					}
  				},
  				inject: (sessionId) => ({
-@@ -16721,6 +16715,10 @@ window.__ModuleLoader__.load({
+@@ -16721,6 +16709,10 @@ window.__ModuleLoader__.load({
  						kind: "single",
  						scope: "session-maybe"
  					},

@@ -73,9 +73,21 @@ function mountWindowsMenu(): void {
 
   zoomDisplay = renderMenu(menu, menuEntries(locale), () => closeMenu(false), applyZoomState)
   menuButton.addEventListener('pointerdown', (event) => event.preventDefault())
+  // Opening resizes this view, and a resize repaints the caption strip it sits
+  // in. Rapid clicks must not queue several of them, so a toggle in flight
+  // swallows the next click until it settles.
+  let toggling = false
   menuButton.addEventListener('click', () => {
-    if (menu.hidden) void openMenu()
-    else closeMenu()
+    if (toggling) return
+    if (menu.hidden) {
+      toggling = true
+      const release = (): void => {
+        toggling = false
+      }
+      void openMenu().then(release, release)
+      return
+    }
+    closeMenu()
   })
   menu.addEventListener('keydown', (event) => {
     const buttons = [...menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
