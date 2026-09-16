@@ -145,7 +145,7 @@ import {
 } from './state/plugin-market-check'
 import { upgradePluginToGeneration } from './state/plugin-upgrade'
 import { aboutDetail, bundledHarnessVersion } from './version-info'
-import { windowsMenuViewBounds } from './windows-menu-view'
+import { windowsMenuButtonBounds, windowsMenuPanelBounds } from './windows-menu-view'
 import { shouldKeepRunningInBackground } from './close-to-tray'
 import {
   MAIN_WINDOW_RECOVERY_RELOAD_COOLDOWN_MS,
@@ -177,10 +177,12 @@ const PLUGIN_RECOVERY_ACTIONS = new Set<PluginRecoveryAction>([
 ])
 
 let mainWindow: BrowserWindow | undefined
-let windowsMenuView: WebContentsView | undefined
+let windowsMenuButtonView: WebContentsView | undefined
+let windowsMenuPanelView: WebContentsView | undefined
 let windowsMenuOpen = false
 let windowsMenuOpenedAt = 0
-let windowsMenuBounds: ReturnType<typeof windowsMenuViewBounds> | undefined
+let windowsMenuButtonViewBounds: ReturnType<typeof windowsMenuButtonBounds> | undefined
+let windowsMenuPanelViewBounds: ReturnType<typeof windowsMenuPanelBounds> | undefined
 let windowsMenuDark = false
 let tray: Tray | undefined
 let runtime: HarnessRuntime
@@ -456,48 +458,77 @@ function applyWindowChromeTheme(window: BrowserWindow, isDark: boolean): void {
   if (process.platform === 'win32') {
     windowsMenuDark = isDark
     window.setTitleBarOverlay(windowsTitleBarOverlay(isDark))
-    if (windowsMenuView && !windowsMenuView.webContents.isDestroyed()) {
-      windowsMenuView.webContents.send('desktop-titlebar:theme-changed', isDark)
+    for (const view of windowsMenuViews()) {
+      view.webContents.send('desktop-titlebar:theme-changed', isDark)
     }
   }
 }
 
+/** Every live menu surface: the fixed button strip and the panel. */
+function windowsMenuViews(): WebContentsView[] {
+  return [windowsMenuPanelView, windowsMenuButtonView].filter(
+    (view): view is WebContentsView => view !== undefined && !view.webContents.isDestroyed()
+  )
+}
+
+function sameBounds(
+  a: { x: number; y: number; width: number; height: number } | undefined,
+  b: { x: number; y: number; width: number; height: number }
+): boolean {
+  return (
+    a !== undefined && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
+  )
+}
+
 function updateWindowsMenuViewBounds(window: BrowserWindow): void {
-  if (!windowsMenuView || windowsMenuView.webContents.isDestroyed() || window.isDestroyed()) return
+  if (window.isDestroyed()) return
   const contentSize = window.getContentSize()
-  const width = contentSize[0] ?? 0
-  const height = contentSize[1] ?? 0
-  const next = windowsMenuViewBounds({ width, height }, windowsMenuOpen, window.isFullScreen())
-  const current = windowsMenuBounds
-  // Every pointerdown in the main window asks for a close, and a redundant
-  // setBounds repaints the transparent strip over the caption area — which the
-  // user reads as the titlebar glyphs flickering. Only apply a real change.
-  if (
-    current !== undefined &&
-    current.x === next.x &&
-    current.y === next.y &&
-    current.width === next.width &&
-    current.height === next.height
-  ) {
-    return
+  const size = { width: contentSize[0] ?? 0, height: contentSize[1] ?? 0 }
+  const fullscreen = window.isFullScreen()
+
+  const button = windowsMenuButtonView
+  if (button && !button.webContents.isDestroyed()) {
+    const next = windowsMenuButtonBounds(size, fullscreen)
+    // A redundant setBounds repaints the transparent strip over the caption
+    // area, which the user reads as the titlebar glyphs flickering. Only apply a
+    // real change.
+    if (!sameBounds(windowsMenuButtonViewBounds, next)) {
+      windowsMenuButtonViewBounds = next
+      button.setBounds(next)
+    }
   }
-  windowsMenuBounds = next
-  windowsMenuView.setBounds(next)
+
+  const panel = windowsMenuPanelView
+  if (panel && !panel.webContents.isDestroyed()) {
+    const next = windowsMenuPanelBounds(size, fullscreen)
+    if (!sameBounds(windowsMenuPanelViewBounds, next)) {
+      windowsMenuPanelViewBounds = next
+      panel.setBounds(next)
+    }
+  }
 }
 
 function setWindowsMenuOpen(window: BrowserWindow, open: boolean, notifyRenderer = false): void {
+  const panel = windowsMenuPanelView
   if (windowsMenuOpen !== open) {
     windowsMenuOpen = open
     if (open) windowsMenuOpenedAt = Date.now()
+    // The geometry does not depend on the open state: the panel is shown and
+    // hidden, never resized, so toggling cannot repaint the caption strip.
     updateWindowsMenuViewBounds(window)
+    if (panel && !panel.webContents.isDestroyed()) panel.setVisible(open)
+    const button = windowsMenuButtonView
+    if (button && !button.webContents.isDestroyed()) {
+      button.webContents.send('desktop-titlebar:menu-state', open)
+    }
   }
-  if (notifyRenderer && windowsMenuView && !windowsMenuView.webContents.isDestroyed()) {
-    windowsMenuView.webContents.send('desktop-titlebar:close-menu')
+  if (notifyRenderer && panel && !panel.webContents.isDestroyed()) {
+    panel.webContents.send('desktop-titlebar:close-menu')
   }
 }
 
-function attachWindowsMenuView(window: BrowserWindow): void {
-  const menuView = new WebContentsView({
+function createWindowsMenuView(): WebContentsView {
+  const view = new WebContentsView({
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -506,46 +537,57 @@ function attachWindowsMenuView(window: BrowserWindow): void {
       webSecurity: true
     }
   })
-  windowsMenuView = menuView
+  view.setBackgroundColor('#00000000')
+  view.webContents.setZoomFactor(1)
+  view.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  return view
+}
+
+function attachWindowsMenuView(window: BrowserWindow): void {
+  const panelView = createWindowsMenuView()
+  const buttonView = createWindowsMenuView()
+  windowsMenuPanelView = panelView
+  windowsMenuButtonView = buttonView
   windowsMenuOpen = false
-  windowsMenuBounds = undefined
+  windowsMenuButtonViewBounds = undefined
+  windowsMenuPanelViewBounds = undefined
   windowsMenuDark = nativeTheme.shouldUseDarkColors
-  menuView.setBackgroundColor('#00000000')
-  menuView.webContents.setZoomFactor(1)
-  menuView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  menuView.webContents.on('did-finish-load', () => {
-    if (!menuView.webContents.isDestroyed()) {
-      menuView.webContents.send('desktop-titlebar:theme-changed', windowsMenuDark)
+  panelView.setVisible(false)
+  panelView.webContents.on('did-finish-load', () => {
+    if (!panelView.webContents.isDestroyed()) {
+      panelView.webContents.send('desktop-titlebar:theme-changed', windowsMenuDark)
     }
   })
-  window.contentView.addChildView(menuView)
+  buttonView.webContents.on('did-finish-load', () => {
+    if (!buttonView.webContents.isDestroyed()) {
+      buttonView.webContents.send('desktop-titlebar:theme-changed', windowsMenuDark)
+      buttonView.webContents.send('desktop-titlebar:menu-state', windowsMenuOpen)
+    }
+  })
+  // The panel goes in first so the button strip keeps the pointer on their seam.
+  window.contentView.addChildView(panelView)
+  window.contentView.addChildView(buttonView)
   updateWindowsMenuViewBounds(window)
 
   const updateBounds = (): void => updateWindowsMenuViewBounds(window)
   window.on('resize', updateBounds)
   window.on('enter-full-screen', updateBounds)
   window.on('leave-full-screen', updateBounds)
-  // Opening the menu focuses its first item, and that focus lives in the menu's
-  // own child view; growing that view is itself enough to report a blur here on
-  // Windows. Ignore a blur the menu owns or one that lands while it is still
+  // Focusing the panel's first item can be reported as a window blur on Windows.
+  // Ignore a blur a menu surface owns or one that lands while it is still
   // settling open, or the menu would be torn down a frame after it appears.
   window.on('blur', () => {
     if (windowsMenuOpen && Date.now() - windowsMenuOpenedAt < 500) return
-    if (
-      windowsMenuView &&
-      !windowsMenuView.webContents.isDestroyed() &&
-      windowsMenuView.webContents.isFocused()
-    ) {
-      return
-    }
+    if (windowsMenuViews().some((view) => view.webContents.isFocused())) return
     setWindowsMenuOpen(window, false, true)
   })
 
-  void loadDesktopResource(menuView.webContents, desktopResourcePath('windows-menu.html'), {
-    query: {
-      locale: harnessLocale(),
-      theme: windowsMenuDark ? 'dark' : 'light'
-    }
+  const query = { locale: harnessLocale(), theme: windowsMenuDark ? 'dark' : 'light' }
+  void loadDesktopResource(panelView.webContents, desktopResourcePath('windows-menu.html'), {
+    query: { ...query, surface: 'panel' }
+  }).catch(showUnexpectedError)
+  void loadDesktopResource(buttonView.webContents, desktopResourcePath('windows-menu.html'), {
+    query: { ...query, surface: 'button' }
   }).catch(showUnexpectedError)
 }
 
@@ -1072,10 +1114,11 @@ function createWindow(): BrowserWindow {
   installMainWindowRendererRecovery(window)
   window.on('closed', () => {
     if (mainWindow === window) mainWindow = undefined
-    if (windowsMenuView && !windowsMenuView.webContents.isDestroyed()) {
-      windowsMenuView.webContents.close()
+    for (const view of [windowsMenuPanelView, windowsMenuButtonView]) {
+      if (view && !view.webContents.isDestroyed()) view.webContents.close()
     }
-    windowsMenuView = undefined
+    windowsMenuPanelView = undefined
+    windowsMenuButtonView = undefined
     windowsMenuOpen = false
     resolvePluginRecoveryAction('quit')
     resolveWebImportAction('skip')
@@ -1609,6 +1652,13 @@ function registerHarnessHandlers(): void {
     return { zoomFactor: mainWindow?.webContents.getZoomFactor() ?? 1 }
   })
 
+  ipcMain.removeHandler('desktop-titlebar:toggle-menu')
+  ipcMain.handle('desktop-titlebar:toggle-menu', (event) => {
+    assertTrustedWindowsMenuEvent(event)
+    if (mainWindow && !mainWindow.isDestroyed()) setWindowsMenuOpen(mainWindow, !windowsMenuOpen)
+    return { open: windowsMenuOpen }
+  })
+
   ipcMain.removeHandler('desktop-titlebar:set-menu-open')
   ipcMain.handle('desktop-titlebar:set-menu-open', (event, open: unknown) => {
     assertTrustedWindowsMenuEvent(event)
@@ -1657,23 +1707,19 @@ function assertTrustedDesktopMenuEvent(event: IpcMainInvokeEvent): void {
     !mainWindow.isDestroyed() &&
     event.sender === mainWindow.webContents &&
     event.senderFrame === mainWindow.webContents.mainFrame
-  const fromWindowsMenu =
-    windowsMenuView &&
-    !windowsMenuView.webContents.isDestroyed() &&
-    event.sender === windowsMenuView.webContents &&
-    event.senderFrame === windowsMenuView.webContents.mainFrame
+  const fromWindowsMenu = windowsMenuViews().some(
+    (view) => event.sender === view.webContents && event.senderFrame === view.webContents.mainFrame
+  )
   if (!fromMainWindow && !fromWindowsMenu) {
     throw new Error('This action is only available from the Casleo window.')
   }
 }
 
 function assertTrustedWindowsMenuEvent(event: IpcMainInvokeEvent): void {
-  if (
-    !windowsMenuView ||
-    windowsMenuView.webContents.isDestroyed() ||
-    event.sender !== windowsMenuView.webContents ||
-    event.senderFrame !== windowsMenuView.webContents.mainFrame
-  ) {
+  const trusted = windowsMenuViews().some(
+    (view) => event.sender === view.webContents && event.senderFrame === view.webContents.mainFrame
+  )
+  if (!trusted) {
     throw new Error('This action is only available from the Windows application menu.')
   }
 }

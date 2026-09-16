@@ -10,7 +10,8 @@ import {
   WINDOWS_CAPTION_CONTROLS_WIDTH,
   WINDOWS_MENU_BUTTON_WIDTH,
   WINDOWS_MENU_PANEL_WIDTH,
-  windowsMenuViewBounds
+  windowsMenuButtonBounds,
+  windowsMenuPanelBounds
 } from '../src/main/windows-menu-view'
 
 describe('Windows titlebar menu', () => {
@@ -133,7 +134,8 @@ describe('Windows titlebar menu', () => {
     expect(main).toContain("ipcMain.handle('desktop-menu:execute'")
     expect(main).toContain("ipcMain.handle('desktop-menu:get-zoom-factor'")
     expect(main).toContain('assertTrustedDesktopMenuEvent(event)')
-    expect(main).toContain('event.sender === windowsMenuView.webContents')
+    expect(main).toContain('function assertTrustedWindowsMenuEvent')
+    expect(main).toContain('windowsMenuViews().some(')
     expect(main).toContain('if (!isDesktopMenuCommand(command))')
   })
 
@@ -148,11 +150,15 @@ describe('Windows titlebar menu', () => {
     expect(formatZoomPercentage(1 / Math.sqrt(1.2))).toBe('91%')
     expect(main).toContain('contents.getZoomFactor()')
     expect(main).toContain('new WebContentsView')
-    expect(main).toContain('window.contentView.addChildView(menuView)')
-    expect(main).toContain('menuView.webContents.setZoomFactor(1)')
+    expect(main).toContain('window.contentView.addChildView(panelView)')
+    expect(main).toContain('window.contentView.addChildView(buttonView)')
+    expect(main).toContain('view.webContents.setZoomFactor(1)')
     expect(main).toContain("preload: join(import.meta.dirname, '../preload/windows-menu.cjs')")
+    expect(main).toContain("surface: 'panel'")
+    expect(main).toContain("surface: 'button'")
     expect(menuPreload).toContain("ipcRenderer.invoke('desktop-menu:get-zoom-factor')")
     expect(menuPreload).toContain('formatZoomPercentage(zoomFactor)')
+    expect(menuPreload).toContain("params.get('surface') === 'panel'")
     expect(layoutPreload).not.toContain('INVERSE_ZOOM_PROPERTY')
     expect(layoutPreload).not.toContain('menuButton')
     expect(viteConfig).toContain("'windows-menu': resolve('src/preload/windows-menu.ts')")
@@ -163,22 +169,28 @@ describe('Windows titlebar menu', () => {
     expect(WINDOWS_MENU_BUTTON_WIDTH).toBe(44)
     expect(WINDOWS_MENU_PANEL_WIDTH).toBe(304)
 
-    const closedAt100Percent = windowsMenuViewBounds({ width: 1380, height: 900 }, false)
-    const closedAt69Percent = windowsMenuViewBounds({ width: 1380, height: 900 }, false)
-    expect(closedAt100Percent).toEqual({ x: 1196, y: 0, width: 44, height: 36 })
-    expect(closedAt69Percent).toEqual(closedAt100Percent)
+    const buttonAt100Percent = windowsMenuButtonBounds({ width: 1380, height: 900 }, false)
+    expect(buttonAt100Percent).toEqual({ x: 1196, y: 0, width: 44, height: 36 })
+    // The button strip never depends on the menu state, so opening the menu
+    // cannot resize — and therefore repaint — the strip over the caption area.
+    expect(windowsMenuButtonBounds({ width: 1380, height: 900 }, false)).toEqual(buttonAt100Percent)
 
-    expect(windowsMenuViewBounds({ width: 1380, height: 900 }, true)).toEqual({
-      x: 936,
-      y: 0,
-      width: 304,
-      height: 760
-    })
-    expect(windowsMenuViewBounds({ width: 900, height: 640 }, false, true)).toEqual({
+    const panel = windowsMenuPanelBounds({ width: 1380, height: 900 }, false)
+    expect(panel).toEqual({ x: 936, y: 36, width: 304, height: 760 })
+    // The panel starts below the button strip so the button keeps its own clicks.
+    expect(panel.y).toBe(buttonAt100Percent.height)
+
+    expect(windowsMenuButtonBounds({ width: 900, height: 640 }, true)).toEqual({
       x: 856,
       y: 0,
       width: 44,
       height: 36
+    })
+    expect(windowsMenuPanelBounds({ width: 900, height: 640 }, true)).toEqual({
+      x: 596,
+      y: 36,
+      width: 304,
+      height: 604
     })
   })
 
@@ -196,7 +208,8 @@ describe('Windows titlebar menu', () => {
 
     expect(main).toContain('window.setTitleBarOverlay(windowsTitleBarOverlay(isDark))')
     expect(main).toContain("ipcMain.handle('desktop-titlebar:set-theme'")
-    expect(main).toContain("windowsMenuView.webContents.send('desktop-titlebar:theme-changed', isDark)")
+    expect(main).toContain("view.webContents.send('desktop-titlebar:theme-changed', isDark)")
+    expect(main).toContain('for (const view of windowsMenuViews())')
     expect(preload).toContain("attributeFilter: ['data-ds-dark-theme', 'class', 'style']")
     expect(preload).toContain("ipcRenderer.invoke('desktop-titlebar:set-theme', isDark)")
   })

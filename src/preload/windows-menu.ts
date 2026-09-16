@@ -7,125 +7,163 @@ type MenuEntry =
   | { kind: 'label'; label: string }
   | { kind: 'zoom'; label: string }
 
+type Surface = 'button' | 'panel'
+
+const CHEVRON_ICON = `<svg viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true"><path d="m6.5 8 3.5 3.5L13.5 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+
+/**
+ * The application menu is two views: a button strip that never changes size and
+ * a panel that is shown and hidden. Resizing a view over the caption strip
+ * repaints it, so the button owns a fixed rectangle and the panel never overlaps
+ * it.
+ */
+const THEME_STYLES = `
+  :root {
+    color-scheme: light;
+    --label-primary: #202124; --label-secondary: #61666b; --label-tertiary: #81858c;
+    --hover: rgba(32,33,36,.08); --surface: #fff; --border: rgba(32,33,36,.13);
+    --separator: rgba(32,33,36,.09); --layer: rgba(32,33,36,.06); --danger: #d93025;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --label-primary: #f3f4f6; --label-secondary: #b5b7bd; --label-tertiary: #92959b;
+    --hover: rgba(255,255,255,.09); --surface: #28282b; --border: rgba(255,255,255,.12);
+    --separator: rgba(255,255,255,.09); --layer: rgba(255,255,255,.07); --danger: #ee7772;
+  }
+  * { box-sizing: border-box; }
+  html, body { width:100%; height:100%; margin:0; overflow:hidden; background:transparent; }
+  body { color:var(--label-primary); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; user-select:none; }
+`
+
+const BUTTON_STYLES = `
+  .menuButton {
+    appearance:none; width:100%; height:100%; display:grid; place-items:center; padding:0;
+    color:var(--label-secondary); background:transparent; border:0; cursor:pointer;
+  }
+  .menuButton:hover, .menuButton.isOpen { color:var(--label-primary); background:var(--hover); }
+  .menuButton:focus-visible { outline:none; background:var(--hover); }
+`
+
+const PANEL_STYLES = `
+  .menu {
+    width:100%; height:100%; overflow:auto; padding:7px;
+    color:var(--label-primary); background:var(--surface);
+    border:1px solid var(--border); border-radius:12px;
+    scrollbar-width:thin;
+  }
+  .sectionLabel { padding:7px 10px 4px; color:var(--label-tertiary); font-size:10px; font-weight:600; line-height:14px; letter-spacing:.08em; text-transform:uppercase; }
+  .item { appearance:none; width:100%; min-height:33px; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:6px 10px; color:inherit; background:transparent; border:0; border-radius:7px; font:inherit; font-size:13px; line-height:20px; text-align:left; cursor:pointer; }
+  .item:hover, .item:focus-visible, .zoomButton:hover, .zoomButton:focus-visible, .zoomReset:hover, .zoomReset:focus-visible { outline:none; background:var(--hover); }
+  .item.danger { color:var(--danger); }
+  kbd { flex:none; color:var(--label-tertiary); font:11px/16px ui-monospace,"SFMono-Regular",Consolas,monospace; }
+  .separator { height:1px; margin:6px 3px; background:var(--separator); }
+  .zoomRow { min-height:37px; display:grid; grid-template-columns:1fr 30px 54px 30px; align-items:center; gap:3px; padding:3px 7px 3px 10px; font-size:13px; }
+  .zoomButton, .zoomReset { appearance:none; height:27px; padding:0; color:inherit; background:var(--layer); border:0; border-radius:6px; font:inherit; cursor:pointer; }
+  .zoomReset { font-size:11px; }
+  @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; } }
+`
+
+function surfaceStyles(surface: Surface): string {
+  return THEME_STYLES + (surface === 'panel' ? PANEL_STYLES : BUTTON_STYLES)
+}
+
 function mountWindowsMenu(): void {
-  if (!document.body || document.getElementById('application-menu-button')) return
+  if (!document.body || document.getElementById('application-menu-root')) return
   const params = new URLSearchParams(location.search)
   const locale = params.get('locale') === 'zh' ? 'zh' : 'en'
+  const surface: Surface = params.get('surface') === 'panel' ? 'panel' : 'button'
+
   applyTheme(params.get('theme') === 'dark')
+  ipcRenderer.on('desktop-titlebar:theme-changed', (_event, isDark: unknown) => {
+    if (typeof isDark === 'boolean') applyTheme(isDark)
+  })
 
-  const bar = document.createElement('div')
-  bar.className = 'bar'
-  const menuButton = document.createElement('button')
-  menuButton.id = 'application-menu-button'
-  menuButton.className = 'menuButton'
-  menuButton.type = 'button'
-  menuButton.setAttribute('aria-haspopup', 'menu')
-  menuButton.setAttribute('aria-expanded', 'false')
-  menuButton.setAttribute('aria-label', locale === 'zh' ? '打开应用菜单' : 'Open application menu')
-  menuButton.title = locale === 'zh' ? '应用菜单' : 'Application menu'
-  menuButton.innerHTML = chevronIcon
+  const style = document.createElement('style')
+  style.textContent = surfaceStyles(surface)
+  document.head.appendChild(style)
 
-  const menu = document.createElement('div')
-  menu.className = 'menu'
-  menu.hidden = true
-  menu.setAttribute('role', 'menu')
-  menu.setAttribute('aria-label', locale === 'zh' ? '应用菜单' : 'Application menu')
-  let zoomDisplay: HTMLButtonElement | null = null
-  let openedAt = 0
+  if (surface === 'panel') mountPanel(locale)
+  else mountButton(locale)
+}
 
-  const applyZoomState = (result: unknown): void => {
-    const zoomFactor = readZoomFactor(result)
-    if (zoomFactor !== undefined && zoomDisplay) {
-      zoomDisplay.textContent = formatZoomPercentage(zoomFactor)
-    }
+/** One button that reports toggles; the main process owns the open state. */
+function mountButton(locale: 'en' | 'zh'): void {
+  const button = document.createElement('button')
+  button.id = 'application-menu-root'
+  button.className = 'menuButton'
+  button.type = 'button'
+  button.setAttribute('aria-haspopup', 'menu')
+  button.setAttribute('aria-expanded', 'false')
+  button.setAttribute('aria-label', locale === 'zh' ? '打开应用菜单' : 'Open application menu')
+  button.title = locale === 'zh' ? '应用菜单' : 'Application menu'
+  button.innerHTML = CHEVRON_ICON
+
+  const setOpen = (open: boolean): void => {
+    button.classList.toggle('isOpen', open)
+    button.setAttribute('aria-expanded', open ? 'true' : 'false')
   }
-  const refreshZoomState = (): void => {
-    void ipcRenderer.invoke('desktop-menu:get-zoom-factor').then(applyZoomState).catch((error: unknown) => {
-      console.warn('[desktop-menu] unable to read zoom factor', error)
+
+  button.addEventListener('pointerdown', (event) => event.preventDefault())
+  button.addEventListener('click', () => {
+    void ipcRenderer
+      .invoke('desktop-titlebar:toggle-menu')
+      .catch((error: unknown) => {
+        console.warn('[desktop-menu] unable to toggle the application menu', error)
+      })
+  })
+  ipcRenderer.on('desktop-titlebar:menu-state', (_event, open: unknown) => {
+    if (typeof open === 'boolean') setOpen(open)
+  })
+  ipcRenderer.on('desktop-titlebar:close-menu', () => setOpen(false))
+
+  document.body.appendChild(button)
+}
+
+/** The panel itself: it is hidden by the main process when the menu closes. */
+function mountPanel(locale: 'en' | 'zh'): void {
+  const close = (): void => {
+    void ipcRenderer.invoke('desktop-titlebar:set-menu-open', false).catch((error: unknown) => {
+      console.warn('[desktop-menu] unable to close the application menu', error)
     })
   }
 
-  // The menu lives in a child view whose bounds grow with it. Asking the main
-  // process to resize first keeps the panel from painting inside the 44px button
-  // view and then jumping to its full width once the resize lands.
-  async function openMenu(): Promise<void> {
-    openedAt = Date.now()
-    refreshZoomState()
-    try {
-      await ipcRenderer.invoke('desktop-titlebar:set-menu-open', true)
-    } catch (error: unknown) {
-      console.warn('[desktop-menu] unable to open the application menu', error)
-    }
-    menu.hidden = false
-    menuButton.classList.add('isOpen')
-    menuButton.setAttribute('aria-expanded', 'true')
-    window.requestAnimationFrame(() => menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus())
-  }
+  const menu = document.createElement('div')
+  menu.id = 'application-menu-root'
+  menu.className = 'menu'
+  menu.setAttribute('role', 'menu')
+  menu.setAttribute('aria-label', locale === 'zh' ? '应用菜单' : 'Application menu')
+  const zoomDisplay = renderMenu(menu, menuEntries(locale), close)
+  document.body.appendChild(menu)
+  refreshZoomState(zoomDisplay)
 
-  function closeMenu(restoreFocus = true): void {
-    if (menu.hidden) return
-    menu.hidden = true
-    menuButton.classList.remove('isOpen')
-    menuButton.setAttribute('aria-expanded', 'false')
-    void ipcRenderer.invoke('desktop-titlebar:set-menu-open', false)
-    if (restoreFocus) menuButton.focus()
-  }
-
-  zoomDisplay = renderMenu(menu, menuEntries(locale), () => closeMenu(false), applyZoomState)
-  menuButton.addEventListener('pointerdown', (event) => event.preventDefault())
-  // Opening resizes this view, and a resize repaints the caption strip it sits
-  // in. Rapid clicks must not queue several of them, so a toggle in flight
-  // swallows the next click until it settles.
-  let toggling = false
-  menuButton.addEventListener('click', () => {
-    if (toggling) return
-    if (menu.hidden) {
-      toggling = true
-      const release = (): void => {
-        toggling = false
-      }
-      void openMenu().then(release, release)
-      return
+  const closeOnEscape = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      close()
     }
-    closeMenu()
-  })
+  }
   menu.addEventListener('keydown', (event) => {
     const buttons = [...menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
     const current = buttons.indexOf(document.activeElement as HTMLButtonElement)
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      closeMenu()
-    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       const direction = event.key === 'ArrowDown' ? 1 : -1
       const next = current < 0 ? 0 : (current + direction + buttons.length) % buttons.length
       buttons[next]?.focus()
+      return
     }
+    closeOnEscape(event)
   })
-  ipcRenderer.on('desktop-titlebar:close-menu', () => closeMenu(false))
-  ipcRenderer.on('desktop-titlebar:theme-changed', (_event, isDark: unknown) => {
-    if (typeof isDark === 'boolean') applyTheme(isDark)
-  })
-  // Growing the view can report a blur for this page before the menu is even
-  // shown, so ignore one that lands while the open is still settling.
-  window.addEventListener('blur', () => {
-    if (Date.now() - openedAt < 500) return
-    closeMenu(false)
-  })
-
-  const style = document.createElement('style')
-  style.textContent = menuStyles
-  document.head.appendChild(style)
-  bar.append(menuButton, menu)
-  document.body.appendChild(bar)
-  refreshZoomState()
+  document.addEventListener('keydown', closeOnEscape)
+  window.requestAnimationFrame(() =>
+    menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+  )
 }
 
 function renderMenu(
   menu: HTMLElement,
   entries: MenuEntry[],
-  close: () => void,
-  applyZoomState: (result: unknown) => void
+  close: () => void
 ): HTMLButtonElement | null {
   let zoomDisplay: HTMLButtonElement | null = null
   for (const entry of entries) {
@@ -177,9 +215,9 @@ function renderMenu(
     item.type = 'button'
     item.className = entry.command === 'quit' ? 'item danger' : 'item'
     item.setAttribute('role', 'menuitem')
-    const label = document.createElement('span')
-    label.textContent = entry.label
-    item.appendChild(label)
+    const itemLabel = document.createElement('span')
+    itemLabel.textContent = entry.label
+    item.appendChild(itemLabel)
     if (entry.shortcut) {
       const shortcut = document.createElement('kbd')
       shortcut.textContent = entry.shortcut
@@ -199,10 +237,25 @@ function renderMenu(
 
 function readZoomFactor(result: unknown): number | undefined {
   if (typeof result !== 'object' || result === null || !('zoomFactor' in result)) return undefined
-  const zoomFactor = result.zoomFactor
+  const zoomFactor = (result as { zoomFactor?: unknown }).zoomFactor
   return typeof zoomFactor === 'number' && Number.isFinite(zoomFactor) && zoomFactor > 0
     ? zoomFactor
     : undefined
+}
+
+function applyZoomState(result: unknown): void {
+  const zoomFactor = readZoomFactor(result)
+  const display = document.getElementById('application-menu-zoom')
+  if (zoomFactor !== undefined && display !== null) {
+    display.textContent = formatZoomPercentage(zoomFactor)
+  }
+}
+
+function refreshZoomState(zoomDisplay: HTMLButtonElement | null): void {
+  if (zoomDisplay !== null) zoomDisplay.id = 'application-menu-zoom'
+  void ipcRenderer.invoke('desktop-menu:get-zoom-factor').then(applyZoomState).catch((error: unknown) => {
+    console.warn('[desktop-menu] unable to read zoom factor', error)
+  })
 }
 
 function applyTheme(isDark: boolean): void {
@@ -236,43 +289,6 @@ function menuEntries(locale: 'en' | 'zh'): MenuEntry[] {
     { kind: 'command', command: 'quit', label: zh ? '退出' : 'Exit' }
   ]
 }
-
-const chevronIcon = `<svg viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true"><path d="m6.5 8 3.5 3.5L13.5 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-
-const menuStyles = `
-  :root {
-    color-scheme: light;
-    --label-primary: #202124; --label-secondary: #61666b; --label-tertiary: #81858c;
-    --hover: rgba(32,33,36,.08); --surface: #fff; --border: rgba(32,33,36,.13);
-    --separator: rgba(32,33,36,.09); --layer: rgba(32,33,36,.06); --danger: #d93025;
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --label-primary: #f3f4f6; --label-secondary: #b5b7bd; --label-tertiary: #92959b;
-    --hover: rgba(255,255,255,.09); --surface: #28282b; --border: rgba(255,255,255,.12);
-    --separator: rgba(255,255,255,.09); --layer: rgba(255,255,255,.07); --danger: #ee7772;
-  }
-  * { box-sizing: border-box; }
-  html, body { width:100%; height:100%; margin:0; overflow:hidden; background:transparent; }
-  body { color:var(--label-primary); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; user-select:none; }
-  .bar { position:relative; width:100%; height:100%; display:flex; justify-content:flex-end; align-items:flex-start; }
-  .menuButton { appearance:none; flex:none; width:44px; height:36px; display:grid; place-items:center; padding:0; color:var(--label-secondary); background:transparent; border:0; cursor:pointer; }
-  .menuButton:hover, .menuButton.isOpen { color:var(--label-primary); background:var(--hover); }
-  .menuButton:focus-visible { outline:none; background:var(--hover); }
-  .menu { position:absolute; top:43px; right:0; width:304px; max-height:calc(100vh - 56px); overflow:auto; padding:7px; color:var(--label-primary); background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.2); scrollbar-width:thin; }
-  .menu[hidden] { display:none; }
-  .sectionLabel { padding:7px 10px 4px; color:var(--label-tertiary); font-size:10px; font-weight:600; line-height:14px; letter-spacing:.08em; text-transform:uppercase; }
-  .item { appearance:none; width:100%; min-height:33px; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:6px 10px; color:inherit; background:transparent; border:0; border-radius:7px; font:inherit; font-size:13px; line-height:20px; text-align:left; cursor:pointer; }
-  .item:hover, .item:focus-visible, .zoomButton:hover, .zoomButton:focus-visible, .zoomReset:hover, .zoomReset:focus-visible { outline:none; background:var(--hover); }
-  .item.danger { color:var(--danger); }
-  kbd { flex:none; color:var(--label-tertiary); font:11px/16px ui-monospace,"SFMono-Regular",Consolas,monospace; }
-  .separator { height:1px; margin:6px 3px; background:var(--separator); }
-  .zoomRow { min-height:37px; display:grid; grid-template-columns:1fr 30px 54px 30px; align-items:center; gap:3px; padding:3px 7px 3px 10px; font-size:13px; }
-  .zoomButton, .zoomReset { appearance:none; height:27px; padding:0; color:inherit; background:var(--layer); border:0; border-radius:6px; font:inherit; cursor:pointer; }
-  .zoomReset { font-size:11px; }
-  :root[data-theme="dark"] .menu { box-shadow:0 18px 42px rgba(0,0,0,.46); }
-  @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; } }
-`
 
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', mountWindowsMenu, { once: true })
