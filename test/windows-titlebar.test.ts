@@ -50,9 +50,12 @@ describe('Windows titlebar menu', () => {
     expect(preload).toContain('modalSelector')
     expect(preload).toContain('updateDragRegionVisibility')
     // Leaving the settings panel must not leave the shell's white focus box on
-    // a sidebar row.
+    // a sidebar row, and the header's crumbs must stay clickable inside the
+    // caption strip.
     expect(preload).toContain('[class*="panelRow"]:focus-visible')
     expect(preload).toContain('[data-dsh-sidebar-settings] :focus-visible')
+    expect(preload).toContain('[class*="crumb"]')
+    expect(preload).toContain('background: none !important')
     expect(preload).toContain('body.dsh-desktop-windows-titlebar-layout button')
     expect(preload).toContain('-webkit-app-region: no-drag !important')
     expect(preload).toContain("document.documentElement.style.setProperty(SIDEBAR_WIDTH_PROPERTY, '0px')")

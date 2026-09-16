@@ -506,7 +506,20 @@ function attachWindowsMenuView(window: BrowserWindow): void {
   window.on('resize', updateBounds)
   window.on('enter-full-screen', updateBounds)
   window.on('leave-full-screen', updateBounds)
-  window.on('blur', () => setWindowsMenuOpen(window, false, true))
+  // Opening the menu focuses its first item, and that focus lives in the menu's
+  // own child view; on Windows the window can report a blur for it, which would
+  // tear the menu down one frame after it opens. Ignore a blur the menu itself
+  // owns.
+  window.on('blur', () => {
+    if (
+      windowsMenuView &&
+      !windowsMenuView.webContents.isDestroyed() &&
+      windowsMenuView.webContents.isFocused()
+    ) {
+      return
+    }
+    setWindowsMenuOpen(window, false, true)
+  })
 
   void loadDesktopResource(menuView.webContents, desktopResourcePath('windows-menu.html'), {
     query: {

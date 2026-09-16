@@ -101,13 +101,16 @@ function installLayout(document: Document): void {
     /*
      * Closing the settings panel with Escape can hand focus back to a sidebar
      * row or to the settings trigger, where the shell's 2px label-primary
-     * outline reads as a stray white box. The hover background stays as the
-     * focus affordance instead.
+     * outline reads as a stray white box. Neither side paints a focus box here:
+     * the sidebar keeps its own hover and active backgrounds, and the trigger
+     * paints nothing.
      */
-    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-root] [class*="panelRow"]:focus-visible,
+    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-root] [class*="panelRow"]:focus-visible {
+      outline: none !important;
+    }
     body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-settings] :focus-visible {
       outline: none !important;
-      background: var(--dsw-alias-interactive-bg-hover) !important;
+      background: none !important;
     }
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="headerUtilities"]:has(+ [data-conversation-header-corner]:empty),
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="headerUtilities"]:has(+ [class*="headerCorner"]:empty),
@@ -136,11 +139,13 @@ function installLayout(document: Document): void {
       -webkit-app-region: no-drag !important;
     }
     /*
-     * The drag region sits at z-index 10: below the header's own action,
-     * utility and corner clusters (z-index 20, which stay clickable) and far
-     * below modal overlays, which must still cover the header.
+     * The drag region sits at z-index 10: below the header's own clickable
+     * clusters (z-index 20: the session action cluster and the session crumbs,
+     * which stay clickable) and far below modal overlays, which must still cover
+     * the header.
      */
-    body.dsh-desktop-windows-titlebar-layout [class*="headerActions"] {
+    body.dsh-desktop-windows-titlebar-layout [class*="headerActions"],
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="crumb"] {
       position: relative !important;
       z-index: 20 !important;
     }
