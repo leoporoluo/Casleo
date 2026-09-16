@@ -412,7 +412,10 @@ function runCommand(command: string, args: readonly string[]): Promise<Launchctl
     const child = spawn(command, [...args], {
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: COMPONENT_COMMAND_TIMEOUT_MS,
-      killSignal: 'SIGKILL'
+      killSignal: 'SIGKILL',
+      // A child of this console-less GUI process would otherwise flash its own
+      // terminal window on Windows; the flag is inert on other platforms.
+      windowsHide: true
     })
     let stdout = ''
     let stderr = ''

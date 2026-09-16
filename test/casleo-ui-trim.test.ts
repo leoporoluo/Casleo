@@ -111,18 +111,31 @@ describe('Casleo interface trims', () => {
     expect(patch).toContain('group.id !== "deepseek-official"')
   })
 
-  it('labels the built-in official model neutrally instead of its raw id', async () => {
-    const [client, patch] = await Promise.all([
+  it('starts unconfigured: an unroutable default model is no selection at all', async () => {
+    const [client, patch, composition] = await Promise.all([
       readFile(modelSelectionClient, 'utf8'),
-      readFile(patchPath('@deepseek-ai/dsh-client-ui-model-selection'), 'utf8')
+      readFile(patchPath('@deepseek-ai/dsh-client-ui-model-selection'), 'utf8'),
+      readFile(path.join(projectRoot, 'build', 'dsh-desktop.patch.yml'), 'utf8')
     ])
 
+    // The stock default names the official route; without that route it must
+    // read as "nothing selected" rather than as a model the deployment cannot
+    // run, and the composer must show its unset label instead of the raw id.
     expect(client).toContain(
-      'state.current.provider === "deepseek-official" ? t("trigger.defaultModel")'
+      'const resolvedFallback = fallbackSelection === null || fallbackSelection === void 0 || !catalog.value.routableProviders.includes(fallbackSelection.provider) ? null : fallbackSelection;'
     )
-    expect(client).toContain('"trigger.defaultModel": "默认模型"')
-    expect(client).toContain('"trigger.defaultModel": "Default model"')
-    expect(patch).toContain('t("trigger.defaultModel")')
+    expect(client).toContain(
+      'routable: current === null ? false : catalog.value.routableProviders.includes(current.provider)'
+    )
+    expect(client).toContain(
+      'const modelLabel = waiting ? t("trigger.loading") : currentChoice?.model.name ?? t("trigger.fallback");'
+    )
+    expect(client).not.toContain('`${state.current.provider}/${state.current.model}`')
+    expect(client).not.toContain('trigger.defaultModel')
+    expect(patch).toContain('!catalog.value.routableProviders.includes(fallbackSelection.provider)')
+
+    // Casleo ships no built-in model route, so a fresh install has none.
+    expect(composition).toContain('- id: llm-deepseek\n  disabled: true')
   })
 
   it('renders no column drag handles around the sidebar or right panel', async () => {

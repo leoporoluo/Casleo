@@ -1,3 +1,14 @@
+# Casleo ships no built-in model route. The stock composition mounts the
+# official DeepSeek chat adapter with a `deepseek-official` default selection;
+# disabling that adapter removes the route from the catalog, so the composer
+# starts unconfigured ("选择模型" and a blocked send) and the user registers
+# their own provider on the Models page. The `agent-default-model` row keeps
+# its stock config: the client resolves a default whose provider is not
+# routable as "no selection", which is what keeps a stale default from naming
+# a model this deployment cannot run.
+- id: llm-deepseek
+  disabled: true
+
 # Keep the stock directory-picker (auto) row active: the native backend
 # serves ctx.directoryPicker, so host-side consumers (host.pickDirectory,
 # plugins reading the seam) work unmodified. The client surface keeps its

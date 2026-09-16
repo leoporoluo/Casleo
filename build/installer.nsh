@@ -95,10 +95,26 @@
       WriteRegDWORD HKLM "SYSTEM\CurrentControlSet\Control\FileSystem" "LongPathsEnabled" 1
       ; Direct attempt (succeeds if installer was executed as Administrator)
       nsExec::ExecToLog 'powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command "Add-MpPreference -ExclusionPath \"$INSTDIR\" -ErrorAction SilentlyContinue; Add-MpPreference -ExclusionPath \"$APPDATA\casleo\" -ErrorAction SilentlyContinue"'
-      ; When running non-elevated (default user install), invoke elevated PowerShell via runas to apply Defender exclusions and enable LongPaths in HKLM.
-      ; If UAC is accepted, Defender exclusion takes effect and avoids scanning 20,000+ files on first launch.
+      ; When running non-elevated (default user install), apply the same
+      ; settings from an elevated pass. If UAC is accepted, Defender stops
+      ; scanning the 20,000+ files of the profile on first launch.
+      ;
+      ; The elevated pass goes through a script file started by
+      ; `Start-Process -Verb RunAs -WindowStyle Hidden` rather than
+      ; `ExecShell "runas" powershell.exe -WindowStyle Hidden`: the latter
+      ; still creates the console window before PowerShell applies the style,
+      ; so a terminal window flashed by during installation (blue on Windows
+      ; 11, where Windows Terminal hosts it). Start-Process hides the window
+      ; it creates, leaving only the UAC prompt.
       ${IfNot} ${Silent}
-        ExecShell "runas" 'powershell.exe' '-NonInteractive -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "Add-MpPreference -ExclusionPath \"$INSTDIR\" -ErrorAction SilentlyContinue; Add-MpPreference -ExclusionPath \"$APPDATA\casleo\" -ErrorAction SilentlyContinue; Set-ItemProperty -Path \"HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem\" -Name \"LongPathsEnabled\" -Value 1 -ErrorAction SilentlyContinue"'
+        FileOpen $9 "$TEMP\casleo-elevate.ps1" w
+        FileWrite $9 "param([string]$$InstallDir, [string]$$DataDir)$\r$\n"
+        FileWrite $9 "Add-MpPreference -ExclusionPath $$InstallDir -ErrorAction SilentlyContinue$\r$\n"
+        FileWrite $9 "Add-MpPreference -ExclusionPath $$DataDir -ErrorAction SilentlyContinue$\r$\n"
+        FileWrite $9 "Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Value 1 -ErrorAction SilentlyContinue$\r$\n"
+        FileClose $9
+        nsExec::ExecToLog "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command $\"Start-Process -FilePath '$TEMP\casleo-elevate.ps1' -ArgumentList '$INSTDIR','$APPDATA\casleo' -Verb RunAs -WindowStyle Hidden -Wait -ErrorAction SilentlyContinue$\""
+        Delete "$TEMP\casleo-elevate.ps1"
       ${EndIf}
     !macroend
   !endif

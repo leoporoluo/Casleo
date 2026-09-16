@@ -1,17 +1,26 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js
-index 209a74d..799dc80 100644
+index 209a74d..fe16155 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js
-@@ -227,7 +227,7 @@ window.__ModuleLoader__.load({
+@@ -222,12 +222,14 @@ window.__ModuleLoader__.load({
+ 					});
+ 					return;
+ 				}
+-				const current = projected.next ?? catalog.value.default;
++				const fallbackSelection = catalog.value.default;
++				const resolvedFallback = fallbackSelection === null || fallbackSelection === void 0 || !catalog.value.routableProviders.includes(fallbackSelection.provider) ? null : fallbackSelection;
++				const current = projected.next ?? resolvedFallback;
+ 				this.resolved = true;
  				this.store.set({
  					current,
- 					routable: catalog.value.routableProviders.includes(current.provider),
+-					routable: catalog.value.routableProviders.includes(current.provider),
 -					groups: catalog.value.groups,
++					routable: current === null ? false : catalog.value.routableProviders.includes(current.provider),
 +					groups: catalog.value.groups.filter((group) => group.id !== "deepseek-official"),
  					failures: catalog.value.failures,
  					status: this.store.getSnapshot().status === "selecting" ? "selecting" : "ready",
  					error: null
-@@ -405,15 +405,71 @@ window.__ModuleLoader__.load({
+@@ -405,15 +407,71 @@ window.__ModuleLoader__.load({
  		* store/verbs) + the standard locale seat.
  		* @returns the trigger and, while open, the two-level menu.
  		*/
@@ -83,7 +92,7 @@ index 209a74d..799dc80 100644
  			const menuRef = (0, react.useRef)(null);
  			const [menuPos, setMenuPos] = (0, react.useState)(null);
  			const itemRefs = (0, react.useRef)([]);
-@@ -427,6 +483,7 @@ window.__ModuleLoader__.load({
+@@ -427,6 +485,7 @@ window.__ModuleLoader__.load({
  					...model.reasoning?.defaultEffort === void 0 ? {} : { reasoningEffort: model.reasoning.defaultEffort }
  				}
  			}))), [state.groups]);
@@ -91,7 +100,7 @@ index 209a74d..799dc80 100644
  			const currentChoice = choices[state.current === null ? -1 : choices.findIndex((c) => c.selection.provider === state.current?.provider && c.selection.model === state.current.model)];
  			const reasoning = currentChoice?.model.reasoning;
  			const effectiveEffort = state.current?.reasoningEffort ?? reasoning?.defaultEffort;
-@@ -490,15 +547,20 @@ window.__ModuleLoader__.load({
+@@ -490,15 +549,20 @@ window.__ModuleLoader__.load({
  				pane,
  				state
  			]);
@@ -112,7 +121,7 @@ index 209a74d..799dc80 100644
  				if (restoreFocus) queueMicrotask(() => {
  					triggerRef.current?.focus();
  				});
-@@ -507,12 +569,16 @@ window.__ModuleLoader__.load({
+@@ -507,12 +571,16 @@ window.__ModuleLoader__.load({
  				const items = itemRefs.current.filter((item) => item !== null);
  				if (items.length === 0) return;
  				const active = items.findIndex((item) => item === document.activeElement);
@@ -131,16 +140,16 @@ index 209a74d..799dc80 100644
  					else close(true);
  					return;
  				}
-@@ -563,7 +629,7 @@ window.__ModuleLoader__.load({
+@@ -563,7 +631,7 @@ window.__ModuleLoader__.load({
  				select(selection).then(settleSelection);
  			};
  			const waiting = state.current === null && state.status === "loading";
 -			const modelLabel = waiting ? t("trigger.loading") : currentChoice?.model.name ?? (state.current === null ? t("trigger.fallback") : `${state.current.provider}/${state.current.model}`);
-+			const modelLabel = waiting ? t("trigger.loading") : currentChoice?.model.name ?? (state.current === null ? t("trigger.fallback") : state.current.provider === "deepseek-official" ? t("trigger.defaultModel") : `${state.current.provider}/${state.current.model}`);
++			const modelLabel = waiting ? t("trigger.loading") : currentChoice?.model.name ?? t("trigger.fallback");
  			const triggerLabel = effortLabel === void 0 ? modelLabel : `${modelLabel} · ${effortLabel}`;
  			const triggerAria = waiting ? t("trigger.loading") : state.current === null ? t("trigger.selectAria") : effortLabel === void 0 ? t("trigger.aria", { model: modelLabel }) : t("trigger.ariaEffort", {
  				model: modelLabel,
-@@ -628,6 +694,7 @@ window.__ModuleLoader__.load({
+@@ -628,6 +696,7 @@ window.__ModuleLoader__.load({
  								role: "menuitem",
  								className: ModelSelect_module_css_default.cell,
  								onClick: () => {
@@ -148,7 +157,7 @@ index 209a74d..799dc80 100644
  									setPane("model");
  								},
  								children: [
-@@ -662,6 +729,23 @@ window.__ModuleLoader__.load({
+@@ -662,6 +731,23 @@ window.__ModuleLoader__.load({
  								]
  							})] }),
  							pane === "model" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
@@ -172,7 +181,7 @@ index 209a74d..799dc80 100644
  								state.status === "loading" && (0, react_jsx_runtime.jsx)("div", {
  									className: ModelSelect_module_css_default.status,
  									children: t("status.loading")
-@@ -689,7 +773,7 @@ window.__ModuleLoader__.load({
+@@ -689,7 +775,7 @@ window.__ModuleLoader__.load({
  								}, failure.id)),
  								(0, react_jsx_runtime.jsx)("div", {
  									className: clsx(ModelSelect_module_css_default.groups, "scrollable"),
@@ -181,7 +190,7 @@ index 209a74d..799dc80 100644
  										const headingId = `${id}-${group.id}`;
  										return (0, react_jsx_runtime.jsxs)("section", {
  											role: "group",
-@@ -733,6 +817,10 @@ window.__ModuleLoader__.load({
+@@ -733,6 +819,10 @@ window.__ModuleLoader__.load({
  								state.status === "ready" && choices.length === 0 && (0, react_jsx_runtime.jsx)("div", {
  									className: ModelSelect_module_css_default.empty,
  									children: t("empty.models")
@@ -192,14 +201,7 @@ index 209a74d..799dc80 100644
  								})
  							] }),
  							pane === "effort" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [state.error !== null && lastActionRef.current === "load" && (0, react_jsx_runtime.jsxs)("div", {
-@@ -799,18 +887,22 @@ window.__ModuleLoader__.load({
- 			"option.deepseekV4Pro.description": "更强的自主编码、知识与复杂推理能力；适合复杂或质量优先的任务，但成本更高。",
- 			"trigger.fallback": "选择模型",
- 			"trigger.loading": "正在加载模型…",
-+			"trigger.defaultModel": "默认模型",
- 			"trigger.selectAria": "选择模型",
- 			"trigger.aria": "选择模型，当前 {model}",
- 			"trigger.ariaEffort": "选择模型，当前 {model}，推理等级 {effort}",
+@@ -805,12 +895,15 @@ window.__ModuleLoader__.load({
  			"menu.aria": "模型与推理等级",
  			"menu.model": "模型",
  			"menu.effort": "推理等级",
@@ -215,14 +217,7 @@ index 209a74d..799dc80 100644
  			"blocked.composer": "当前模型不可用，请先选择模型",
  			"empty.efforts": "当前模型未提供推理等级。"
  		};
-@@ -822,18 +914,22 @@ window.__ModuleLoader__.load({
- 			"option.deepseekV4Pro.description": "Stronger agentic coding, knowledge, and difficult reasoning; suited to complex or quality-critical tasks at higher cost.",
- 			"trigger.fallback": "Select model",
- 			"trigger.loading": "Loading models…",
-+			"trigger.defaultModel": "Default model",
- 			"trigger.selectAria": "Select model",
- 			"trigger.aria": "Select model, current {model}",
- 			"trigger.ariaEffort": "Select model, current {model}, reasoning effort {effort}",
+@@ -828,12 +921,15 @@ window.__ModuleLoader__.load({
  			"menu.aria": "Model and reasoning effort",
  			"menu.model": "Model",
  			"menu.effort": "Effort",

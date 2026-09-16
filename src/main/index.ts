@@ -27,6 +27,7 @@ import {
   prewarmShellEnvironment
 } from './runtime/harness-runtime'
 import { launchDisclaimedUtilityProcess } from './runtime/disclaimed-utility-process'
+import { attachHiddenConsole } from './runtime/hidden-console'
 import {
   installProfileDependenciesWithDsh,
   removeProfilePluginWithDsh
@@ -2770,6 +2771,16 @@ async function bootstrap(): Promise<void> {
       }
     }
   })
+  const hiddenConsole = await attachHiddenConsole({
+    resourcePath: desktopResourcePath('windows-hidden-console.mjs')
+  })
+  if (process.platform === 'win32') {
+    runtime.note(
+      hiddenConsole.attached
+        ? '[desktop] attached a hidden console so spawned command windows stay invisible'
+        : `[desktop] hidden console unavailable (${hiddenConsole.detail ?? 'no reason reported'})`
+    )
+  }
   registerHarnessHandlers()
   ipcMain.handle('directory-picker:open', async (event) => {
     if (
