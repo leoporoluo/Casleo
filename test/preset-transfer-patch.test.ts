@@ -522,6 +522,23 @@ describe('agent preset package transfer', () => {
     expect(patch).not.toContain('browseAwesomePresets')
   })
 
+  it('keeps the desktop seat CSS balanced so its rules are not swallowed', async () => {
+    const client = await readFile(
+      path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-agent-preset', 'lib', 'client.js'),
+      'utf8'
+    )
+    const block = /const seatDesktopCss = "([^"]*)";/u.exec(client)?.[1] ?? ''
+
+    // The block used to leave its `@media (prefers-reduced-motion:reduce)` open, so
+    // every rule after it — the picker width, the item and group styling — applied
+    // only when the OS asked for reduced motion. It now closes on its own rule.
+    expect(block).not.toBe('')
+    expect(block.match(/\{/gu)?.length).toBe(block.match(/\}/gu)?.length)
+    expect(block).toContain('@media (prefers-reduced-motion:reduce){.cubgiG_item{transition:none}}')
+    // The search field is gone, so nothing may size the menu around it any more.
+    expect(block).not.toContain('[role=menu]:has(')
+  })
+
   it('keeps the loopback API discoverable by an explicitly requested online Skill', async () => {
     const webApp = await readFile(
       path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-web-app', 'lib', 'index.js'),
