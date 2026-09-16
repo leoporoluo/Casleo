@@ -67,6 +67,13 @@ describe('Windows titlebar menu', () => {
     // row's only control, so the top-left corner carries the gesture instead of
     // leaving the 8px strip as the only handle there.
     expect(preload).toMatch(/\[data-dsh-sidebar-root\] \[class\*="logoRow"\]\s*\{[^}]*app-region: drag/u)
+    // The caption guard is a no-drag column, never a click shield: without
+    // `pointer-events: none` it would swallow every click meant for the native
+    // caption controls and for whatever the header puts underneath it.
+    expect(preload).toMatch(/#\$\{CAPTION_GUARD_ID\} \{[\s\S]{0,320}?pointer-events: none;/u)
+    // The drag band is 8px of otherwise empty strip and stops short of the caption
+    // column, so it can cover no control and no window button.
+    expect(preload).toContain('right: calc(var(${CAPTION_WIDTH_PROPERTY}, 140px) + 44px);')
     expect(preload).toContain('height: 8px;')
     expect(preload).not.toContain('background: none !important')
     expect(preload).toContain('body.dsh-desktop-windows-titlebar-layout button')
