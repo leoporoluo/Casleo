@@ -99,18 +99,14 @@ function installLayout(document: Document): void {
       gap: 8px !important;
     }
     /*
-     * Closing the settings panel with Escape can hand focus back to a sidebar
-     * row or to the settings trigger, where the shell's 2px label-primary
-     * outline reads as a stray white box. Neither side paints a focus box here:
-     * the sidebar keeps its own hover and active backgrounds, and the trigger
-     * paints nothing.
+     * Leaving Settings with Escape hands focus back to a sidebar row or to the
+     * settings trigger, where the shell's 2px label-primary outline reads as a
+     * stray white box. Suppress only that outline — the shell's own hover and
+     * active backgrounds must keep painting.
      */
-    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-root] [class*="panelRow"]:focus-visible {
+    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-root] [class*="panelRow"]:focus-visible,
+    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-settings] :focus-visible {
       outline: none !important;
-    }
-    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-settings] :focus-visible:not(:hover) {
-      outline: none !important;
-      background: none !important;
     }
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="headerUtilities"]:has(+ [data-conversation-header-corner]:empty),
     body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="headerUtilities"]:has(+ [class*="headerCorner"]:empty),
@@ -155,13 +151,40 @@ function installLayout(document: Document): void {
       z-index: 20 !important;
       -webkit-app-region: no-drag !important;
     }
+    /*
+     * A covering overlay can never be punched through from below, so the window
+     * is dragged by the session header itself and its controls opt out with a
+     * no-drag region. That is the form Chromium resolves reliably.
+     */
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header,
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header > div:first-child {
+      -webkit-app-region: drag;
+    }
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header button,
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header a,
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header input,
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header select,
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header textarea,
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [role="button"],
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [role="tab"],
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [role="menuitem"],
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="crumb"],
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [class*="headerActions"],
+    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header [data-dsh-no-drag] {
+      -webkit-app-region: no-drag !important;
+    }
     #${DRAG_REGION_ID} {
       position: fixed;
       z-index: 10;
       top: 0;
       left: 0;
       right: calc(var(${CAPTION_WIDTH_PROPERTY}, 140px) + 44px);
-      height: 36px;
+      /*
+       * Only a thin fallback band: it covers the topmost pixels (over the sidebar
+       * and any surface without its own drag area) and never the header's own
+       * content, which a covering overlay could only ever swallow.
+       */
+      height: 8px;
       background: transparent;
       user-select: none;
       -webkit-app-region: drag;

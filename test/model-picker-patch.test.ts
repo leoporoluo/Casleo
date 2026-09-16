@@ -68,7 +68,10 @@ describe('Casleo model image-input declarations', () => {
     // The native select popup follows color-scheme, so the control carries its own
     // desktop-owned class and a dark-scheme rule for the dark palette.
     expect(client).toContain('dshModelImageInput')
-    expect(client).toContain('body[data-ds-dark-theme] .dshModelImageInput{color-scheme:dark}')
+    expect(client).toContain(
+      'html[data-ds-dark-theme] .dshModelImageInput,body[data-ds-dark-theme] .dshModelImageInput{color-scheme:dark}'
+    )
+    expect(client).toContain('.dshModelImageInput option{color:var(--dsw-alias-label-primary)')
     expect(client).not.toContain('ModelImageInputToggle')
   })
 

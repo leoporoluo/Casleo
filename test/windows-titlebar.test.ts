@@ -58,7 +58,12 @@ describe('Windows titlebar menu', () => {
     // Lifting the cluster is not enough: the caption strip's draggable rectangle
     // has to be punched through so the lineage chip receives the click.
     expect(preload).toMatch(/\[class\*="crumb"\]\s*\{[^}]*no-drag/u)
-    expect(preload).toContain('background: none !important')
+    // The window drags through the header itself, and the fallback band stays a
+    // thin strip so it can never cover the header's own controls again.
+    expect(preload).toContain('conversation.session.header"] > header,')
+    expect(preload).toContain('conversation.session.header"] > header button,')
+    expect(preload).toContain('height: 8px;')
+    expect(preload).not.toContain('background: none !important')
     expect(preload).toContain('body.dsh-desktop-windows-titlebar-layout button')
     expect(preload).toContain('-webkit-app-region: no-drag !important')
     expect(preload).toContain("document.documentElement.style.setProperty(SIDEBAR_WIDTH_PROPERTY, '0px')")
