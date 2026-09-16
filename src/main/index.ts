@@ -180,6 +180,7 @@ let mainWindow: BrowserWindow | undefined
 let windowsMenuView: WebContentsView | undefined
 let windowsMenuOpen = false
 let windowsMenuOpenedAt = 0
+let windowsMenuBounds: ReturnType<typeof windowsMenuViewBounds> | undefined
 let windowsMenuDark = false
 let tray: Tray | undefined
 let runtime: HarnessRuntime
@@ -466,15 +467,30 @@ function updateWindowsMenuViewBounds(window: BrowserWindow): void {
   const contentSize = window.getContentSize()
   const width = contentSize[0] ?? 0
   const height = contentSize[1] ?? 0
-  windowsMenuView.setBounds(
-    windowsMenuViewBounds({ width, height }, windowsMenuOpen, window.isFullScreen())
-  )
+  const next = windowsMenuViewBounds({ width, height }, windowsMenuOpen, window.isFullScreen())
+  const current = windowsMenuBounds
+  // Every pointerdown in the main window asks for a close, and a redundant
+  // setBounds repaints the transparent strip over the caption area — which the
+  // user reads as the titlebar glyphs flickering. Only apply a real change.
+  if (
+    current !== undefined &&
+    current.x === next.x &&
+    current.y === next.y &&
+    current.width === next.width &&
+    current.height === next.height
+  ) {
+    return
+  }
+  windowsMenuBounds = next
+  windowsMenuView.setBounds(next)
 }
 
 function setWindowsMenuOpen(window: BrowserWindow, open: boolean, notifyRenderer = false): void {
-  windowsMenuOpen = open
-  if (open) windowsMenuOpenedAt = Date.now()
-  updateWindowsMenuViewBounds(window)
+  if (windowsMenuOpen !== open) {
+    windowsMenuOpen = open
+    if (open) windowsMenuOpenedAt = Date.now()
+    updateWindowsMenuViewBounds(window)
+  }
   if (notifyRenderer && windowsMenuView && !windowsMenuView.webContents.isDestroyed()) {
     windowsMenuView.webContents.send('desktop-titlebar:close-menu')
   }
@@ -492,6 +508,7 @@ function attachWindowsMenuView(window: BrowserWindow): void {
   })
   windowsMenuView = menuView
   windowsMenuOpen = false
+  windowsMenuBounds = undefined
   windowsMenuDark = nativeTheme.shouldUseDarkColors
   menuView.setBackgroundColor('#00000000')
   menuView.webContents.setZoomFactor(1)

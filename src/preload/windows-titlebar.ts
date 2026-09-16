@@ -108,7 +108,7 @@ function installLayout(document: Document): void {
     body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-root] [class*="panelRow"]:focus-visible {
       outline: none !important;
     }
-    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-settings] :focus-visible {
+    body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-settings] :focus-visible:not(:hover) {
       outline: none !important;
       background: none !important;
     }
