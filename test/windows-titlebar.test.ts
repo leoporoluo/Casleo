@@ -159,6 +159,8 @@ describe('Windows titlebar menu', () => {
     expect(menuPreload).toContain("ipcRenderer.invoke('desktop-menu:get-zoom-factor')")
     expect(menuPreload).toContain('formatZoomPercentage(zoomFactor)')
     expect(menuPreload).toContain("params.get('surface') === 'panel'")
+    expect(menuPreload).toContain("invoke('desktop-titlebar:panel-height', height)")
+    expect(main).toContain("ipcMain.handle('desktop-titlebar:panel-height'")
     expect(layoutPreload).not.toContain('INVERSE_ZOOM_PROPERTY')
     expect(layoutPreload).not.toContain('menuButton')
     expect(viteConfig).toContain("'windows-menu': resolve('src/preload/windows-menu.ts')")
@@ -192,6 +194,15 @@ describe('Windows titlebar menu', () => {
       width: 304,
       height: 604
     })
+    // The panel shrinks to the content height its page reports, so the
+    // transparent remainder cannot swallow clicks meant for the window below.
+    expect(windowsMenuPanelBounds({ width: 1380, height: 900 }, false, 240)).toEqual({
+      x: 936,
+      y: 36,
+      width: 304,
+      height: 240
+    })
+    expect(windowsMenuPanelBounds({ width: 1380, height: 900 }, false, 5000).height).toBe(760)
   })
 
   it('shows the bundled Harness version in About without update controls', async () => {

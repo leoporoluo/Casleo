@@ -46,7 +46,7 @@ const BUTTON_STYLES = `
 
 const PANEL_STYLES = `
   .menu {
-    width:100%; height:100%; overflow:auto; padding:7px;
+    width:100%; height:auto; max-height:100%; overflow:auto; padding:7px;
     color:var(--label-primary); background:var(--surface);
     border:1px solid var(--border); border-radius:12px;
     scrollbar-width:thin;
@@ -135,6 +135,23 @@ function mountPanel(locale: 'en' | 'zh'): void {
   const zoomDisplay = renderMenu(menu, menuEntries(locale), close)
   document.body.appendChild(menu)
   refreshZoomState(zoomDisplay)
+
+  // The view shrinks to the panel so its transparent remainder no longer covers
+  // the window: a click just outside the panel then reaches the window and closes
+  // the menu, which is what "click outside to close" means here.
+  const reportHeight = (): void => {
+    const height = menu.scrollHeight
+    if (height <= 0) return
+    void ipcRenderer
+      .invoke('desktop-titlebar:panel-height', height)
+      .catch((error: unknown) => {
+        console.warn('[desktop-menu] unable to report the panel height', error)
+      })
+  }
+  window.requestAnimationFrame(() => {
+    reportHeight()
+    new ResizeObserver(reportHeight).observe(menu)
+  })
 
   const closeOnEscape = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') {

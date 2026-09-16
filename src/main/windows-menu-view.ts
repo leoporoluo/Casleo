@@ -53,16 +53,26 @@ export function windowsMenuButtonBounds(contentSize: ContentSize, fullscreen = f
 /**
  * The panel surface starts below the button strip, so the button keeps its own
  * clicks while the panel is open, and is hidden rather than resized when closed.
+ *
+ * `measuredHeight` is the panel's own content height, reported by the page: the
+ * view shrinks to it so its transparent remainder cannot swallow clicks that
+ * belong to the window underneath (which is how "click outside to close" works).
  */
-export function windowsMenuPanelBounds(contentSize: ContentSize, fullscreen = false): Rectangle {
+export function windowsMenuPanelBounds(
+  contentSize: ContentSize,
+  fullscreen = false,
+  measuredHeight?: number
+): Rectangle {
   const contentHeight = Math.max(0, Math.floor(contentSize.height))
   const { x, width } = menuColumn(contentSize, WINDOWS_MENU_PANEL_WIDTH, fullscreen)
   const top = Math.min(WINDOWS_TITLEBAR_HEIGHT, contentHeight)
+  const available = Math.max(0, contentHeight - top)
+  const measured = measuredHeight === undefined ? available : Math.max(0, Math.floor(measuredHeight))
 
   return {
     x,
     y: top,
     width,
-    height: Math.min(WINDOWS_MENU_PANEL_MAX_HEIGHT, contentHeight - top)
+    height: Math.min(WINDOWS_MENU_PANEL_MAX_HEIGHT, available, measured)
   }
 }

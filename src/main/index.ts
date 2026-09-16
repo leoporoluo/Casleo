@@ -183,6 +183,11 @@ let windowsMenuOpen = false
 let windowsMenuOpenedAt = 0
 let windowsMenuButtonViewBounds: ReturnType<typeof windowsMenuButtonBounds> | undefined
 let windowsMenuPanelViewBounds: ReturnType<typeof windowsMenuPanelBounds> | undefined
+/**
+ * The panel's own content height, reported by its page. The view shrinks to it so
+ * the transparent remainder cannot swallow clicks meant for the window below.
+ */
+let windowsMenuPanelMeasuredHeight: number | undefined
 let windowsMenuDark = false
 let tray: Tray | undefined
 let runtime: HarnessRuntime
@@ -500,7 +505,7 @@ function updateWindowsMenuViewBounds(window: BrowserWindow): void {
 
   const panel = windowsMenuPanelView
   if (panel && !panel.webContents.isDestroyed()) {
-    const next = windowsMenuPanelBounds(size, fullscreen)
+    const next = windowsMenuPanelBounds(size, fullscreen, windowsMenuPanelMeasuredHeight)
     if (!sameBounds(windowsMenuPanelViewBounds, next)) {
       windowsMenuPanelViewBounds = next
       panel.setBounds(next)
@@ -551,6 +556,7 @@ function attachWindowsMenuView(window: BrowserWindow): void {
   windowsMenuOpen = false
   windowsMenuButtonViewBounds = undefined
   windowsMenuPanelViewBounds = undefined
+  windowsMenuPanelMeasuredHeight = undefined
   windowsMenuDark = nativeTheme.shouldUseDarkColors
   panelView.setVisible(false)
   panelView.webContents.on('did-finish-load', () => {
@@ -1650,6 +1656,17 @@ function registerHarnessHandlers(): void {
   ipcMain.handle('desktop-menu:get-zoom-factor', (event) => {
     assertTrustedDesktopMenuEvent(event)
     return { zoomFactor: mainWindow?.webContents.getZoomFactor() ?? 1 }
+  })
+
+  ipcMain.removeHandler('desktop-titlebar:panel-height')
+  ipcMain.handle('desktop-titlebar:panel-height', (event, height: unknown) => {
+    assertTrustedWindowsMenuEvent(event)
+    if (typeof height !== 'number' || !Number.isFinite(height) || height < 0) {
+      throw new Error('The application menu panel height must be a non-negative number.')
+    }
+    windowsMenuPanelMeasuredHeight = Math.round(height)
+    if (mainWindow && !mainWindow.isDestroyed()) updateWindowsMenuViewBounds(mainWindow)
+    return { ok: true }
   })
 
   ipcMain.removeHandler('desktop-titlebar:toggle-menu')
