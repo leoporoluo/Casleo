@@ -1,0 +1,37 @@
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-subagent/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-subagent/lib/client.js
+index 86774af..28e9d7b 100644
+--- a/node_modules/@deepseek-ai/dsh-client-ui-subagent/lib/client.js
++++ b/node_modules/@deepseek-ai/dsh-client-ui-subagent/lib/client.js
+@@ -592,8 +592,8 @@ window.__ModuleLoader__.load({
+ 				className: `${SubagentHeaderLineage_module_css_default.root} ${variant === "switcher" ? SubagentHeaderLineage_module_css_default.switcherRoot : ""}`,
+ 				ref: rootRef,
+ 				onKeyDown: navigate,
+-				onMouseEnter: scheduleHoverOpen,
+-				onMouseLeave: scheduleHoverClose,
++				onMouseEnter: ancestorSwitcher ? scheduleHoverOpen : void 0,
++				onMouseLeave: ancestorSwitcher ? scheduleHoverClose : void 0,
+ 				children: [
+ 					separator && (0, react_jsx_runtime.jsx)("span", {
+ 						className: SubagentHeaderLineage_module_css_default.separator,
+@@ -606,7 +606,9 @@ window.__ModuleLoader__.load({
+ 						"aria-haspopup": "tree",
+ 						"aria-expanded": open,
+ 						"aria-label": variant === "switcher" ? t("switcher.aria", { title: switcherDisplayTitle }) : t(descendants.runningCount > 0 ? runningCountKey : totalCountKey, { count: descendants.runningCount > 0 ? descendants.runningCount : descendantCount }),
+-						onClick: openTitle === void 0 ? void 0 : () => {
++						onClick: openTitle === void 0 ? () => {
++							changeOpen(!open);
++						} : () => {
+ 							cancelHoverOpen();
+ 							if (open) changeOpen(false);
+ 							openTitle();
+@@ -636,8 +638,8 @@ window.__ModuleLoader__.load({
+ 						style: menuPosition,
+ 						role: "tree",
+ 						"aria-label": t("tree.aria"),
+-						onMouseEnter: cancelHoverClose,
+-						onMouseLeave: scheduleHoverClose,
++						onMouseEnter: ancestorSwitcher ? cancelHoverClose : void 0,
++						onMouseLeave: ancestorSwitcher ? scheduleHoverClose : void 0,
+ 						children: (0, react_jsx_runtime.jsx)(CatalogRows, {
+ 							parentSessionId: rootSessionId,
+ 							currentSessionId,
