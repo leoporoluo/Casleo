@@ -19,10 +19,12 @@ describe('workspace Open in Finder integration', () => {
       '@deepseek-ai+dsh-client-ui-workspace+0.1.5-rc.1.patch'
     )
     expect(patch).toContain('id: "openInFinder"')
-    expect(patch).toContain('t("menu.openInFinder")')
+    expect(patch).toContain('t(openInFinderLabel)')
     expect(patch).toContain('window.dshDesktop.openInFinder(row.cwd)')
     expect(patch).toContain('"menu.openInFinder": "在 Finder 中打开"')
+    expect(patch).toContain('"menu.openInExplorer": "在资源管理器中打开"')
     expect(patch).toContain('"menu.openInFinder": "Open in Finder"')
+    expect(patch).toContain('"menu.openInExplorer": "Open in File Explorer"')
   })
 
   it('exposes a validated main-process bridge for opening the directory', async () => {
@@ -40,6 +42,7 @@ describe('workspace Open in Finder integration', () => {
     expect(preloadSource).toContain(
       "ipcRenderer.invoke('harness:open-in-finder', path)"
     )
+    expect(preloadSource).toContain('platform: process.platform')
   })
 
   it('leaves the installed workspace bundle syntactically valid', async () => {
