@@ -1,7 +1,7 @@
 import { it, expect } from 'vitest'
-import { mkdtemp, mkdir, writeFile, readFile, realpath, rm } from 'node:fs/promises'
+import { chmod, copyFile, mkdtemp, mkdir, writeFile, readFile, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
@@ -12,6 +12,21 @@ it('real pnpm refuses unapproved scripts and executes an explicitly approved reb
   // Windows TEMP may contain an 8.3 alias (RUNNER~1). pnpm resolves its
   // workspace root to a real path; keep every install path in that form.
   const root = await realpath(await mkdtemp(join(tmpdir(), 'dsh-build-approval-')))
+  // A node executable at a space-free path, exposed through PATH. Windows'
+  // cmd strips the quotes off a script line like `"C:\Program Files\...\node.exe"
+  // build.cjs` (two-quote rule), so packages that spell the interpreter out
+  // cannot run under pnpm; real packages invoke `node` from PATH instead,
+  // which is also what the product configures via buildPnpmEnvironment.
+  const nodeBin = join(root, 'node-bin')
+  const nodeCopy = join(nodeBin, process.platform === 'win32' ? 'node.exe' : 'node')
+  await mkdir(nodeBin, { recursive: true })
+  await copyFile(process.execPath, nodeCopy)
+  if (process.platform !== 'win32') await chmod(nodeCopy, 0o755)
+  const pathKey = process.platform === 'win32' ? 'Path' : 'PATH'
+  const environment = {
+    ...process.env,
+    [pathKey]: `${nodeBin}${delimiter}${process.env[pathKey] ?? process.env.PATH ?? ''}`
+  }
   const run = promisify(execFile)
   let server
   // Stable publication time: a moving timestamp can appear in the future
@@ -21,8 +36,8 @@ it('real pnpm refuses unapproved scripts and executes an explicitly approved reb
     for (const name of ['dependency', 'plugin']) await mkdir(join(root, name, 'package'), { recursive: true })
     await writeFile(join(root, 'dependency/package/package.json'), JSON.stringify({
       name: 'dsh-test-build-dependency', version: '1.0.0', main: 'built.js',
-      // Use the same executable that runs pnpm, not a PATH-selected node.cmd.
-      scripts: { install: `"${process.execPath}" build.cjs` }
+      // Resolve the interpreter from PATH, the way real build scripts do.
+      scripts: { install: 'node build.cjs' }
     }))
     await writeFile(join(root, 'dependency/package/build.cjs'), "require('node:fs').writeFileSync(require('node:path').join(__dirname, 'built.js'), 'module.exports = 42')")
     const dependencyTar = join(root, 'dependency.tgz')
@@ -47,7 +62,8 @@ it('real pnpm refuses unapproved scripts and executes an explicitly approved reb
     const options = {
       dshHome: home, pluginSpec: 'dsh-test-build-plugin@1.0.0', registry: `http://127.0.0.1:${server.address().port}`, expectedPluginName: 'dsh-test-build-plugin',
       expectedVersion: '1.0.0', strictDepBuilds: true, minimumReleaseAge: 0,
-      nodeExecutablePath: process.execPath, pnpmEntryPath: join(process.cwd(), 'node_modules/pnpm/bin/pnpm.cjs')
+      nodeExecutablePath: process.execPath, pnpmEntryPath: join(process.cwd(), 'node_modules/pnpm/bin/pnpm.cjs'),
+      environment
     }
     const tooFresh = await installGeneration({ ...options, minimumReleaseAge: 1440 })
     expect(tooFresh.ok).toBe(false)

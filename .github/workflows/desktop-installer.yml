@@ -2,6 +2,7 @@ name: Desktop installer (Windows x64)
 
 # Build the unsigned Windows x64 NSIS installer.
 #
+# - Push to main to run tests and upload the installer as a workflow artifact.
 # - Push a tag such as `v0.1.0` to publish a GitHub Release with the installer.
 # - Run the workflow manually to fetch the installer as a workflow artifact.
 #
@@ -9,6 +10,8 @@ name: Desktop installer (Windows x64)
 # dependency comes from the public npm registry.
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:

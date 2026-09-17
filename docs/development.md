@@ -73,7 +73,7 @@ npm run package:win
 
 Do not invoke `electron-builder --win` from macOS or Linux for a distributable Windows package. The target verification scripts intentionally reject host/target mismatches.
 
-Before handing off a Windows installer, verify that `resources/app/node_modules/node/bin/node.exe` exists in `win-unpacked` and require the packaged Windows Harness smoke test to pass.
+Before handing off a Windows installer, verify that `resources/app.asar.unpacked/node_modules/node/bin/node.exe` exists in `win-unpacked` and require the packaged Windows Harness smoke test to pass. Application code lives inside `app.asar`; `node_modules` is unpacked so the bundled Node process can spawn `node.exe` / `pnpm` and resolve the Harness graph from real directories.
 
 ## Contribution hygiene
 

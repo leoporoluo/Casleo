@@ -2,6 +2,7 @@ import { checkBlockingPluginUpdates, selectPluginRecoveryTarget, PluginRecoveryE
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { stat } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import { parse } from 'yaml'
 import {
@@ -16,6 +17,7 @@ import {
   Tray,
   utilityProcess,
   WebContentsView,
+  type IpcMainEvent,
   type IpcMainInvokeEvent,
   type MessageBoxOptions
 } from 'electron'
@@ -64,6 +66,7 @@ import {
   serializeGpuFallbackState
 } from './gpu-fallback'
 import { secureWindow } from './security'
+import { isTrustedAppUrl, type TrustedAppUrlContext } from './security-policy'
 import { SafeModeOverlay } from './safe-mode-overlay'
 import { ensureLaunchRoot } from './state/launch-root'
 import {
@@ -655,24 +658,28 @@ async function syncNativeTheme(window: BrowserWindow): Promise<void> {
   applyWindowChromeTheme(window, isDark)
 }
 
+/**
+ * The real node_modules tree of the bundled app.
+ *
+ * Packaged builds keep node_modules outside the asar (asarUnpack): the
+ * executables it contains (node.exe, pnpm) must be spawnable plain files, and
+ * the Harness child - a plain Node process without Electron's asar patches -
+ * resolves its module graph from real directories. Electron's own main
+ * process still reads through the asar seam, so a require() inside the app
+ * resolves to the unpacked copies transparently.
+ */
+function nodeModulesRoot(): string {
+  if (!app.isPackaged) return join(app.getAppPath(), 'node_modules')
+  return join(process.resourcesPath, 'app.asar.unpacked', 'node_modules')
+}
+
 function dshEntryPath(): string {
-  if (app.isPackaged) {
-    return join(
-      process.resourcesPath,
-      'app',
-      'node_modules',
-      '@deepseek-ai',
-      'dsh',
-      'lib',
-      'bin.js'
-    )
-  }
-  return join(app.getAppPath(), 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
+  return join(nodeModulesRoot(), '@deepseek-ai', 'dsh', 'lib', 'bin.js')
 }
 
 function bundledNodePath(): string {
   const executable = process.platform === 'win32' ? 'node.exe' : 'node'
-  return join(app.getAppPath(), 'node_modules', 'node', 'bin', executable)
+  return join(nodeModulesRoot(), 'node', 'bin', executable)
 }
 
 /**
@@ -682,16 +689,11 @@ function bundledNodePath(): string {
  * call that would silently drop the recovery.
  */
 function bundledPnpmRunnerPath(): string {
-  return join(
-    app.getAppPath(),
-    'node_modules',
-    'dsh-desktop-market-installer',
-    'pnpm-runner.mjs'
-  )
+  return join(nodeModulesRoot(), 'dsh-desktop-market-installer', 'pnpm-runner.mjs')
 }
 
 function bundledPnpmEntryPath(): string {
-  const root = join(app.getAppPath(), 'node_modules', 'pnpm', 'bin')
+  const root = join(nodeModulesRoot(), 'pnpm', 'bin')
   const candidates = [join(root, 'pnpm.cjs'), join(root, 'pnpm.mjs')]
   return candidates.find((candidate) => existsSync(candidate)) ?? join(root, 'pnpm.cjs')
 }
@@ -704,6 +706,23 @@ function harnessNodeEntryPath(): string {
 
 function desktopResourcePath(name: string): string {
   return app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'build', name)
+}
+
+/** The directory every packaged file: page lives in - the only file: trust root. */
+function desktopResourceDirectory(): string {
+  return app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build')
+}
+
+/**
+ * What the app's own seams currently trust: the harness endpoint that is
+ * running right now, plus this build's packaged page directory. Judged against
+ * the live snapshot, so a stale port from an earlier run is not trusted.
+ */
+function trustedAppUrlContext(): TrustedAppUrlContext {
+  return {
+    harnessUrl: runtime?.snapshot().url,
+    resourceDirectory: desktopResourceDirectory()
+  }
 }
 
 async function loadDesktopResource(
@@ -934,6 +953,9 @@ function respondToGpuFallbackSignal(
   if (escalated) runtime?.note(`[desktop] GPU fallback raised to ${plan.state.level}`)
   if (!plan.relaunch) return false
   gpuFallbackRelaunching = true
+  // app.exit() skips before-quit, so the storage mirror would lose whatever
+  // the renderer wrote inside its debounce window; flush it explicitly.
+  desktopStorageManager?.flushSync()
   app.relaunch()
   app.exit(0)
   return true
@@ -1115,7 +1137,7 @@ function createWindow(): BrowserWindow {
     appendRendererPluginFailureLog(details.message)
   })
   installPluginRecoveryNavigation(window)
-  secureWindow(window)
+  secureWindow(window, trustedAppUrlContext)
   installContextMenu(window, harnessLocale)
   installMainWindowRendererRecovery(window)
   window.on('closed', () => {
@@ -1393,6 +1415,9 @@ async function enterMigrationSafeRecovery(
   await runtime.stop()
   await ensureSafeModeProfile(dshHome)
   runtime.note('[desktop] safe mode: normal Profile maintenance is blocked until recovery succeeds')
+  // Same as launchSafeHarness: the safe-mode profile owns the storage mirror
+  // while safe mode runs, so its pages cannot write into the web profile.
+  desktopStorageManager?.switchProfile(join(dshHome, 'profiles', SAFE_MODE_PROFILE))
   await runtime.start(launchDirectory, SAFE_MODE_PROFILE)
   if (runtime.snapshot().phase !== 'ready') return
 
@@ -1610,11 +1635,13 @@ async function uninstallMarketAndRestart(): Promise<{ ok: boolean }> {
 function registerHarnessHandlers(): void {
   ipcMain.removeAllListeners('dsh:storage-load-sync')
   ipcMain.on('dsh:storage-load-sync', (event) => {
+    assertTrustedMainWindowEvent(event)
     event.returnValue = desktopStorageManager?.getAll() ?? {}
   })
 
   ipcMain.removeAllListeners('dsh:storage-sync')
-  ipcMain.on('dsh:storage-sync', (_event, action) => {
+  ipcMain.on('dsh:storage-sync', (event, action) => {
+    assertTrustedMainWindowEvent(event)
     if (action && typeof action === 'object') {
       desktopStorageManager?.applyAction(action as DesktopStorageAction)
     }
@@ -1622,9 +1649,7 @@ function registerHarnessHandlers(): void {
 
   ipcMain.removeHandler('harness:restart')
   ipcMain.handle('harness:restart', async (event) => {
-    if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) {
-      throw new Error('Harness restart is only available from the Casleo window.')
-    }
+    assertTrustedMainWindowEvent(event)
     if (runtime.snapshot().phase !== 'ready') {
       throw new Error('Harness is not ready to restart.')
     }
@@ -1718,6 +1743,16 @@ function registerHarnessHandlers(): void {
   })
 }
 
+function assertTrustedSenderUrl(event: IpcMainEvent | IpcMainInvokeEvent): void {
+  // The window identity alone is not enough: the same webContents can be
+  // navigated. Only a page this app actually serves (the live harness endpoint
+  // or this build's packaged pages) may drive privileged IPC.
+  const frameUrl = event.senderFrame?.url
+  if (typeof frameUrl !== 'string' || !isTrustedAppUrl(frameUrl, trustedAppUrlContext())) {
+    throw new Error('This action is only available from a trusted Casleo page.')
+  }
+}
+
 function assertTrustedDesktopMenuEvent(event: IpcMainInvokeEvent): void {
   const fromMainWindow =
     mainWindow &&
@@ -1730,6 +1765,7 @@ function assertTrustedDesktopMenuEvent(event: IpcMainInvokeEvent): void {
   if (!fromMainWindow && !fromWindowsMenu) {
     throw new Error('This action is only available from the Casleo window.')
   }
+  assertTrustedSenderUrl(event)
 }
 
 function assertTrustedWindowsMenuEvent(event: IpcMainInvokeEvent): void {
@@ -1739,9 +1775,10 @@ function assertTrustedWindowsMenuEvent(event: IpcMainInvokeEvent): void {
   if (!trusted) {
     throw new Error('This action is only available from the Windows application menu.')
   }
+  assertTrustedSenderUrl(event)
 }
 
-function assertTrustedMainWindowEvent(event: IpcMainInvokeEvent): void {
+function assertTrustedMainWindowEvent(event: IpcMainEvent | IpcMainInvokeEvent): void {
   if (
     !mainWindow ||
     mainWindow.isDestroyed() ||
@@ -1750,6 +1787,7 @@ function assertTrustedMainWindowEvent(event: IpcMainInvokeEvent): void {
   ) {
     throw new Error('This action is only available from the main Casleo window.')
   }
+  assertTrustedSenderUrl(event)
 }
 
 function assertTrustedSafeModeManagerEvent(event: IpcMainInvokeEvent): void {
@@ -1761,6 +1799,7 @@ function assertTrustedSafeModeManagerEvent(event: IpcMainInvokeEvent): void {
   ) {
     throw new Error('This action is only available from the Safe Mode manager.')
   }
+  assertTrustedSenderUrl(event)
 }
 
 async function showAbout(window: BrowserWindow): Promise<void> {
@@ -1975,7 +2014,7 @@ async function showPluginRecovery(options?: {
         startupFailures: followRendererLogs ? undefined : snapshot.pluginFailures,
         readLatestLogs: followRendererLogs ? () => rendererPluginFailureLogs : undefined,
         excludedPlugins: removedPlugins,
-        slotProviderNodeModulesPaths: [join(app.getAppPath(), 'node_modules')],
+        slotProviderNodeModulesPaths: [nodeModulesRoot()],
         timeoutMs: waitForRendererEvidence ? PLUGIN_RECOVERY_EVIDENCE_TIMEOUT_MS : 0
       })
       detection.plugins = evidence.targets(detection.plugins, removedPlugins)
@@ -1984,7 +2023,7 @@ async function showPluginRecovery(options?: {
       if (applyPendingFrontendEvidence()) continue
 
       const runtimeVersion =
-        (await readBundledDshVersion(join(app.getAppPath(), 'node_modules'))) || '0.1.2-alpha.1'
+        (await readBundledDshVersion(nodeModulesRoot())) || '0.1.2-alpha.1'
       const pluginChecks = await checkBlockingPluginUpdates({
         plugins: detection.plugins,
         attemptedUpgrades,
@@ -2068,7 +2107,7 @@ async function showPluginRecovery(options?: {
 
         const compatibility = await inspectProfileCompatibility(
           dshHome,
-          join(app.getAppPath(), 'node_modules')
+          nodeModulesRoot()
         )
         evidence.inspect(compatibility.issues)
         const blockingIssues = compatibility.issues.filter((issue) => issue.severity === 'blocking')
@@ -2131,7 +2170,7 @@ async function showPluginRecovery(options?: {
         }
         const compatibility = await inspectProfileCompatibility(
           dshHome,
-          join(app.getAppPath(), 'node_modules')
+          nodeModulesRoot()
         )
         evidence.inspect(compatibility.issues)
         const blockingIssues = compatibility.issues.filter((issue) => issue.severity === 'blocking')
@@ -2213,10 +2252,15 @@ async function waitForSafeModeAction(options: {
   const window = safeModeManager && !safeModeManager.isDestroyed()
     ? safeModeManager
     : (() => {
-      const manager = new SafeModeOverlay(parent, join(import.meta.dirname, '../preload/index.cjs'), () => {
-        if (safeModeManager === manager) safeModeManager = undefined
-        resolveSafeModeAction({ type: 'agent' })
-      })
+      const manager = new SafeModeOverlay(
+        parent,
+        join(import.meta.dirname, '../preload/index.cjs'),
+        trustedAppUrlContext,
+        () => {
+          if (safeModeManager === manager) safeModeManager = undefined
+          resolveSafeModeAction({ type: 'agent' })
+        }
+      )
       safeModeManager = manager
       return manager
     })()
@@ -2360,7 +2404,7 @@ async function removeProfilePluginCompletely(
       await markProfileInstallComplete(dshHome)
       const compatibility = await inspectProfileCompatibility(
         dshHome,
-        join(app.getAppPath(), 'node_modules')
+        nodeModulesRoot()
       )
       runtime.note(
         `[${logPrefix}] rebuilt the web profile after removing ${pluginName}; ` +
@@ -2432,7 +2476,7 @@ async function showSafeModeManager(initial?: {
           pendingRemovals = await listPendingPluginRemovals(dshHome)
           compatibility = await inspectProfileCompatibility(
             dshHome,
-            join(app.getAppPath(), 'node_modules')
+            nodeModulesRoot()
           )
         }
       } catch (error) {
@@ -2460,7 +2504,7 @@ async function showSafeModeManager(initial?: {
           healthReports = await checkupAllProfilePlugins({
             plugins: installed,
             dshHome,
-            bundledNodeModulesPath: join(app.getAppPath(), 'node_modules'),
+            bundledNodeModulesPath: nodeModulesRoot(),
             incompatiblePlugins: [...new Set([...safeModeSuspectedPlugins, ...incompatiblePluginNames])],
             fetchFn: (input, init) => net.fetch(input instanceof URL ? input.href : input, init),
             locale: harnessLocale()
@@ -2879,12 +2923,8 @@ async function bootstrap(): Promise<void> {
   }
   registerHarnessHandlers()
   ipcMain.handle('directory-picker:open', async (event) => {
-    if (
-      !mainWindow ||
-      mainWindow.isDestroyed() ||
-      event.sender !== mainWindow.webContents ||
-      event.senderFrame !== mainWindow.webContents.mainFrame
-    ) {
+    assertTrustedMainWindowEvent(event)
+    if (!mainWindow || mainWindow.isDestroyed()) {
       throw new Error('Directory picker requests are only allowed from the main Harness window')
     }
 
@@ -2894,13 +2934,21 @@ async function bootstrap(): Promise<void> {
     })
     return result.canceled ? null : result.filePaths[0] ?? null
   })
-  ipcMain.handle('harness:show-log', () => {
+  ipcMain.handle('harness:show-log', (event) => {
+    assertTrustedMainWindowEvent(event)
     shell.showItemInFolder(join(app.getPath('logs'), 'harness.log'))
   })
   ipcMain.handle('harness:open-in-finder', async (event, path?: unknown) => {
     assertTrustedMainWindowEvent(event)
     if (typeof path !== 'string' || path.length === 0) {
       throw new Error('A directory path is required.')
+    }
+    // shell.openPath on a file hands it to the shell's default handler -
+    // .bat/.cmd/.js would execute. Callers only ever pass workspace
+    // directories, so anything else is rejected rather than opened.
+    const stats = await stat(path).catch(() => undefined)
+    if (!stats?.isDirectory()) {
+      throw new Error('Only an existing directory can be opened.')
     }
     const errorMessage = await shell.openPath(path)
     if (errorMessage) throw new Error(errorMessage)
@@ -3045,7 +3093,7 @@ async function bootstrap(): Promise<void> {
     }
     const compatibility = await inspectProfileCompatibility(
       dshHome,
-      join(app.getAppPath(), 'node_modules')
+      nodeModulesRoot()
     )
     if (compatibility.issues.some((issue) => issue.severity === 'blocking')) {
       void showSafeModeManager().catch(showUnexpectedError)

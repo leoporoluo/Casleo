@@ -16,7 +16,7 @@ Casleo 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) �
 
 ## 下载
 
-Windows x64 安装包由 [构建流程](.github/workflows/desktop-installer.yml) 生成，并随标签发布在 [Releases](https://github.com/leoporoluo/Casleo/releases)。安装包未签名，首次运行可能出现 Windows SmartScreen 提示。
+Windows x64 安装包由 [构建流程](.github/workflows/desktop-installer.yml) 在每次推送到 `main` 时生成（作为 workflow artifact），并随标签发布在 [Releases](https://github.com/leoporoluo/Casleo/releases)。安装包未签名，首次运行可能出现 Windows SmartScreen 提示。
 
 本地构建：
 

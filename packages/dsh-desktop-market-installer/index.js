@@ -21,7 +21,7 @@ import {
   writeDesired
 } from './generations/registry.mjs'
 import { resolveMarketRegistry } from './market-registry.mjs'
-import { SIDELINE_MARKER } from './pnpm-runner.mjs'
+import { SIDELINE_MARKER, STAGING_PATTERN } from './pnpm-runner.mjs'
 import { removeTree } from './remove-tree.mjs'
 
 /** Install spec: the registry resolves the newest published market. */
@@ -71,7 +71,9 @@ export function updateProfileNpmrc(npmrc) {
 
 /** Leftovers of an interrupted pnpm run, or of a Windows locked-rename recovery. */
 export function isDisposableModuleDirectory(name) {
-  return name.includes('_tmp_') || name.includes(SIDELINE_MARKER)
+  // Exact staging-shape match only: a substring test would also remove any
+  // real package whose name merely contains `_tmp_`.
+  return STAGING_PATTERN.test(name) || name.includes(SIDELINE_MARKER)
 }
 
 /**

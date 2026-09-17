@@ -288,7 +288,10 @@
   "build": {
     "appId": "com.casleo.desktop",
     "productName": "Casleo",
-    "asar": false,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/**/*"
+    ],
     "npmRebuild": false,
     "compression": "normal",
     "electronLanguages": [

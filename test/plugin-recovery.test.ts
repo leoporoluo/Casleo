@@ -902,6 +902,8 @@ describe('plugin-recovery', () => {
     expect(isDisposableModuleDirectory('argparse.dsh-old-1787317710932')).toBe(true)
     expect(isDisposableModuleDirectory('argparse')).toBe(false)
     expect(isDisposableModuleDirectory('js-yaml')).toBe(false)
+    expect(isDisposableModuleDirectory('some_tmp_package')).toBe(false)
+    expect(isDisposableModuleDirectory('foo_tmp_bar')).toBe(false)
   })
 })
 

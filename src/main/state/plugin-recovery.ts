@@ -12,8 +12,13 @@ import { bundleEntryIds, prunePatchLayer } from './patch-layer'
  * when Windows refuses to replace a directory still held open. Both are only
  * safely removable before Harness starts, which is when this sweep runs.
  */
+/** The `<pkg>_tmp_<pid>_<n>` staging name pnpm leaves beside its destination. */
+const STAGING_PATTERN = /^(?<packageName>.+)_tmp_\d+_\d+$/u
+
 export function isDisposableModuleDirectory(name: string): boolean {
-  return name.includes('_tmp_') || name.includes('.dsh-old-')
+  // Exact staging-shape match only: a substring test would also remove any
+  // real package whose name merely contains `_tmp_`.
+  return STAGING_PATTERN.test(name) || name.includes('.dsh-old-')
 }
 
 export function profilePackageJsonPath(dshHome: string): string {
@@ -568,8 +573,6 @@ export async function resetPluginProfile(
         for (const dep of Object.keys(manifest.dependencies)) {
           if (
             matchRelatedPackages && (
-              failingPlugin.includes(dep) ||
-              dep.includes(failingPlugin) ||
               (scope && dep.startsWith(scope))
             )
           ) {
@@ -584,8 +587,6 @@ export async function resetPluginProfile(
           (b) =>
             b !== failingPlugin &&
             (!matchRelatedPackages || (
-              !failingPlugin.includes(b) &&
-              !b.includes(failingPlugin) &&
               (!scope || !b.startsWith(scope))
             ))
         )

@@ -11,6 +11,31 @@ import {
 import { listGenerations, registryLayout } from '../packages/dsh-desktop-market-installer/generations/registry'
 
 /**
+ * Whether this environment allows creating symlinks at all. Windows only
+ * permits them to administrators or accounts with Developer Mode enabled, and
+ * an EPERM there is an environment property, not a product failure - those
+ * environments skip the link-based coverage instead of failing it.
+ */
+const canCreateSymlinks = await (async () => {
+  try {
+    const probeHome = await mkdtemp(join(tmpdir(), 'dsh-symlink-probe-'))
+    const target = join(probeHome, 'target')
+    const link = join(probeHome, 'probe')
+    await writeFile(target, '')
+    try {
+      // A file symlink - the exact kind the link-based coverage creates, and
+      // the kind Windows reserves to administrators or Developer Mode.
+      await symlink(target, link)
+      return true
+    } finally {
+      await rm(probeHome, { recursive: true, force: true })
+    }
+  } catch {
+    return false
+  }
+})()
+
+/**
  * These exercise the promotion and hoist logic with a stubbed install, so they
  * run anywhere. The real pnpm path is covered by scripts/generation-poc.mjs
  * against live Market plugins on Windows.
@@ -496,7 +521,7 @@ describe('the generation installer', () => {
     )
   })
 
-  it('accepts named Harness fallback links without trusting the rest of the checkout', async () => {
+  it.skipIf(!canCreateSymlinks)('accepts named Harness fallback links without trusting the rest of the checkout', async () => {
     const home = await freshHome()
     const directory = join(home, 'profiles', '.generations', 'live', 'linked-host')
     const plugin = join(directory, 'node_modules', 'root-plugin')

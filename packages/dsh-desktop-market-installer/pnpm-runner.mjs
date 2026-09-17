@@ -601,7 +601,7 @@ export async function runWithLockRecovery(executable, args, options = {}) {
 }
 
 /** The `<pkg>_tmp_<pid>_<n>` staging name pnpm leaves beside its destination. */
-const STAGING_PATTERN = /^(?<packageName>.+)_tmp_\d+_\d+$/u
+export const STAGING_PATTERN = /^(?<packageName>.+)_tmp_\d+_\d+$/u
 
 /**
  * Every destination the failed run still has staging for, plus the one pnpm

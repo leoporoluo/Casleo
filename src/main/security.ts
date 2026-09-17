@@ -1,15 +1,22 @@
 import { shell, type BrowserWindow } from 'electron'
-import { canGrantWindowPermission, isTrustedAppUrl } from './security-policy'
+import {
+  canGrantWindowPermission,
+  isTrustedAppUrl,
+  type TrustedAppUrlContext
+} from './security-policy'
 
-export function secureWindow(window: Pick<BrowserWindow, 'webContents'>): void {
+export function secureWindow(
+  window: Pick<BrowserWindow, 'webContents'>,
+  trustedContext: () => TrustedAppUrlContext
+): void {
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (isTrustedAppUrl(url)) return { action: 'allow' }
+    if (isTrustedAppUrl(url, trustedContext())) return { action: 'allow' }
     if (url.startsWith('https://') || url.startsWith('http://')) void shell.openExternal(url)
     return { action: 'deny' }
   })
 
   window.webContents.on('will-navigate', (event, url) => {
-    if (isTrustedAppUrl(url)) return
+    if (isTrustedAppUrl(url, trustedContext())) return
     event.preventDefault()
     if (url.startsWith('https://') || url.startsWith('http://')) void shell.openExternal(url)
   })
@@ -20,13 +27,19 @@ export function secureWindow(window: Pick<BrowserWindow, 'webContents'>): void {
       canGrantWindowPermission(
         permission,
         details.requestingUrl ?? requestingOrigin,
-        details.isMainFrame
+        details.isMainFrame,
+        trustedContext()
       )
   )
   window.webContents.session.setPermissionRequestHandler(
     (_webContents, permission, callback, details) => {
       callback(
-        canGrantWindowPermission(permission, details.requestingUrl, details.isMainFrame)
+        canGrantWindowPermission(
+          permission,
+          details.requestingUrl,
+          details.isMainFrame,
+          trustedContext()
+        )
       )
     }
   )

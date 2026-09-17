@@ -16,7 +16,7 @@ Casleo is a local-first desktop app for [DeepSeek Harness](https://github.com/de
 
 ## Download
 
-Windows x64 installers are built by the [installer workflow](.github/workflows/desktop-installer.yml) and attached to tagged [releases](https://github.com/leoporoluo/Casleo/releases). The installer is unsigned, so Windows SmartScreen may warn on first run.
+Windows x64 installers are built by the [installer workflow](.github/workflows/desktop-installer.yml) on every push to `main` (as a workflow artifact) and attached to tagged [releases](https://github.com/leoporoluo/Casleo/releases). The installer is unsigned, so Windows SmartScreen may warn on first run.
 
 You can also build the installer locally:
 

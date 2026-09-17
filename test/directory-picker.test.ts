@@ -10,6 +10,7 @@ describe('desktop Electron directory picker', () => {
     expect(preload).toContain("contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker'")
     expect(preload).toContain("ipcRenderer.invoke('directory-picker:open')")
     expect(main).toContain("ipcMain.handle('directory-picker:open'")
+    expect(main).toContain('assertTrustedMainWindowEvent(event)')
     expect(main).toContain('event.senderFrame !== mainWindow.webContents.mainFrame')
     expect(main).toContain('dialog.showOpenDialog(mainWindow')
     expect(main).toContain("properties: ['openDirectory']")

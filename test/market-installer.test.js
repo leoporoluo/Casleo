@@ -16,6 +16,7 @@ import {
   createDesktopPnpmService,
   createDesktopProfilesService,
   ensurePnpmShim,
+  isDisposableModuleDirectory,
   isTrustedRequest,
   readMarketInstallation,
   resolvePnpmEntry,
@@ -52,6 +53,13 @@ describe('desktop plugin market installer', () => {
 
   it('ships a resolvable pnpm binary instead of relying on the user PATH', () => {
     expect(resolvePnpmEntry()).toMatch(/node_modules[/\\]pnpm[/\\]bin[/\\]pnpm\.(c|m)js$/u)
+  })
+
+  it('sweeps only pnpm staging names, not packages whose name contains _tmp_', () => {
+    expect(isDisposableModuleDirectory('argparse_tmp_19856_4')).toBe(true)
+    expect(isDisposableModuleDirectory('argparse.dsh-old-1787317710932')).toBe(true)
+    expect(isDisposableModuleDirectory('some_tmp_package')).toBe(false)
+    expect(isDisposableModuleDirectory('foo_tmp_bar')).toBe(false)
   })
 
   it('removes only Desktop’s exact legacy pnpm settings and preserves sensitive config bytes', () => {

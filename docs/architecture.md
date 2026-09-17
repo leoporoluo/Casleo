@@ -59,7 +59,7 @@ The main Harness window uses:
 - navigation and new-window restrictions
 - a narrow permission allowlist
 
-Only local Harness, packaged file, and desktop recovery URLs are trusted inside the app. Ordinary HTTP and HTTPS links are opened externally. IPC handlers validate the sending window and main frame before performing privileged actions such as opening the native directory picker, restarting Harness, or managing Safe Mode.
+Only the live Harness origin (its current loopback port) and this build's packaged `file:` pages are trusted inside the app. Ordinary HTTP and HTTPS links are opened externally. IPC handlers validate the sending window, main frame, and that page URL before performing privileged actions such as opening the native directory picker, restarting Harness, or managing Safe Mode.
 
 ## Profiles and plugin recovery
 

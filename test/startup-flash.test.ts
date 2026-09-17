@@ -57,8 +57,28 @@ describe('startup flash guards', () => {
     // `ExecShell "runas" powershell.exe -WindowStyle Hidden` still creates the
     // console window before PowerShell applies the style, which is the flash.
     expect(directives).not.toContain('ExecShell "runas"')
-    expect(installer).toContain('Start-Process -FilePath \'$TEMP\\casleo-elevate.ps1\'')
-    expect(installer).toContain('-Verb RunAs -WindowStyle Hidden')
+    // The elevated pass must launch PowerShell explicitly and execute the
+    // generated script with -File: handing the .ps1 to Start-Process as the
+    // FilePath would open it in Notepad instead of running it.
+    expect(installer).toContain('Start-Process -FilePath powershell.exe -Verb RunAs')
+    expect(installer).toContain('-WindowStyle Hidden -Wait')
+    expect(installer).toContain("'-File',")
+    expect(installer).toContain('Delete "$TEMP\\casleo-elevate-$8.ps1"')
     expect(installer).toContain('nsExec::ExecToLog "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass')
+    expect(installer).toContain('!macro customUnInstall')
+    expect(installer).toContain('Remove-MpPreference -ExclusionPath')
+    expect(installer).toContain('app.asar.unpacked\\node_modules')
+  })
+
+  it('packs application code in asar and unpacks node_modules for the Harness child', async () => {
+    const packageJson = JSON.parse(await readFile('package.json', 'utf8')) as {
+      build?: { asar?: boolean; asarUnpack?: string[] }
+    }
+    const main = await readFile('src/main/index.ts', 'utf8')
+
+    expect(packageJson.build?.asar).toBe(true)
+    expect(packageJson.build?.asarUnpack).toEqual(['node_modules/**/*'])
+    expect(main).toContain("join(process.resourcesPath, 'app.asar.unpacked', 'node_modules')")
+    expect(main).toContain('function nodeModulesRoot()')
   })
 })

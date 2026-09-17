@@ -1,5 +1,6 @@
 import { WebContentsView, type BrowserWindow, type WebContents } from 'electron'
 import { secureWindow } from './security'
+import type { TrustedAppUrlContext } from './security-policy'
 
 /** Keep the recovery dialog inside the host window, including its full backdrop. */
 export class SafeModeOverlay {
@@ -10,6 +11,7 @@ export class SafeModeOverlay {
   constructor(
     readonly parent: BrowserWindow,
     preload: string,
+    trustedContext: () => TrustedAppUrlContext,
     private readonly onClose: () => void
   ) {
     this.view = new WebContentsView({
@@ -24,7 +26,7 @@ export class SafeModeOverlay {
     this.webContents = this.view.webContents
     this.view.setBackgroundColor('#00000000')
     this.view.setVisible(false)
-    secureWindow(this.view)
+    secureWindow(this.view, trustedContext)
     parent.contentView.addChildView(this.view)
     parent.on('resize', this.syncBounds)
     parent.on('enter-full-screen', this.syncBounds)

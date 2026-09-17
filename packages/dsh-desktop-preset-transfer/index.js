@@ -167,7 +167,30 @@ function createPresetArchive(ctx) {
 			let unzipped;
 			try {
 				signal?.throwIfAborted();
-				unzipped = unzipSync(data);
+				// Bound allocation before decompression: a small archive whose
+				// entries claim huge uncompressed sizes must be refused from the
+				// header data alone, instead of after every entry is already in
+				// memory (and while the harness event loop stays blocked).
+				let precheckFailure;
+				let declaredTotal = 0;
+				unzipped = unzipSync(data, {
+					filter: (file) => {
+						if (file.name === "manifest.json") return true;
+						if (file.name.startsWith("__MACOSX/") || file.name.includes("/__MACOSX/")) return false;
+						const size = file.originalSize ?? 0;
+						if (size > PRESET_ARCHIVE_MAX_FILE) {
+							precheckFailure ??= `File "${file.name}" exceeds the 12 MB limit.`;
+							return false;
+						}
+						if (declaredTotal + size > PRESET_ARCHIVE_MAX_UNCOMPRESSED) {
+							precheckFailure ??= "Uncompressed package exceeds the 32 MB limit.";
+							return false;
+						}
+						declaredTotal += size;
+						return true;
+					}
+				});
+				if (precheckFailure !== undefined) return presetArchiveFailure(precheckFailure);
 			} catch {
 				return presetArchiveFailure("The file is not a valid ZIP archive.");
 			}
@@ -347,7 +370,34 @@ export function apply(ctx) {
       }
       let data
       try {
-        data = new Uint8Array(await request.arrayBuffer())
+        // Chunked uploads have no content-length header; cap the accumulated
+        // body instead of reading an unbounded stream into memory first.
+        if (!Number.isFinite(contentLength)) {
+          const MAX_CHUNKED_BYTES = PRESET_ARCHIVE_MAX_COMPRESSED
+          const reader = request.body?.getReader()
+          if (!reader) return presetArchiveFailure('Could not read the preset package.')
+          const chunks = []
+          let received = 0
+          for (;;) {
+            const { done, value } = await reader.read()
+            if (done) break
+            received += value.byteLength
+            if (received > MAX_CHUNKED_BYTES) {
+              await reader.cancel().catch(() => undefined)
+              return presetArchiveFailure('Preset package is larger than 16 MB.', 413)
+            }
+            chunks.push(value)
+          }
+          const merged = new Uint8Array(received)
+          let offset = 0
+          for (const chunk of chunks) {
+            merged.set(chunk, offset)
+            offset += chunk.byteLength
+          }
+          data = merged
+        } else {
+          data = new Uint8Array(await request.arrayBuffer())
+        }
       } catch {
         return presetArchiveFailure('Could not read the preset package.')
       }

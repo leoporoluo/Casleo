@@ -581,49 +581,118 @@ describe('offending plugin extraction', () => {
 })
 
 describe('navigation trust boundary', () => {
-  it('only trusts the launcher and loopback HTTP pages', () => {
-    expect(isTrustedAppUrl('file:///app/index.html')).toBe(true)
-    expect(isTrustedAppUrl('http://127.0.0.1:43127')).toBe(true)
-    expect(isTrustedAppUrl('http://localhost:43127')).toBe(true)
+  it('trusts no loopback or file page without a live origin and resource root', () => {
+    // A bare shape check cannot know which local files belong to this build,
+    // or which loopback port is the Harness that is running right now.
+    expect(isTrustedAppUrl('http://127.0.0.1:43127')).toBe(false)
+    expect(isTrustedAppUrl('http://localhost:43127')).toBe(false)
+    expect(isTrustedAppUrl('file:///app/index.html')).toBe(false)
     expect(isTrustedAppUrl('https://127.0.0.1:43127')).toBe(false)
     expect(isTrustedAppUrl('http://example.com')).toBe(false)
     expect(isTrustedAppUrl('javascript:alert(1)')).toBe(false)
   })
 
+  it('trusts only the running harness port and this build\'s resource pages', () => {
+    const windows = process.platform === 'win32'
+    const context = {
+      harnessUrl: 'http://127.0.0.1:43129',
+      resourceDirectory: windows
+        ? String.raw`C:\Program Files\Casleo\resources`
+        : '/Applications/Casleo.app/Contents/Resources'
+    }
+    expect(isTrustedAppUrl('http://127.0.0.1:43129/session', context)).toBe(true)
+    expect(isTrustedAppUrl('http://localhost:43129/session', context)).toBe(true)
+    // Another loopback port is someone else's server, not ours.
+    expect(isTrustedAppUrl('http://127.0.0.1:43130/session', context)).toBe(false)
+    expect(
+      isTrustedAppUrl(
+        windows
+          ? 'file:///C:/Program Files/Casleo/resources/plugin-recovery.html'
+          : 'file:///Applications/Casleo.app/Contents/Resources/plugin-recovery.html',
+        context
+      )
+    ).toBe(true)
+    expect(
+      isTrustedAppUrl(
+        windows ? 'file:///C:/Users/victim/planted.html' : 'file:///Users/victim/planted.html',
+        context
+      )
+    ).toBe(false)
+    expect(
+      isTrustedAppUrl(
+        windows ? 'file:///C:/Program Files/Other/evil.html' : 'file:///Applications/Other/evil.html',
+        context
+      )
+    ).toBe(false)
+    expect(
+      isTrustedAppUrl(
+        windows
+          ? 'file:///C:/Program Files/Casleo/resources/../Users/victim/planted.html'
+          : 'file:///Applications/Casleo.app/Contents/Resources/../victim/planted.html',
+        context
+      )
+    ).toBe(false)
+  })
+
   it('only grants clipboard writes from the trusted main frame', () => {
+    const context = { harnessUrl: 'http://127.0.0.1:43127' }
     expect(
       canGrantWindowPermission(
         'clipboard-sanitized-write',
         'http://127.0.0.1:43127/session',
-        true
+        true,
+        context
       )
     ).toBe(true)
     expect(
       canGrantWindowPermission(
         'clipboard-sanitized-write',
         'http://localhost:43127/session',
-        true
+        true,
+        context
       )
     ).toBe(true)
     expect(
-      canGrantWindowPermission('clipboard-read', 'http://127.0.0.1:43127/session', true)
+      canGrantWindowPermission(
+        'clipboard-sanitized-write',
+        'http://127.0.0.1:43128/session',
+        true,
+        context
+      )
     ).toBe(false)
     expect(
       canGrantWindowPermission(
         'clipboard-sanitized-write',
         'http://127.0.0.1:43127/session',
-        false
+        true
+      )
+    ).toBe(false)
+    expect(
+      canGrantWindowPermission('clipboard-read', 'http://127.0.0.1:43127/session', true, context)
+    ).toBe(false)
+    expect(
+      canGrantWindowPermission(
+        'clipboard-sanitized-write',
+        'http://127.0.0.1:43127/session',
+        false,
+        context
       )
     ).toBe(false)
     expect(
       canGrantWindowPermission(
         'clipboard-sanitized-write',
         'https://example.com/session',
-        true
+        true,
+        context
       )
     ).toBe(false)
     expect(
-      canGrantWindowPermission('clipboard-sanitized-write', 'file:///tmp/app.html', true)
+      canGrantWindowPermission(
+        'clipboard-sanitized-write',
+        'file:///tmp/app.html',
+        true,
+        context
+      )
     ).toBe(false)
   })
 })

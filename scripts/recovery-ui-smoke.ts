@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { SafeModeOverlay } from '../src/main/safe-mode-overlay'
 import { buildSafeModeViewModel } from '../src/main/safe-mode'
 import { buildPluginRecoveryViewModel } from '../src/main/plugin-recovery-view'
-import { windowsMenuViewBounds } from '../src/main/windows-menu-view'
+import { windowsMenuPanelBounds } from '../src/main/windows-menu-view'
 import { secureWindow } from '../src/main/security'
 
 const scale = process.env.RECOVERY_UI_SCALE || '1'
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
     webPreferences: { sandbox: true, contextIsolation: true }
   })
   parent.setMenuBarVisibility(false)
-  secureWindow(parent)
+  secureWindow(parent, () => ({}))
   const menu = new WebContentsView({ webPreferences: { sandbox: true } })
   menu.setBackgroundColor('#00000000')
   if (process.platform === 'win32') parent.contentView.addChildView(menu)
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   for (const scenario of ['safe-mode', 'plugin-recovery', 'multiple-plugins', 'market-offline', 'unidentified-plugin']) {
     const page = scenario === 'unidentified-plugin' || scenario === 'multiple-plugins' || scenario === 'market-offline' ? 'plugin-recovery' : scenario
     await parent.loadURL('data:text/html,<body style="background:%2318181b;color:%23999">Casleo</body>')
-    const overlay = page === 'safe-mode' ? new SafeModeOverlay(parent, preload, () => { closed++ }) : undefined
+    const overlay = page === 'safe-mode' ? new SafeModeOverlay(parent, preload, () => ({}), () => { closed++ }) : undefined
     const contents = overlay?.webContents ?? parent.webContents
     const rendererErrors: string[] = []
     contents.on('console-message', event => { if (event.level === 'error') rendererErrors.push(event.message) })
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
       parent.setSize(width!, height!)
       if (process.platform === 'win32') {
         parent.setTitleBarOverlay({ color: '#00000000', symbolColor: theme === 'dark' ? '#fafafa' : '#18181b', height: 36 })
-        menu.setBounds(windowsMenuViewBounds({ width: width!, height: height! }, false))
+        menu.setBounds(windowsMenuPanelBounds({ width: width!, height: height! }, false))
       }
       const model = page === 'safe-mode' ? buildSafeModeViewModel({ locale, plugins: names }) : buildPluginRecoveryViewModel({
         locale, plugins: scenario === 'unidentified-plugin' ? [] : (scenario === 'multiple-plugins' || scenario === 'market-offline') ? names.slice(0, 3) : [names[0]!], removedPlugins: [],
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
         })()`)
         assert.deepEqual(retry, { action: 'check-updates', label: locale === 'zh' ? '重新检查更新' : 'Retry update checks' })
       }
-      results.push({ page, scenario, locale, theme, requestedSize: [width,height], layout, popup })
+      results.push({ page, scenario, locale, theme, requestedSize: [width, height], layout })
     }
     assert.deepEqual(rendererErrors, [])
     if (overlay) {
@@ -179,7 +179,7 @@ async function main(): Promise<void> {
   const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 1280, height: 800 } })
   const source = sources.find(item => item.id === parent.getMediaSourceId())
   if (source && !source.thumbnail.isEmpty()) writeFileSync(join(output, 'native-window.png'), source.thumbnail.toPNG())
-  const overlay = new SafeModeOverlay(parent, preload, () => { closed++ })
+  const overlay = new SafeModeOverlay(parent, preload, () => ({}), () => { closed++ })
   parent.destroy(); await delay(60)
   assert.equal(overlay.isDestroyed(), true)
   assert.equal(closed, 2)
