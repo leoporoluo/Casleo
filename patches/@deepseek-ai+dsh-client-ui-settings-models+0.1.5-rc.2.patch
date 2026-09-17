@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
-index aa8ef80..c5208b6 100644
+index aa8ef80..09723c2 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
 @@ -64,6 +64,46 @@ window.__ModuleLoader__.load({
@@ -35,7 +35,7 @@ index aa8ef80..c5208b6 100644
 +			const tag = document.createElement("style");
 +			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-settings-models";
 +			tag.dataset.pluginCss = modelReasoningTagId;
-+			tag.textContent = "html[data-ds-dark-theme] .dshModelImageInput,body[data-ds-dark-theme] .dshModelImageInput{color-scheme:dark}.dshModelImageInput option{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2)}.dshModelReasoningField{grid-column:auto;flex-direction:column;gap:6px;display:flex}.dshModelReasoningHint{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}";
++			tag.textContent = "html[data-ds-dark-theme] .dshModelImageInput,body[data-ds-dark-theme] .dshModelImageInput{color-scheme:dark}.dshModelImageInput option{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2)}.dshModelReasoningField{grid-column:auto;flex-direction:column;gap:6px;display:flex}.dshModelReasoningHint{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}.zGbnIq_modelAdvanced{grid-template-columns:repeat(2,minmax(0,1fr))}";
 +			document.head.appendChild(tag);
 +		}
 +		const modelDropdownTagId = "@deepseek-ai/dsh-client-ui-settings-models/ModelDropdown";

@@ -77,6 +77,11 @@ describe('Casleo model image-input declarations', () => {
       'getAnchorRect: () => triggerRef.current === null ? null : triggerRef.current.getBoundingClientRect(),'
     )
     expect(client).toContain('align: "start",')
+    // The advanced fields sit in an `auto-fit` grid, so their column count
+    // followed the container width: the same four fields read 3+1 while a
+    // provider was being created and 2+2 once it was saved. Two columns are
+    // pinned, so the row reads the same in both places.
+    expect(client).toContain('.zGbnIq_modelAdvanced{grid-template-columns:repeat(2,minmax(0,1fr))}')
     expect(client).not.toContain('("select", {')
     expect(client).toContain('ModelsSection_module_css_default["modelFieldLabel"]')
     // The control carries its own desktop-owned class and a dark-scheme rule for
