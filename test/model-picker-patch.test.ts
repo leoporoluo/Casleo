@@ -70,6 +70,13 @@ describe('Casleo model image-input declarations', () => {
       'className: `dshModelImageInput ${ModelsSection_module_css_default["input"]} ${ModelsSection_module_css_default["selectInput"]}`'
     )
     expect(client).toContain('className: "dshModelDropdownLabel"')
+    // Portal placement measures the Menu's own wrapper, which here stretches to
+    // the whole field column while the control stops at 240px; the list has to
+    // take the button's own rect or it drops from the column's edge instead.
+    expect(client).toContain(
+      'getAnchorRect: () => triggerRef.current === null ? null : triggerRef.current.getBoundingClientRect(),'
+    )
+    expect(client).toContain('align: "start",')
     expect(client).not.toContain('("select", {')
     expect(client).toContain('ModelsSection_module_css_default["modelFieldLabel"]')
     // The control carries its own desktop-owned class and a dark-scheme rule for
