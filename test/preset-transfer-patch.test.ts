@@ -533,6 +533,20 @@ describe('agent preset package transfer', () => {
     expect(patch).not.toContain('browseAwesomePresets')
   })
 
+  it('shows the mode label at once instead of typing it out on launch', async () => {
+    const client = await readFile(
+      path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-client-ui-agent-preset', 'lib', 'client.js'),
+      'utf8'
+    )
+
+    // The seat introduced itself once per launch by staggering its label in
+    // character by character, right beside the wordmark. The label is a plain
+    // string now; the roster store still reports the introduction, it just has
+    // nothing left to animate.
+    expect(client).toContain('const shownLabel = label;')
+    expect(client).not.toContain('AgentPresetSeat_module_css_default.introText')
+  })
+
   it('keeps the loopback API discoverable by an explicitly requested online Skill', async () => {
     const webApp = await readFile(
       path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-web-app', 'lib', 'index.js'),
