@@ -33,6 +33,8 @@ export interface HarnessRuntimeOptions {
   ): HarnessChildProcess
   preferredPort?: number
   startupTimeoutMs?: number
+  /** Resolved at each launch from the desktop proxy-config file; empty = direct. */
+  proxyUrl?: () => string | undefined
   onChanged(snapshot: RuntimeSnapshot): void
 }
 
@@ -301,11 +303,33 @@ export function buildHarnessSpawnOptions(
   launchDirectory: string,
   dshHome: string,
   platform: NodeJS.Platform = process.platform,
-  environment: NodeJS.ProcessEnv = process.env
+  environment: NodeJS.ProcessEnv = process.env,
+  proxyUrl?: string
 ): SpawnOptionsWithoutStdio {
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...parentEnvironment } = environment
   const pathKey = platform === 'win32' ? 'Path' : 'PATH'
   const pathApi = platform === 'win32' ? win32 : posix
+
+  // The configured proxy reaches the Harness through its environment, which
+  // `dsh-http-proxy` resolves into per-scheme routing for every outbound
+  // fetch (Node's fetch ignores the Windows system-proxy switch entirely).
+  // Both casings are written because consumers disagree on which they read,
+  // and the user's own bypass list survives with the loopback appended so
+  // the desktop's internal endpoint can never be routed through the proxy.
+  const proxyEnvironment: NodeJS.ProcessEnv = {}
+  if (typeof proxyUrl === 'string' && proxyUrl.trim() !== '') {
+    const proxy = proxyUrl.trim()
+    const userBypass = environment.NO_PROXY ?? environment.no_proxy ?? ''
+    const bypass = [...new Set([...userBypass.split(','), '127.0.0.1', 'localhost']
+      .map((entry) => entry.trim())
+      .filter((entry) => entry !== ''))].join(',')
+    proxyEnvironment.HTTP_PROXY = proxy
+    proxyEnvironment.HTTPS_PROXY = proxy
+    proxyEnvironment.http_proxy = proxy
+    proxyEnvironment.https_proxy = proxy
+    proxyEnvironment.NO_PROXY = bypass
+    proxyEnvironment.no_proxy = bypass
+  }
 
   // ELECTRON_RUN_AS_NODE must not reach the Harness process itself: the macOS
   // utility process is launched with Chromium switches (--type=utility, …)
@@ -323,6 +347,7 @@ export function buildHarnessSpawnOptions(
     cwd: launchDirectory,
     env: {
       ...parentEnvironment,
+      ...proxyEnvironment,
       DSH_HOME: dshHome,
       NO_COLOR: '1',
       // package-import-method/child-concurrency are left at pnpm's defaults
@@ -508,7 +533,8 @@ export class HarnessRuntime {
           launchDirectory,
           this.options.dshHome,
           process.platform,
-          shellEnvironment
+          shellEnvironment,
+          this.options.proxyUrl?.()
         )
       )
     } catch (error) {

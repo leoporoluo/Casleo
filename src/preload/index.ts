@@ -258,6 +258,9 @@ contextBridge.exposeInMainWorld(
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),
     uninstallMarket: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('market:uninstall'),
     openInFinder: (path: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:open-in-finder', path),
+    /** General-settings network-proxy preference (empty string = direct). */
+    getProxyConfig: (): Promise<{ httpProxy: string }> => ipcRenderer.invoke('desktop-proxy:get'),
+    setProxyConfig: (value: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('desktop-proxy:set', value),
     /** Renderer platform, so shared UI can pick platform-correct wording. */
     platform: process.platform
   })

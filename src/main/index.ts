@@ -49,6 +49,13 @@ import {
 } from './state/profile-compatibility'
 import { ensureStoreDirPinned, inspectStoreConsistency } from './state/profile-store'
 import {
+  readProxyConfig,
+  validateProxyUrl,
+  writeProxyConfig,
+  proxyConfigPath,
+  type DesktopProxyConfig
+} from './state/desktop-proxy'
+import {
   detectPluginRecovery,
   PLUGIN_RECOVERY_EVIDENCE_TIMEOUT_MS
 } from './plugin-recovery-detection'
@@ -1741,6 +1748,25 @@ function registerHarnessHandlers(): void {
       locale
     }
   })
+
+  ipcMain.removeHandler('desktop-proxy:get')
+  ipcMain.handle('desktop-proxy:get', (event) => {
+    assertTrustedMainWindowEvent(event)
+    return readProxyConfig(proxyConfigPath(app.getPath('userData')))
+  })
+
+  ipcMain.removeHandler('desktop-proxy:set')
+  ipcMain.handle('desktop-proxy:set', (event, value: unknown) => {
+    assertTrustedMainWindowEvent(event)
+    const error = validateProxyUrl(value)
+    if (error !== null) throw new Error(error)
+    const config: DesktopProxyConfig = {
+      httpProxy: typeof value === 'string' ? value.trim() : ''
+    }
+    writeProxyConfig(proxyConfigPath(app.getPath('userData')), config)
+    runtime?.note(`[desktop] proxy preference saved: ${config.httpProxy === '' ? '(direct)' : config.httpProxy}`)
+    return { ok: true }
+  })
 }
 
 function assertTrustedSenderUrl(event: IpcMainEvent | IpcMainInvokeEvent): void {
@@ -2899,6 +2925,10 @@ async function bootstrap(): Promise<void> {
     dshHome: join(app.getPath('userData'), 'harness'),
     logPath: join(app.getPath('logs'), 'harness.log'),
     preferredPort: DEFAULT_HARNESS_PORT + (developmentBuild ? 1 : 0),
+    proxyUrl: () => {
+      const config = readProxyConfig(proxyConfigPath(app.getPath('userData')))
+      return config.httpProxy.trim() !== '' ? config.httpProxy.trim() : undefined
+    },
     launchProcess: (executablePath, args, options) =>
       process.platform === 'darwin'
         ? launchDisclaimedUtilityProcess(utilityProcess, args, options, {
