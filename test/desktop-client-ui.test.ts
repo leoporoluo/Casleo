@@ -123,16 +123,26 @@ describe('Casleo client slot occupants', () => {
     expect(String(markPath.props.d)).toContain('M500 219L750 625L500 797L250 625Z')
   })
 
-  it('offers the proxy row only where the desktop bridge exists', async () => {
+  it('offers the notifications row only where the desktop bridge exists', async () => {
     const bridgeless = await loadClientPlugin({})
     const { slots: bridgelessSlots, registrations: bridgelessRows } = makeSlots()
     bridgeless.apply({ slots: bridgelessSlots })
     expect(bridgelessRows.map(({ config }) => config.name)).not.toContain('settings.general.item')
 
+    // A bridge that predates the notification seat still gets no row: the row
+    // is gated on the API it actually calls.
+    const notificationsUnsupported = await loadClientPlugin({
+      dshDesktop: {
+        getProxyConfig: vi.fn(async () => ({ httpProxy: '' })),
+        setProxyConfig: vi.fn(async () => ({ ok: true }))
+      }
+    })
+    const { slots: unsupportedSlots, registrations: unsupportedRows } = makeSlots()
+    notificationsUnsupported.apply({ slots: unsupportedSlots })
+    expect(unsupportedRows.map(({ config }) => config.name)).not.toContain('settings.general.item')
+
     const plugin = await loadClientPlugin({
       dshDesktop: {
-        getProxyConfig: vi.fn(async () => ({ httpProxy: 'http://192.168.0.105:7890' })),
-        setProxyConfig: vi.fn(async () => ({ ok: true })),
         getNotificationsEnabled: vi.fn(async () => ({ enabled: true })),
         setNotificationsEnabled: vi.fn(async () => ({ ok: true })),
         notifyRunEnded: vi.fn(async () => ({ shown: false }))
@@ -146,11 +156,15 @@ describe('Casleo client slot occupants', () => {
       get: () => undefined
     })
 
-    const proxy = registrations.find(({ config }) => config.id === 'casleo-proxy')
-    expect(proxy).toBeDefined()
-    expect(proxy!.config.name).toBe('settings.general.item')
-    expect(proxy!.config.order).toBe(90)
-    expect(registrations.find(({ config }) => config.id === 'casleo-safe-mode')).toBeDefined()
-    expect(registrations.find(({ config }) => config.id === 'casleo-notifications')).toBeDefined()
+    // The General page keeps exactly one desktop row: notifications. The
+    // network-proxy and safe-mode rows are deliberately gone (the safe-mode
+    // restart still lives in the native Harness menu).
+    expect(registrations.map(({ config }) => config.id).filter(Boolean)).toEqual([
+      'casleo-notifications'
+    ])
+    const notify = registrations.find(({ config }) => config.id === 'casleo-notifications')
+    expect(notify).toBeDefined()
+    expect(notify!.config.name).toBe('settings.general.item')
+    expect(notify!.config.order).toBe(92)
   })
 })
