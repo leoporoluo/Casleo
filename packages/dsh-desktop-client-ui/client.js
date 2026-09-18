@@ -85,7 +85,13 @@ window.__ModuleLoader__.load({
         'proxy.save': '保存',
         'proxy.saving': '保存中…',
         'proxy.saved': '已保存，重启 Casleo 后生效',
-        'proxy.empty': '当前直连'
+        'proxy.empty': '当前直连',
+        'safe.title': '安全模式',
+        'safe.description': '怀疑插件冲突时，以安全模式重启：停用所有第三方插件后再排查。',
+        'safe.restart': '以安全模式重启…',
+        'safe.restarting': '正在重启…',
+        'notify.title': '桌面通知',
+        'notify.description': '任务结束（完成或失败）且窗口不在前台时，弹系统通知；点击通知回到窗口。'
       },
       en: {
         'proxy.title': 'Network proxy',
@@ -94,7 +100,13 @@ window.__ModuleLoader__.load({
         'proxy.save': 'Save',
         'proxy.saving': 'Saving…',
         'proxy.saved': 'Saved — restart Casleo to apply',
-        'proxy.empty': 'Direct connection'
+        'proxy.empty': 'Direct connection',
+        'safe.title': 'Safe mode',
+        'safe.description': 'When a plugin breaks startup, restart with all third-party plugins disabled.',
+        'safe.restart': 'Restart as Safe Mode…',
+        'safe.restarting': 'Restarting…',
+        'notify.title': 'Desktop notifications',
+        'notify.description': 'When a run ends (done or failed) while the window is not focused, show a system notification; clicking it returns to the window.'
       }
     }
 
@@ -196,7 +208,117 @@ window.__ModuleLoader__.load({
     }
     //#endregion
 
-    const inject = ['slots', 'locale']
+    /** Desktop-maintenance row: the safe-mode restart that lost its menu home. */
+    function SafeModeRow({ t }) {
+      const bridge = typeof window !== 'undefined' ? window.dshDesktop : undefined
+      const [restarting, setRestarting] = React.useState(false)
+      const restart = () => {
+        if (restarting) return
+        setRestarting(true)
+        bridge.restartAsSafeMode().catch(() => setRestarting(false))
+      }
+      return ReactJSXRuntime.jsx('div', {
+        className: 'casleoProxyRow_row',
+        children: [
+          ReactJSXRuntime.jsxs('div', {
+            className: 'casleoProxyRow_rowText',
+            children: [
+              ReactJSXRuntime.jsx('div', { className: 'casleoProxyRow_title', children: t('safe.title') }),
+              ReactJSXRuntime.jsx('div', { className: 'casleoProxyRow_desc', children: t('safe.description') })
+            ]
+          }),
+          ReactJSXRuntime.jsx('div', {
+            className: 'casleoProxyRow_statusRow',
+            children: ReactJSXRuntime.jsx(primitives.Button, {
+              variant: 'outline',
+              size: 'sm',
+              disabled: restarting,
+              onClick: restart,
+              children: t(restarting ? 'safe.restarting' : 'safe.restart')
+            })
+          })
+        ]
+      })
+    }
+
+    /** Desktop-notification row: one switch; the desktop owns the focus check. */
+    function NotificationsRow({ t }) {
+      const bridge = typeof window !== 'undefined' ? window.dshDesktop : undefined
+      const [enabled, setEnabled] = React.useState(false)
+      const [loaded, setLoaded] = React.useState(false)
+      React.useEffect(() => {
+        let cancelled = false
+        bridge.getNotificationsEnabled?.().then((config) => {
+          if (cancelled) return
+          setEnabled(config?.enabled !== false)
+          setLoaded(true)
+        }).catch(() => {
+          if (!cancelled) setLoaded(true)
+        })
+        return () => {
+          cancelled = true
+        }
+      }, [])
+      const toggle = (next) => {
+        setEnabled(next)
+        bridge.setNotificationsEnabled?.(next)
+      }
+      return ReactJSXRuntime.jsx('div', {
+        className: 'casleoProxyRow_row',
+        children: [
+          ReactJSXRuntime.jsxs('div', {
+            className: 'casleoProxyRow_rowText',
+            children: [
+              ReactJSXRuntime.jsx('div', { className: 'casleoProxyRow_title', children: t('notify.title') }),
+              ReactJSXRuntime.jsx('div', { className: 'casleoProxyRow_desc', children: t('notify.description') })
+            ]
+          }),
+          ReactJSXRuntime.jsx('div', {
+            className: 'casleoProxyRow_statusRow',
+            children: ReactJSXRuntime.jsx(primitives.Switch, {
+              checked: enabled,
+              disabled: !loaded,
+              label: t('notify.title'),
+              onChange: toggle
+            })
+          })
+        ]
+      })
+    }
+
+    /**
+     * Report one session-run edge to the desktop. The list store's running bit
+     * is the same edge the sidebar's green reminder uses; outcome is not
+     * carried by the summary, so the toast says "run ended" for both results.
+     * The desktop still owns the toggle and the focus check, so this stays a
+     * cheap no-op for anyone who turned notifications off.
+     */
+    function installRunEndedNotifications(ctx, bridge) {
+      if (typeof ctx.get !== 'function') return
+      const sessions = ctx.get('sessions')
+      if (typeof sessions?.list?.subscribe !== 'function') return
+      const prevRunning = new Map()
+      ctx.effect(
+        () => sessions.list.subscribe(() => {
+          const snapshot = sessions.list.getSnapshot()
+          for (const item of snapshot.items ?? []) {
+            const id = item.sessionId
+            const prev = prevRunning.get(id)
+            if (prev === undefined) {
+              prevRunning.set(id, item.running === true)
+              continue
+            }
+            if (prev === true && item.running !== true) {
+              bridge.notifyRunEnded({ sessionId: String(id), title: item.title })
+            }
+            prevRunning.set(id, item.running === true)
+          }
+        }),
+        'dsh-desktop-notifications: run edges'
+      )
+    }
+
+    const inject = ['slots', 'locale', 'sessions']
     function apply(ctx) {
       // The brand seats keep their own injection; the proxy row is separate so
       // the two features never share a disposer chain.
@@ -209,6 +331,7 @@ window.__ModuleLoader__.load({
       // The proxy row only renders inside the desktop shell, where the preload
       // bridge exists; a plain web harness gets no row and no CSS.
       if (typeof window === 'undefined' || typeof window.dshDesktop?.getProxyConfig !== 'function') return
+      const bridge = window.dshDesktop
       ctx.effect(
         () => ctx.locale.register(PROXY_LOCALE_NS, PROXY_LOCALE),
         'dsh-desktop-proxy: dictionaries'
@@ -221,6 +344,23 @@ window.__ModuleLoader__.load({
         locale: PROXY_LOCALE_NS,
         inject: () => ({})
       }, ProxyRow))
+      ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+        name: 'settings.general.item',
+        id: 'casleo-safe-mode',
+        order: 91,
+        locale: PROXY_LOCALE_NS,
+        inject: () => ({})
+      }, SafeModeRow))
+      if (typeof bridge.getNotificationsEnabled === 'function') {
+        ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+          name: 'settings.general.item',
+          id: 'casleo-notifications',
+          order: 92,
+          locale: PROXY_LOCALE_NS,
+          inject: () => ({})
+        }, NotificationsRow))
+        installRunEndedNotifications(ctx, bridge)
+      }
     }
 
     exports.apply = apply

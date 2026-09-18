@@ -5,7 +5,6 @@ import { join } from 'node:path'
 import { SafeModeOverlay } from '../src/main/safe-mode-overlay'
 import { buildSafeModeViewModel } from '../src/main/safe-mode'
 import { buildPluginRecoveryViewModel } from '../src/main/plugin-recovery-view'
-import { windowsMenuPanelBounds } from '../src/main/windows-menu-view'
 import { secureWindow } from '../src/main/security'
 
 const scale = process.env.RECOVERY_UI_SCALE || '1'
@@ -22,8 +21,6 @@ ipcMain.on('dsh:storage-load-sync', event => { event.returnValue = {} })
 ipcMain.on('dsh:storage-sync', () => {})
 ipcMain.handle('updates:status', () => ({ phase: 'idle', currentVersion: '0.0.0', manual: false }))
 ipcMain.handle('mobile:status', () => ({ connected: false }))
-ipcMain.handle('desktop-titlebar:close-menu', () => {})
-ipcMain.handle('desktop-titlebar:set-theme', () => {})
 
 async function capture(contents: Electron.WebContents, path: string): Promise<void> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -52,9 +49,6 @@ async function main(): Promise<void> {
   })
   parent.setMenuBarVisibility(false)
   secureWindow(parent, () => ({}))
-  const menu = new WebContentsView({ webPreferences: { sandbox: true } })
-  menu.setBackgroundColor('#00000000')
-  if (process.platform === 'win32') parent.contentView.addChildView(menu)
   const preload = join(process.cwd(), 'out/preload/index.cjs')
   const names = ['calendar-plugin', 'search-plugin', 'notes-plugin', '@community/billing-plugin', '@community/longer-agent-memory-plugin', 'mobile-plugin']
   let closed = 0
@@ -69,7 +63,6 @@ async function main(): Promise<void> {
       parent.setSize(width!, height!)
       if (process.platform === 'win32') {
         parent.setTitleBarOverlay({ color: '#00000000', symbolColor: theme === 'dark' ? '#fafafa' : '#18181b', height: 36 })
-        menu.setBounds(windowsMenuPanelBounds({ width: width!, height: height! }, false))
       }
       const model = page === 'safe-mode' ? buildSafeModeViewModel({ locale, plugins: names }) : buildPluginRecoveryViewModel({
         locale, plugins: scenario === 'unidentified-plugin' ? [] : (scenario === 'multiple-plugins' || scenario === 'market-offline') ? names.slice(0, 3) : [names[0]!], removedPlugins: [],
@@ -183,7 +176,6 @@ async function main(): Promise<void> {
   parent.destroy(); await delay(60)
   assert.equal(overlay.isDestroyed(), true)
   assert.equal(closed, 2)
-  if (!menu.webContents.isDestroyed()) menu.webContents.close()
   writeFileSync(join(output, 'results.json'), JSON.stringify({ platform: process.platform, arch: process.arch, scale, results, closed }, null, 2))
   console.log(JSON.stringify({ platform: process.platform, scale, variants: results.length, status: 'passed' }))
 }

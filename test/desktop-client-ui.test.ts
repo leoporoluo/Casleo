@@ -64,7 +64,7 @@ async function loadClientPlugin(windowOverrides: Record<string, unknown>): Promi
     }
     if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx }
     if (id === '@deepseek-ai/dsh-client-ui-primitives') {
-      return { Button: ({ children }: { children?: unknown }) => children }
+      return { Button: ({ children }: { children?: unknown }) => children, Switch: ({ label }: { label?: unknown }) => label }
     }
     throw new Error(`Unexpected client dependency: ${id}`)
   }) as never
@@ -98,7 +98,7 @@ describe('Casleo client slot occupants', () => {
 
     plugin.apply({ slots })
 
-    expect(plugin.inject).toEqual(['slots', 'locale'])
+    expect(plugin.inject).toEqual(['slots', 'locale', 'sessions'])
     expect(registrations.map(({ config }) => config.name)).toEqual([
       'sidebar.brand.mark',
       'sidebar.brand.name'
@@ -132,19 +132,25 @@ describe('Casleo client slot occupants', () => {
     const plugin = await loadClientPlugin({
       dshDesktop: {
         getProxyConfig: vi.fn(async () => ({ httpProxy: 'http://192.168.0.105:7890' })),
-        setProxyConfig: vi.fn(async () => ({ ok: true }))
+        setProxyConfig: vi.fn(async () => ({ ok: true })),
+        getNotificationsEnabled: vi.fn(async () => ({ enabled: true })),
+        setNotificationsEnabled: vi.fn(async () => ({ ok: true })),
+        notifyRunEnded: vi.fn(async () => ({ shown: false }))
       }
     })
     const { slots, registrations } = makeSlots()
     plugin.apply({
       slots,
       locale: { register: vi.fn() },
-      effect: (_fn: () => void, _label: string) => undefined
+      effect: (_fn: () => void, _label: string) => undefined,
+      get: () => undefined
     })
 
     const proxy = registrations.find(({ config }) => config.id === 'casleo-proxy')
     expect(proxy).toBeDefined()
     expect(proxy!.config.name).toBe('settings.general.item')
     expect(proxy!.config.order).toBe(90)
+    expect(registrations.find(({ config }) => config.id === 'casleo-safe-mode')).toBeDefined()
+    expect(registrations.find(({ config }) => config.id === 'casleo-notifications')).toBeDefined()
   })
 })

@@ -62,11 +62,11 @@ describe('Casleo sidebar branding', () => {
     expect(patch).not.toContain('DshDesktopLogo')
     expect(patch).not.toContain('DshDesktopBrand')
     expect(patch).not.toContain('brandWordmark')
-    expect(patch).toContain('[data-dsh-sidebar-root]')
-    expect(patch).toContain('padding-top:32px')
+    expect(patch).toContain('"data-dsh-sidebar-root"')
+    // The native titlebar owns the top inset; the sidebar keeps official padding.
+    expect(patch).not.toContain('padding-top:32px')
     // Windows-first: the renderer carries no mac UA-sniffed padding branch.
     expect(patch).not.toContain('Macintosh')
-    expect(patch).not.toContain('padding-top:28px')
     // The wide row shows the wordmark only; the mark remains the collapsed
     // rail's toggle glyph.
     expect(patch).toContain('[data-dsh-sidebar-brand-identity]{flex:1;min-width:0}')
@@ -116,12 +116,10 @@ describe('Casleo sidebar branding', () => {
   })
 
   it('left no phone pairing entry anywhere in the shell', async () => {
-    const [patch, preload, main, menu, commands, client] = await Promise.all([
+    const [patch, preload, main, client] = await Promise.all([
       readFile(patchPath('@deepseek-ai/dsh-client-ui-sidebar'), 'utf8'),
       readFile(path.join(projectRoot, 'src', 'preload', 'index.ts'), 'utf8'),
       readFile(path.join(projectRoot, 'src', 'main', 'index.ts'), 'utf8'),
-      readFile(path.join(projectRoot, 'src', 'preload', 'windows-menu.ts'), 'utf8'),
-      readFile(path.join(projectRoot, 'src', 'shared', 'desktop-menu.ts'), 'utf8'),
       readFile(path.join(projectRoot, 'packages', 'dsh-desktop-client-ui', 'client.js'), 'utf8')
     ])
 
@@ -135,8 +133,6 @@ describe('Casleo sidebar branding', () => {
     expect(preload).not.toContain('mobile:status-changed')
     expect(main).not.toContain('mobileBridge')
     expect(main).not.toContain('mobileWindow')
-    expect(menu).not.toContain('connect-phone')
-    expect(commands).not.toContain('connect-phone')
   })
 
   it('installs the source logo into the Harness static frontend', async () => {

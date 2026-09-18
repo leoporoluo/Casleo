@@ -1,5 +1,3 @@
-import { WINDOWS_TITLEBAR_HEIGHT } from '../shared/desktop-menu'
-
 export function shouldLoadHarnessUrl(currentUrl: string, targetUrl: string): boolean {
   if (currentUrl === '' || currentUrl === 'about:blank') return true
 
@@ -30,7 +28,6 @@ export function desktopHarnessUrl(
     if (platform === 'win32') {
       parsed.searchParams.set('dsh-desktop-mode', 'advanced')
       parsed.searchParams.set('dsh-desktop-platform', platform)
-      parsed.searchParams.set('dsh-desktop-titlebar-inset', String(WINDOWS_TITLEBAR_HEIGHT))
     }
     return parsed.toString()
   } catch {

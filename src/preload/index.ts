@@ -2,7 +2,6 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { setupDesktopStoragePersistence } from './desktop-storage'
 import { isPluginLoadError } from './plugin-error-view'
 import { findBootFailureText } from './boot-failure'
-import { mountWindowsTitlebarLayout } from './windows-titlebar'
 
 // Intercept and persist localStorage to disk storage before any page script executes
 setupDesktopStoragePersistence()
@@ -219,9 +218,6 @@ async function mountSafeModeBanner(): Promise<void> {
 }
 
 function initializeUi(): void {
-  if (process.platform === 'win32') {
-    mountWindowsTitlebarLayout({ document, ipcRenderer })
-  }
   mountAbout()
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
@@ -256,11 +252,19 @@ contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),
+    restartAsSafeMode: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('safe-mode:show'),
     uninstallMarket: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('market:uninstall'),
     openInFinder: (path: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:open-in-finder', path),
     /** General-settings network-proxy preference (empty string = direct). */
     getProxyConfig: (): Promise<{ httpProxy: string }> => ipcRenderer.invoke('desktop-proxy:get'),
     setProxyConfig: (value: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('desktop-proxy:set', value),
+    /** Desktop-notification preference and toast bridge (session-run edges). */
+    getNotificationsEnabled: (): Promise<{ enabled: boolean }> =>
+      ipcRenderer.invoke('desktop-notification:get'),
+    setNotificationsEnabled: (enabled: boolean): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('desktop-notification:set', enabled),
+    notifyRunEnded: (payload: { sessionId: string; title?: string }): Promise<{ shown: boolean }> =>
+      ipcRenderer.invoke('desktop-notification:show', payload),
     /** Renderer platform, so shared UI can pick platform-correct wording. */
     platform: process.platform
   })

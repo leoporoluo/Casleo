@@ -13,10 +13,10 @@ import {
   ipcMain,
   Menu,
   nativeTheme,
+  Notification,
   shell,
   Tray,
   utilityProcess,
-  WebContentsView,
   type IpcMainEvent,
   type IpcMainInvokeEvent,
   type MessageBoxOptions
@@ -48,6 +48,11 @@ import {
   type ProfileCompatibilityIssue
 } from './state/profile-compatibility'
 import { ensureStoreDirPinned, inspectStoreConsistency } from './state/profile-store'
+import {
+  readNotificationsConfig,
+  notificationsConfigPath,
+  writeNotificationsConfig
+} from './state/desktop-notifications'
 import {
   readProxyConfig,
   validateProxyUrl,
@@ -129,12 +134,6 @@ import {
 import type { RuntimeSnapshot } from '../shared/contracts'
 import { resolveHarnessLocale } from './application-locale'
 import { installContextMenu } from './context-menu'
-import {
-  WINDOWS_TITLEBAR_HEIGHT,
-  isDesktopMenuCommand,
-  isZoomMenuCommand,
-  type DesktopMenuCommand
-} from '../shared/desktop-menu'
 import { buildPluginRecoveryViewModel } from './plugin-recovery-view'
 import { buildWebImportViewModel } from './web-import-view'
 import {
@@ -155,7 +154,6 @@ import {
 } from './state/plugin-market-check'
 import { upgradePluginToGeneration } from './state/plugin-upgrade'
 import { aboutDetail, bundledHarnessVersion } from './version-info'
-import { windowsMenuButtonBounds, windowsMenuPanelBounds } from './windows-menu-view'
 import { shouldKeepRunningInBackground } from './close-to-tray'
 import {
   MAIN_WINDOW_RECOVERY_RELOAD_COOLDOWN_MS,
@@ -187,18 +185,6 @@ const PLUGIN_RECOVERY_ACTIONS = new Set<PluginRecoveryAction>([
 ])
 
 let mainWindow: BrowserWindow | undefined
-let windowsMenuButtonView: WebContentsView | undefined
-let windowsMenuPanelView: WebContentsView | undefined
-let windowsMenuOpen = false
-let windowsMenuOpenedAt = 0
-let windowsMenuButtonViewBounds: ReturnType<typeof windowsMenuButtonBounds> | undefined
-let windowsMenuPanelViewBounds: ReturnType<typeof windowsMenuPanelBounds> | undefined
-/**
- * The panel's own content height, reported by its page. The view shrinks to it so
- * the transparent remainder cannot swallow clicks meant for the window below.
- */
-let windowsMenuPanelMeasuredHeight: number | undefined
-let windowsMenuDark = false
 let tray: Tray | undefined
 let runtime: HarnessRuntime
 let desktopStorageManager: DesktopStorageManager | undefined
@@ -457,154 +443,11 @@ function installMainWindowRendererRecovery(window: BrowserWindow): void {
   })
 }
 
-function windowsTitleBarOverlay(isDark: boolean): Electron.TitleBarOverlayOptions {
-  return {
-    color: '#00000000',
-    symbolColor: isDark ? '#f3f4f6' : '#202124',
-    height: WINDOWS_TITLEBAR_HEIGHT
-  }
-}
-
 function applyWindowChromeTheme(window: BrowserWindow, isDark: boolean): void {
   if (window.isDestroyed()) return
   // Keep this identical to the window's creation background: a page transition
   // paints it for a frame, and a mismatched value reads as a flash.
   window.setBackgroundColor(isDark ? '#141416' : '#f8f8f6')
-  if (process.platform === 'win32') {
-    windowsMenuDark = isDark
-    window.setTitleBarOverlay(windowsTitleBarOverlay(isDark))
-    for (const view of windowsMenuViews()) {
-      view.webContents.send('desktop-titlebar:theme-changed', isDark)
-    }
-  }
-}
-
-/** Every live menu surface: the fixed button strip and the panel. */
-function windowsMenuViews(): WebContentsView[] {
-  return [windowsMenuPanelView, windowsMenuButtonView].filter(
-    (view): view is WebContentsView => view !== undefined && !view.webContents.isDestroyed()
-  )
-}
-
-function sameBounds(
-  a: { x: number; y: number; width: number; height: number } | undefined,
-  b: { x: number; y: number; width: number; height: number }
-): boolean {
-  return (
-    a !== undefined && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
-  )
-}
-
-function updateWindowsMenuViewBounds(window: BrowserWindow): void {
-  if (window.isDestroyed()) return
-  const contentSize = window.getContentSize()
-  const size = { width: contentSize[0] ?? 0, height: contentSize[1] ?? 0 }
-  const fullscreen = window.isFullScreen()
-
-  const button = windowsMenuButtonView
-  if (button && !button.webContents.isDestroyed()) {
-    const next = windowsMenuButtonBounds(size, fullscreen)
-    // A redundant setBounds repaints the transparent strip over the caption
-    // area, which the user reads as the titlebar glyphs flickering. Only apply a
-    // real change.
-    if (!sameBounds(windowsMenuButtonViewBounds, next)) {
-      windowsMenuButtonViewBounds = next
-      button.setBounds(next)
-    }
-  }
-
-  const panel = windowsMenuPanelView
-  if (panel && !panel.webContents.isDestroyed()) {
-    const next = windowsMenuPanelBounds(size, fullscreen, windowsMenuPanelMeasuredHeight)
-    if (!sameBounds(windowsMenuPanelViewBounds, next)) {
-      windowsMenuPanelViewBounds = next
-      panel.setBounds(next)
-    }
-  }
-}
-
-function setWindowsMenuOpen(window: BrowserWindow, open: boolean, notifyRenderer = false): void {
-  const panel = windowsMenuPanelView
-  if (windowsMenuOpen !== open) {
-    windowsMenuOpen = open
-    if (open) windowsMenuOpenedAt = Date.now()
-    // The geometry does not depend on the open state: the panel is shown and
-    // hidden, never resized, so toggling cannot repaint the caption strip.
-    updateWindowsMenuViewBounds(window)
-    if (panel && !panel.webContents.isDestroyed()) panel.setVisible(open)
-    const button = windowsMenuButtonView
-    if (button && !button.webContents.isDestroyed()) {
-      button.webContents.send('desktop-titlebar:menu-state', open)
-    }
-  }
-  if (notifyRenderer && panel && !panel.webContents.isDestroyed()) {
-    panel.webContents.send('desktop-titlebar:close-menu')
-  }
-}
-
-function createWindowsMenuView(): WebContentsView {
-  const view = new WebContentsView({
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: join(import.meta.dirname, '../preload/windows-menu.cjs'),
-      sandbox: true,
-      webSecurity: true
-    }
-  })
-  view.setBackgroundColor('#00000000')
-  view.webContents.setZoomFactor(1)
-  view.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  return view
-}
-
-function attachWindowsMenuView(window: BrowserWindow): void {
-  const panelView = createWindowsMenuView()
-  const buttonView = createWindowsMenuView()
-  windowsMenuPanelView = panelView
-  windowsMenuButtonView = buttonView
-  windowsMenuOpen = false
-  windowsMenuButtonViewBounds = undefined
-  windowsMenuPanelViewBounds = undefined
-  windowsMenuPanelMeasuredHeight = undefined
-  windowsMenuDark = nativeTheme.shouldUseDarkColors
-  panelView.setVisible(false)
-  panelView.webContents.on('did-finish-load', () => {
-    if (!panelView.webContents.isDestroyed()) {
-      panelView.webContents.send('desktop-titlebar:theme-changed', windowsMenuDark)
-    }
-  })
-  buttonView.webContents.on('did-finish-load', () => {
-    if (!buttonView.webContents.isDestroyed()) {
-      buttonView.webContents.send('desktop-titlebar:theme-changed', windowsMenuDark)
-      buttonView.webContents.send('desktop-titlebar:menu-state', windowsMenuOpen)
-    }
-  })
-  // The panel goes in first so the button strip keeps the pointer on their seam.
-  window.contentView.addChildView(panelView)
-  window.contentView.addChildView(buttonView)
-  updateWindowsMenuViewBounds(window)
-
-  const updateBounds = (): void => updateWindowsMenuViewBounds(window)
-  window.on('resize', updateBounds)
-  window.on('enter-full-screen', updateBounds)
-  window.on('leave-full-screen', updateBounds)
-  // Focusing the panel's first item can be reported as a window blur on Windows.
-  // Ignore a blur a menu surface owns or one that lands while it is still
-  // settling open, or the menu would be torn down a frame after it appears.
-  window.on('blur', () => {
-    if (windowsMenuOpen && Date.now() - windowsMenuOpenedAt < 500) return
-    if (windowsMenuViews().some((view) => view.webContents.isFocused())) return
-    setWindowsMenuOpen(window, false, true)
-  })
-
-  const query = { locale: harnessLocale(), theme: windowsMenuDark ? 'dark' : 'light' }
-  void loadDesktopResource(panelView.webContents, desktopResourcePath('windows-menu.html'), {
-    query: { ...query, surface: 'panel' }
-  }).catch(showUnexpectedError)
-  void loadDesktopResource(buttonView.webContents, desktopResourcePath('windows-menu.html'), {
-    query: { ...query, surface: 'button' }
-  }).catch(showUnexpectedError)
 }
 
 function configureAppIdentity(): void {
@@ -615,6 +458,9 @@ function configureAppIdentity(): void {
   }
 
   app.setName('Casleo')
+  // Windows notifications require an AppUserModelID; electron-builder sets
+  // the same value for the packaged shortcut.
+  if (process.platform === 'win32') app.setAppUserModelId('com.casleo.desktop')
   // The lowercase directory stays pinned independently of the product name so
   // Harness data (workspaces, sessions, credentials, presets) is not re-rooted
   // by a future branding change.
@@ -1087,17 +933,11 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 640,
     show: false,
-    title: '',
+    title: 'Casleo',
     icon: desktopIconPath(),
     frame: process.platform !== 'darwin',
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden' as const } : {}),
-    ...(isWindows
-      ? {
-        titleBarStyle: 'hidden' as const,
-        titleBarOverlay: windowsTitleBarOverlay(nativeTheme.shouldUseDarkColors),
-        autoHideMenuBar: true
-      }
-      : {}),
+    ...(isWindows ? { autoHideMenuBar: true } : {}),
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#141416' : '#f8f8f6',
     webPreferences: {
       contextIsolation: true,
@@ -1122,7 +962,8 @@ function createWindow(): BrowserWindow {
     window.webContents.on('did-finish-load', alignWindowButtons)
     window.webContents.on('zoom-changed', () => setImmediate(alignWindowButtons))
   } else if (isWindows) {
-    window.setMenuBarVisibility(false)
+    // autoHideMenuBar keeps the menu one Alt press away without painting a
+    // permanent menu row under the native titlebar.
   }
   window.on('close', (event) => {
     desktopStorageManager?.flushSync()
@@ -1132,10 +973,6 @@ function createWindow(): BrowserWindow {
   })
   window.on('session-end', () => {
     desktopStorageManager?.flushSync()
-  })
-  window.on('page-title-updated', (event) => {
-    event.preventDefault()
-    window.setTitle('')
   })
   window.webContents.on('console-message', (details) => {
     if (details.level !== 'error') return
@@ -1149,18 +986,11 @@ function createWindow(): BrowserWindow {
   installMainWindowRendererRecovery(window)
   window.on('closed', () => {
     if (mainWindow === window) mainWindow = undefined
-    for (const view of [windowsMenuPanelView, windowsMenuButtonView]) {
-      if (view && !view.webContents.isDestroyed()) view.webContents.close()
-    }
-    windowsMenuPanelView = undefined
-    windowsMenuButtonView = undefined
-    windowsMenuOpen = false
     resolvePluginRecoveryAction('quit')
     resolveWebImportAction('skip')
     resolveSafeModeAction({ type: 'quit' })
   })
   mainWindow = window
-  if (isWindows) attachWindowsMenuView(window)
   return window
 }
 
@@ -1674,67 +1504,54 @@ function registerHarnessHandlers(): void {
     return uninstallMarketAndRestart()
   })
 
-  ipcMain.removeHandler('desktop-menu:execute')
-  ipcMain.handle('desktop-menu:execute', async (event, command: unknown) => {
-    assertTrustedDesktopMenuEvent(event)
-    if (!isDesktopMenuCommand(command)) {
-      throw new Error('Unknown Casleo menu command.')
-    }
-    const zoomFactor = await executeDesktopMenuCommand(command)
-    return zoomFactor === undefined ? { ok: true } : { ok: true, zoomFactor }
-  })
-
-  ipcMain.removeHandler('desktop-menu:get-zoom-factor')
-  ipcMain.handle('desktop-menu:get-zoom-factor', (event) => {
-    assertTrustedDesktopMenuEvent(event)
-    return { zoomFactor: mainWindow?.webContents.getZoomFactor() ?? 1 }
-  })
-
-  ipcMain.removeHandler('desktop-titlebar:panel-height')
-  ipcMain.handle('desktop-titlebar:panel-height', (event, height: unknown) => {
-    assertTrustedWindowsMenuEvent(event)
-    if (typeof height !== 'number' || !Number.isFinite(height) || height < 0) {
-      throw new Error('The application menu panel height must be a non-negative number.')
-    }
-    windowsMenuPanelMeasuredHeight = Math.round(height)
-    if (mainWindow && !mainWindow.isDestroyed()) updateWindowsMenuViewBounds(mainWindow)
-    return { ok: true }
-  })
-
-  ipcMain.removeHandler('desktop-titlebar:toggle-menu')
-  ipcMain.handle('desktop-titlebar:toggle-menu', (event) => {
-    assertTrustedWindowsMenuEvent(event)
-    if (mainWindow && !mainWindow.isDestroyed()) setWindowsMenuOpen(mainWindow, !windowsMenuOpen)
-    return { open: windowsMenuOpen }
-  })
-
-  ipcMain.removeHandler('desktop-titlebar:set-menu-open')
-  ipcMain.handle('desktop-titlebar:set-menu-open', (event, open: unknown) => {
-    assertTrustedWindowsMenuEvent(event)
-    if (typeof open !== 'boolean') {
-      throw new Error('The application menu state must be a boolean.')
-    }
-    if (mainWindow && !mainWindow.isDestroyed()) setWindowsMenuOpen(mainWindow, open)
-    return { ok: true }
-  })
-
-  ipcMain.removeHandler('desktop-titlebar:close-menu')
-  ipcMain.handle('desktop-titlebar:close-menu', (event) => {
+  ipcMain.removeHandler('safe-mode:show')
+  ipcMain.handle('safe-mode:show', (event) => {
     assertTrustedMainWindowEvent(event)
-    if (mainWindow && !mainWindow.isDestroyed()) setWindowsMenuOpen(mainWindow, false, true)
+    void showSafeMode().catch(showUnexpectedError)
     return { ok: true }
   })
 
-  ipcMain.removeHandler('desktop-titlebar:set-theme')
-  ipcMain.handle('desktop-titlebar:set-theme', (event, isDark: unknown) => {
+  ipcMain.removeHandler('desktop-notification:get')
+  ipcMain.handle('desktop-notification:get', (event) => {
     assertTrustedMainWindowEvent(event)
-    if (typeof isDark !== 'boolean') {
-      throw new Error('The Casleo titlebar theme must be a boolean.')
+    return readNotificationsConfig(notificationsConfigPath(app.getPath('userData')))
+  })
+
+  ipcMain.removeHandler('desktop-notification:set')
+  ipcMain.handle('desktop-notification:set', (event, enabled: unknown) => {
+    assertTrustedMainWindowEvent(event)
+    if (typeof enabled !== 'boolean') {
+      throw new Error('The desktop notification toggle must be a boolean.')
     }
-    if (process.platform === 'win32' && mainWindow) {
-      applyWindowChromeTheme(mainWindow, isDark)
-    }
+    writeNotificationsConfig(notificationsConfigPath(app.getPath('userData')), { enabled })
+    runtime?.note(`[desktop] notifications ${enabled ? 'enabled' : 'disabled'}`)
     return { ok: true }
+  })
+
+  ipcMain.removeHandler('desktop-notification:show')
+  ipcMain.handle('desktop-notification:show', (event, payload: unknown) => {
+    assertTrustedMainWindowEvent(event)
+    const window = mainWindow
+    if (!window || window.isDestroyed()) return { ok: true, shown: false }
+    // The point of a notification is an absent user: while the window has the
+    // foreground, the conversation itself is the reminder.
+    const hasAttention = window.isFocused() && !window.isMinimized() && window.isVisible()
+    const config = readNotificationsConfig(notificationsConfigPath(app.getPath('userData')))
+    if (!config.enabled || hasAttention) return { ok: true, shown: false }
+    const body = typeof (payload as { title?: unknown })?.title === 'string'
+      ? String((payload as { title?: string }).title).slice(0, 120)
+      : ''
+    const toast = new Notification({
+      title: 'Casleo',
+      body: body === '' ? '任务已结束' : `任务已结束：${body}`
+    })
+    toast.on('click', () => {
+      if (window.isMinimized()) window.restore()
+      window.show()
+      window.focus()
+    })
+    toast.show()
+    return { ok: true, shown: true }
   })
 
   ipcMain.removeHandler('desktop:about-info')
@@ -1777,31 +1594,6 @@ function assertTrustedSenderUrl(event: IpcMainEvent | IpcMainInvokeEvent): void 
   if (typeof frameUrl !== 'string' || !isTrustedAppUrl(frameUrl, trustedAppUrlContext())) {
     throw new Error('This action is only available from a trusted Casleo page.')
   }
-}
-
-function assertTrustedDesktopMenuEvent(event: IpcMainInvokeEvent): void {
-  const fromMainWindow =
-    mainWindow &&
-    !mainWindow.isDestroyed() &&
-    event.sender === mainWindow.webContents &&
-    event.senderFrame === mainWindow.webContents.mainFrame
-  const fromWindowsMenu = windowsMenuViews().some(
-    (view) => event.sender === view.webContents && event.senderFrame === view.webContents.mainFrame
-  )
-  if (!fromMainWindow && !fromWindowsMenu) {
-    throw new Error('This action is only available from the Casleo window.')
-  }
-  assertTrustedSenderUrl(event)
-}
-
-function assertTrustedWindowsMenuEvent(event: IpcMainInvokeEvent): void {
-  const trusted = windowsMenuViews().some(
-    (view) => event.sender === view.webContents && event.senderFrame === view.webContents.mainFrame
-  )
-  if (!trusted) {
-    throw new Error('This action is only available from the Windows application menu.')
-  }
-  assertTrustedSenderUrl(event)
 }
 
 function assertTrustedMainWindowEvent(event: IpcMainEvent | IpcMainInvokeEvent): void {
@@ -1859,91 +1651,6 @@ async function showAbout(window: BrowserWindow): Promise<void> {
     cancelId: 0,
     noLink: true
   })
-}
-
-async function executeDesktopMenuCommand(command: DesktopMenuCommand): Promise<number | undefined> {
-  const window = mainWindow
-  if (!window || window.isDestroyed()) return
-  const contents = window.webContents
-
-  switch (command) {
-    case 'restart-harness':
-      await restartHarness()
-      break
-    case 'safe-mode':
-      void showSafeMode().catch(showUnexpectedError)
-      break
-    case 'show-harness-log':
-      shell.showItemInFolder(join(app.getPath('logs'), 'harness.log'))
-      break
-    case 'export-session':
-      await contents.executeJavaScript(
-        `(() => {
-          const moreBtn = document.querySelector('button[aria-label="更多操作"], button[aria-label="More actions"], button[class*="moreButton"]')
-          if (moreBtn instanceof HTMLElement) {
-            moreBtn.click()
-            setTimeout(() => {
-              const labels = new Set(['下载 Session 日志', 'Download session log'])
-              const items = Array.from(document.querySelectorAll('[role="menuitem"]'))
-              const item = items.find((el) => labels.has((el.textContent || '').replace(/\\s+/g, ' ').trim()))
-              if (item instanceof HTMLElement) item.click()
-            }, 80)
-            return true
-          }
-          const legacyBtn = document.querySelector('button[class*="sessionLogButton"]')
-          if (legacyBtn instanceof HTMLElement) {
-            legacyBtn.click()
-            return true
-          }
-          return false
-        })()`
-      ).catch(showUnexpectedError)
-      break
-    case 'undo':
-      contents.undo()
-      break
-    case 'redo':
-      contents.redo()
-      break
-    case 'cut':
-      contents.cut()
-      break
-    case 'copy':
-      contents.copy()
-      break
-    case 'paste':
-      contents.paste()
-      break
-    case 'select-all':
-      contents.selectAll()
-      break
-    case 'reload':
-      contents.reload()
-      break
-    case 'toggle-devtools':
-      contents.toggleDevTools()
-      break
-    case 'zoom-reset':
-      contents.setZoomLevel(0)
-      break
-    case 'zoom-in':
-      contents.setZoomLevel(Math.min(3, contents.getZoomLevel() + 0.5))
-      break
-    case 'zoom-out':
-      contents.setZoomLevel(Math.max(-3, contents.getZoomLevel() - 0.5))
-      break
-    case 'toggle-fullscreen':
-      window.setFullScreen(!window.isFullScreen())
-      break
-    case 'about':
-      await showAbout(window)
-      break
-    case 'quit':
-      app.quit()
-      break
-  }
-
-  return isZoomMenuCommand(command) ? contents.getZoomFactor() : undefined
 }
 
 async function waitForPluginRecoveryAction(options: {
@@ -2899,9 +2606,6 @@ function installMenu(): void {
     { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'close' }] }
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
-  if (process.platform === 'win32' && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setMenuBarVisibility(false)
-  }
 }
 
 async function bootstrap(): Promise<void> {

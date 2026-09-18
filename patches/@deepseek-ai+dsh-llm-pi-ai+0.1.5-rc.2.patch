@@ -1,19 +1,8 @@
 diff --git a/node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js b/node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js
-index e06cf8d..2e14216 100644
+index e06cf8d..3e151e2 100644
 --- a/node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js
 +++ b/node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js
-@@ -1364,8 +1364,9 @@ function mapUsage(usage) {
- 	};
- }
- function classifyPiAiError(message) {
--	if (/\b(?:401|403)\b/.test(message)) return "AUTH";
- 	if (isQuotaExceededError(message)) return QUOTA_EXCEEDED_CODE;
-+	if (/\b401\b/.test(message)) return "AUTH";
-+	if (/\b403\b/.test(message)) return "FORBIDDEN";
- 	if (/\b429\b|rate.?limit/i.test(message)) return "RATE_LIMIT";
- 	if (/\b413\b|failed to buffer the request body:\s*length limit exceeded|payload too large|request body too large/i.test(message)) return "INVALID_REQUEST";
- 	if (/\b400\b|invalid.?request/i.test(message)) return "INVALID_REQUEST";
-@@ -1440,6 +1441,14 @@ function mapStopReason(message, contextWindow) {
+@@ -1440,6 +1440,14 @@ function mapStopReason(message, contextWindow) {
  		}
  	}
  }
@@ -28,7 +17,7 @@ index e06cf8d..2e14216 100644
  /**
  * Translate the pi-ai event stream into StreamChunks. pi-ai never throws
  * mid-stream — failures arrive as `error` events, which become error/aborted
-@@ -1454,6 +1463,7 @@ function mapStopReason(message, contextWindow) {
+@@ -1454,6 +1462,7 @@ function mapStopReason(message, contextWindow) {
  */
  async function* toStreamChunks(events, contextWindow, callerSignal, requestedModel) {
  	const toolIds = /* @__PURE__ */ new Map();
@@ -36,7 +25,7 @@ index e06cf8d..2e14216 100644
  	for await (const event of events) switch (event.type) {
  		case "start": break;
  		case "text_start":
-@@ -1470,16 +1480,19 @@ async function* toStreamChunks(events, contextWindow, callerSignal, requestedMod
+@@ -1470,16 +1479,19 @@ async function* toStreamChunks(events, contextWindow, callerSignal, requestedMod
  				text: event.delta
  			};
  			break;
@@ -61,7 +50,7 @@ index e06cf8d..2e14216 100644
  		case "thinking_start":
  			yield {
  				type: "block-start",
-@@ -1494,16 +1507,19 @@ async function* toStreamChunks(events, contextWindow, callerSignal, requestedMod
+@@ -1494,16 +1506,19 @@ async function* toStreamChunks(events, contextWindow, callerSignal, requestedMod
  				text: event.delta
  			};
  			break;
@@ -86,7 +75,7 @@ index e06cf8d..2e14216 100644
  		case "toolcall_start": {
  			const partial = event.partial.content[event.contentIndex];
  			const id = partial?.type === "toolCall" ? partial.id : "";
-@@ -1530,29 +1546,34 @@ async function* toStreamChunks(events, contextWindow, callerSignal, requestedMod
+@@ -1530,29 +1545,34 @@ async function* toStreamChunks(events, contextWindow, callerSignal, requestedMod
  			};
  			break;
  		}
@@ -132,7 +121,7 @@ index e06cf8d..2e14216 100644
  		case "error":
  			yield {
  				type: "usage",
-@@ -1720,8 +1741,11 @@ function reasoningInfo(model, defaultLevel) {
+@@ -1720,8 +1740,11 @@ function reasoningInfo(model, defaultLevel) {
  	} };
  }
  /** Merge deployment headers while removing case-insensitive attribution collisions. */
@@ -146,7 +135,7 @@ index e06cf8d..2e14216 100644
  	const reserved = new Set(Object.keys(attribution).map((name) => name.toLowerCase()));
  	return {
  		...Object.fromEntries(Object.entries(headers ?? {}).filter(([name]) => !reserved.has(name.toLowerCase()))),
-@@ -1870,7 +1894,7 @@ var PiAiAdapter = class extends LlmAdapter {
+@@ -1870,7 +1893,7 @@ var PiAiAdapter = class extends LlmAdapter {
  					...options.maxTokens === void 0 ? {} : { maxTokens: options.maxTokens },
  					...options.sessionId === void 0 ? {} : { sessionId: String(options.sessionId) },
  					signal: watchdog.signal,
