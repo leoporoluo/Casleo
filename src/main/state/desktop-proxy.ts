@@ -41,6 +41,23 @@ export function validateProxyUrl(value: unknown): string | null {
   return null
 }
 
+/**
+ * Parse one Chromium `resolveProxy` answer into a proxy URL the Harness can
+ * use. Chromium reports the Windows system proxy decision for a URL, e.g.
+ * "PROXY 192.168.0.105:7890; DIRECT". Only http(s)-style proxies are returned:
+ * SOCKS entries are deliberately dropped because the Harness fetch path
+ * (dsh-http-proxy) refuses them, and "DIRECT" means nothing to prefill.
+ * @returns an `http(s)://` URL, or "" when there is nothing usable.
+ */
+export function parseSystemProxy(resolved: string): string {
+  const first = resolved.split(';')[0]?.trim() ?? ''
+  const match = /^(PROXY|HTTPS)\s+(\S+)$/iu.exec(first)
+  const scheme = match?.[1]
+  const host = match?.[2]
+  if (scheme === undefined || host === undefined || host === '') return ''
+  return scheme.toUpperCase() === 'PROXY' ? `http://${host}` : `https://${host}`
+}
+
 export function readProxyConfig(file: string): DesktopProxyConfig {
   try {
     const parsed = JSON.parse(readFileSync(file, 'utf8')) as Partial<DesktopProxyConfig>

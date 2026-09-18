@@ -14,6 +14,7 @@ import {
   Menu,
   nativeTheme,
   Notification,
+  session,
   shell,
   Tray,
   utilityProcess,
@@ -54,6 +55,7 @@ import {
   writeNotificationsConfig
 } from './state/desktop-notifications'
 import {
+  parseSystemProxy,
   readProxyConfig,
   validateProxyUrl,
   writeProxyConfig,
@@ -1573,9 +1575,20 @@ function registerHarnessHandlers(): void {
   })
 
   ipcMain.removeHandler('desktop-proxy:get')
-  ipcMain.handle('desktop-proxy:get', (event) => {
+  ipcMain.handle('desktop-proxy:get', async (event) => {
     assertTrustedMainWindowEvent(event)
-    return readProxyConfig(proxyConfigPath(app.getPath('userData')))
+    const config = readProxyConfig(proxyConfigPath(app.getPath('userData')))
+    // Chromium's resolver reads the very switch in Windows' proxy settings, so
+    // an untouched field can be prefilled with what the OS already configured.
+    let systemProxy = ''
+    try {
+      systemProxy = parseSystemProxy(
+        await session.defaultSession.resolveProxy('https://deepseek.ai/')
+      )
+    } catch {
+      systemProxy = ''
+    }
+    return { ...config, systemProxy }
   })
 
   ipcMain.removeHandler('desktop-proxy:set')

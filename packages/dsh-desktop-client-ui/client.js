@@ -119,7 +119,11 @@ window.__ModuleLoader__.load({
         if (typeof bridge?.getProxyConfig !== 'function') return undefined
         bridge.getProxyConfig().then((config) => {
           if (cancelled) return
-          setValue(typeof config?.httpProxy === 'string' ? config.httpProxy : '')
+          const stored = typeof config?.httpProxy === 'string' ? config.httpProxy : ''
+          const detected = typeof config?.systemProxy === 'string' ? config.systemProxy : ''
+          // An untouched field shows the Windows system proxy so that a fresh
+          // machine is one Save press away from a working setup.
+          setValue(stored !== '' ? stored : detected)
           setLoaded(true)
         }).catch(() => {
           if (!cancelled) setLoaded(true)

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  parseSystemProxy,
   proxyConfigPath,
   readProxyConfig,
   validateProxyUrl,
@@ -84,6 +85,16 @@ describe('desktop proxy preference', () => {
     expect(env.https_proxy).toBeUndefined()
   })
 
+  it('prefills the field from the Windows system proxy', () => {
+    expect(parseSystemProxy('PROXY 192.168.0.105:7890')).toBe('http://192.168.0.105:7890')
+    expect(parseSystemProxy('proxy 127.0.0.1:7890; DIRECT')).toBe('http://127.0.0.1:7890')
+    expect(parseSystemProxy('HTTPS secure.example.com:8443')).toBe('https://secure.example.com:8443')
+    // SOCKS cannot serve the Harness fetch path; DIRECT has nothing to prefill.
+    expect(parseSystemProxy('SOCKS5 127.0.0.1:7890')).toBe('')
+    expect(parseSystemProxy('DIRECT')).toBe('')
+    expect(parseSystemProxy('')).toBe('')
+  })
+
   it('wires the preference through the desktop surface', async () => {
     const [main, preload, runtime] = await Promise.all([
       readFile(path.join(projectRoot, 'src', 'main', 'index.ts'), 'utf8'),
@@ -96,7 +107,8 @@ describe('desktop proxy preference', () => {
     expect(main).toContain("ipcMain.handle('desktop-proxy:set'")
     expect(main).toContain('assertTrustedMainWindowEvent(event)')
     expect(main).toContain('validateProxyUrl(value)')
-    expect(main).toContain('readProxyConfig(proxyConfigPath(app.getPath(\'userData\')))')
+    expect(main).toContain('parseSystemProxy')
+    expect(main).toContain("session.defaultSession.resolveProxy('https://deepseek.ai/')")
     // The value is applied at the next harness launch.
     expect(runtime).toContain('proxyUrl?: () => string | undefined')
     expect(runtime).toContain('this.options.proxyUrl?.()')
