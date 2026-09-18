@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js
-index a6834e1..74b0b7c 100644
+index a6834e1..ad0860a 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js
 @@ -198,7 +198,8 @@ window.__ModuleLoader__.load({
@@ -254,7 +254,7 @@ index a6834e1..74b0b7c 100644
  			const currentBlankSessionId = useSessions((state) => {
  				const current = state.current;
  				return current !== void 0 && state.byId[current]?.blank === true ? current : void 0;
-@@ -2185,7 +2258,35 @@ window.__ModuleLoader__.load({
+@@ -2185,7 +2258,37 @@ window.__ModuleLoader__.load({
  				setSessionRenameDraft(currentTitle);
  				setSessionRenameError(null);
  			};
@@ -268,9 +268,11 @@ index a6834e1..74b0b7c 100644
 +			};
 +			const confirmSessionDelete = () => {
 +				if (sessionDeleting || sessionDeleteTarget === null) return;
++				const sessionId = sessionDeleteTarget.sessionId;
 +				setSessionDeleting(true);
 +				setSessionDeleteError(null);
-+				deleteSession(sessionDeleteTarget.sessionId).then(() => {
++				deleteSession(sessionId).then(() => {
++					actions.markSessionRead(sessionId);
 +					setSessionDeleting(false);
 +					setSessionDeleteTarget(null);
 +				}).catch((reason) => {
@@ -290,7 +292,7 @@ index a6834e1..74b0b7c 100644
  				archiveSession(sessionId).catch((reason) => {
  					console.warn("session archive rejected:", reason);
  				});
-@@ -2369,11 +2470,14 @@ window.__ModuleLoader__.load({
+@@ -2369,11 +2472,14 @@ window.__ModuleLoader__.load({
  							usePanelInfo,
  							useSessions,
  							useSessionPendingInteraction,
@@ -306,7 +308,7 @@ index a6834e1..74b0b7c 100644
  							orderBy,
  							sessionOrderByAccount,
  							sessionUpdatedAtByAccount,
-@@ -2388,6 +2492,7 @@ window.__ModuleLoader__.load({
+@@ -2388,6 +2494,7 @@ window.__ModuleLoader__.load({
  							useSessionPendingInteraction,
  							onSessionRename,
  							onSessionArchive,
@@ -314,7 +316,7 @@ index a6834e1..74b0b7c 100644
  							forkSession,
  							workspaces,
  							workspaceReady: workspacePhase === "ready" && workspaceStreamState !== "loading",
-@@ -2398,8 +2503,10 @@ window.__ModuleLoader__.load({
+@@ -2398,8 +2505,10 @@ window.__ModuleLoader__.load({
  							syncSessionOrderAccount: actions.syncSessionOrderAccount,
  							setSessionOrder: actions.setSessionOrder,
  							archivedSessionIds,
@@ -326,7 +328,7 @@ index a6834e1..74b0b7c 100644
  							insertWorkspaceBefore,
  							insertSessionBefore,
  							orderBy,
-@@ -2526,6 +2633,34 @@ window.__ModuleLoader__.load({
+@@ -2526,6 +2635,34 @@ window.__ModuleLoader__.load({
  							children: sessionRenameError
  						})]
  					}),
@@ -361,7 +363,7 @@ index a6834e1..74b0b7c 100644
  					(0, react_jsx_runtime.jsxs)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
  						open: deleteTarget !== null,
  						onClose: closeDelete,
-@@ -2591,6 +2726,8 @@ window.__ModuleLoader__.load({
+@@ -2591,6 +2728,8 @@ window.__ModuleLoader__.load({
  			"search.noMatches": "无匹配会话",
  			"search.hasMore": "仅显示前 {n} 条结果，请缩小搜索范围。",
  			"menu.addWorkspace": "添加工作区…",
@@ -370,7 +372,7 @@ index a6834e1..74b0b7c 100644
  			"picker.loading": "正在加载工作区…",
  			"conflict.named": "已存在名为“{name}”的工作区。",
  			"folderError.title": "无法打开文件夹",
-@@ -2603,7 +2740,12 @@ window.__ModuleLoader__.load({
+@@ -2603,7 +2742,12 @@ window.__ModuleLoader__.load({
  			"delete.workspace": "删除工作区",
  			"delete.desc": "将把“{name}”从工作区列表中移除。文件夹与会话记录会保留，其会话将显示在“未分组”下。",
  			"delete.pending": "正在删除工作区…",
@@ -383,7 +385,7 @@ index a6834e1..74b0b7c 100644
  			"menu.archiveSession": "归档会话",
  			"sessions.count.one": "{n} 个会话",
  			"sessions.count.other": "{n} 个会话",
-@@ -2618,6 +2760,7 @@ window.__ModuleLoader__.load({
+@@ -2618,6 +2762,7 @@ window.__ModuleLoader__.load({
  			"status.planReview": "计划待审",
  			"status.waitingAnswer": "等待回答",
  			"status.completed": "已完成",
@@ -391,7 +393,7 @@ index a6834e1..74b0b7c 100644
  			"schedule.active": "有活动定时任务",
  			"hover.created": "创建于 {time}",
  			"hover.copied": "已复制",
-@@ -2657,6 +2800,8 @@ window.__ModuleLoader__.load({
+@@ -2657,6 +2802,8 @@ window.__ModuleLoader__.load({
  			"search.noMatches": "No matching sessions",
  			"search.hasMore": "Showing the first {n} results. Narrow your search.",
  			"menu.addWorkspace": "Add workspace…",
@@ -400,7 +402,7 @@ index a6834e1..74b0b7c 100644
  			"picker.loading": "Loading workspaces…",
  			"conflict.named": "A workspace named “{name}” already exists.",
  			"folderError.title": "Couldn’t open folder",
-@@ -2669,7 +2814,12 @@ window.__ModuleLoader__.load({
+@@ -2669,7 +2816,12 @@ window.__ModuleLoader__.load({
  			"delete.workspace": "Delete workspace",
  			"delete.desc": "This removes “{name}” from the workspace list. The folder and session logs will be kept. Its sessions will appear under Ungrouped.",
  			"delete.pending": "Deleting workspace…",
@@ -413,7 +415,7 @@ index a6834e1..74b0b7c 100644
  			"menu.archiveSession": "Archive session",
  			"sessions.count.one": "{n} session",
  			"sessions.count.other": "{n} sessions",
-@@ -2684,6 +2834,7 @@ window.__ModuleLoader__.load({
+@@ -2684,6 +2836,7 @@ window.__ModuleLoader__.load({
  			"status.planReview": "Plan awaiting review",
  			"status.waitingAnswer": "Waiting for answer",
  			"status.completed": "Completed",
@@ -421,7 +423,7 @@ index a6834e1..74b0b7c 100644
  			"schedule.active": "Has active scheduled task",
  			"hover.created": "Created {time}",
  			"hover.copied": "Copied",
-@@ -2766,6 +2917,9 @@ window.__ModuleLoader__.load({
+@@ -2766,6 +2919,9 @@ window.__ModuleLoader__.load({
  				forkSession: (sessionId) => {
  					uiWorkspace.forkSession(sessionId).catch(() => {});
  				},

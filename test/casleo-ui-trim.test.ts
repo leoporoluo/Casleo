@@ -168,4 +168,23 @@ describe('Casleo interface trims', () => {
     expect(client).not.toContain('_deepseek_ai_dsh_client_ui_dockkit.canSplit)(surface.layout)')
     expect(patch).toMatch(/-\s*canSplit: \(0, _deepseek_ai_dsh_client_ui_dockkit\.canSplit\)/u)
   })
+
+  it('titles the window Casleo and does not pin a leftover transcript width', async () => {
+    const [layout, conversation, composition] = await Promise.all([
+      readFile(layoutClient, 'utf8'),
+      readFile(conversationClient, 'utf8'),
+      readFile(path.join(projectRoot, 'build', 'dsh-desktop.patch.yml'), 'utf8')
+    ])
+
+    expect(layout).toContain('const productTitle = "Casleo"')
+    expect(layout).not.toContain('const productTitle = "DeepSeek Harness"')
+    // Width handles are gone; ignore any stored preference so an old drag cannot
+    // trap the transcript at a width the user can no longer change.
+    expect(conversation).toContain('function readWidthPreference() {\n\t\t\treturn null;\n\t\t}')
+    expect(conversation).toContain(
+      'variant === "composer" && extensionZone !== void 0 ? renderSlot("conversation.composer.dock", extensionZone) : null'
+    )
+    expect(conversation).not.toContain('max-width:240px;flex:none')
+    expect(composition.replace(/\r\n/gu, '\n')).toContain('- id: ui-message-feedback\n  disabled: true')
+  })
 })

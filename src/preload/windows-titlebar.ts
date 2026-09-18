@@ -258,7 +258,7 @@ function installDragRegion(document: Document): void {
     dragRegion.style.display = hasModal ? 'none' : 'block'
   }
 
-  const observer = new MutationObserver(() => updateDragRegionVisibility())
+  const observer = new MutationObserver(scheduleAnimationFrame(updateDragRegionVisibility))
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
@@ -293,9 +293,20 @@ function trackSidebarLayout(document: Document): void {
     updateSidebarWidth()
   }
 
-  const observer = new MutationObserver(sync)
+  const observer = new MutationObserver(scheduleAnimationFrame(sync))
   observer.observe(document.documentElement, { childList: true, subtree: true })
   sync()
+}
+
+function scheduleAnimationFrame(fn: () => void): () => void {
+  let frame = 0
+  return () => {
+    if (frame !== 0) return
+    frame = window.requestAnimationFrame(() => {
+      frame = 0
+      fn()
+    })
+  }
 }
 
 function syncTheme(document: Document, ipcRenderer: Pick<IpcRenderer, 'invoke'>): void {

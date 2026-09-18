@@ -1857,9 +1857,11 @@ async function executeDesktopMenuCommand(command: DesktopMenuCommand): Promise<n
           if (moreBtn instanceof HTMLElement) {
             moreBtn.click()
             setTimeout(() => {
-              const item = document.querySelector('[role="menuitem"]')
+              const labels = new Set(['下载 Session 日志', 'Download session log'])
+              const items = Array.from(document.querySelectorAll('[role="menuitem"]'))
+              const item = items.find((el) => labels.has((el.textContent || '').replace(/\\s+/g, ' ').trim()))
               if (item instanceof HTMLElement) item.click()
-            }, 50)
+            }, 80)
             return true
           }
           const legacyBtn = document.querySelector('button[class*="sessionLogButton"]')

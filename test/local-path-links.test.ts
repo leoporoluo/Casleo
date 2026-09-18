@@ -101,6 +101,22 @@ describe('assistant local path links', () => {
     }
   })
 
+  it('does not treat abbreviations, dotted identifiers, or file URLs as paths', async () => {
+    const localPathReference = await loadLocalPathReference()
+
+    for (const value of [
+      'e.g.',
+      'i.e.',
+      'React.FC',
+      'process.env',
+      'v1.0.0',
+      'file:///tmp/notes.md',
+      'ftp://example.com/a.txt'
+    ]) {
+      expect(localPathReference(value), value).toBeUndefined()
+    }
+  })
+
   it('strips line and column suffixes from resolved paths', async () => {
     const localPathReference = await loadLocalPathReference()
 

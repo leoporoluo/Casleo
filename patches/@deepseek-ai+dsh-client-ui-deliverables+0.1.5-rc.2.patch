@@ -1,7 +1,8 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js
+index 88a659e..9a297cb 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js
-@@ -468,7 +468,7 @@
+@@ -468,7 +468,7 @@ window.__ModuleLoader__.load({
  		*/
  		function producedFileMentions(paths, openFile, label) {
  			return { resolve(value) {
@@ -10,11 +11,10 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js 
  				if (path === void 0) return void 0;
  				return {
  					open: () => {
-@@ -478,6 +478,28 @@
- 					title: path
+@@ -479,6 +479,28 @@ window.__ModuleLoader__.load({
  				};
  			} };
-+		}
+ 		}
 +		/**
 +		* Resolve Codex-style local path references that were not produced by a tool
 +		* in the current turn. Keep bare identifiers inert: without a slash, an
@@ -28,18 +28,19 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js 
 +		*/
 +		function localPathReference(value) {
 +			const candidate = value.trim();
-+			if (candidate === "" || /[\r\n]/.test(candidate) || /^(?:https?|data|javascript):/i.test(candidate)) return void 0;
++			if (candidate === "" || /[\r\n]/.test(candidate) || /^(?:https?|data|javascript|file|ftp):/i.test(candidate)) return void 0;
 +			const path = candidate.replace(/(?:#L\d+(?:C\d+)?|:\d+(?::\d+)?)$/, "");
 +			if (/^(?:\/|~[\\/]|\.{1,2}[\\/]|[A-Za-z]:[\\/]|\\\\)/.test(path)) return path;
 +			if (/^@[^\\/@\s]+\/[^\\/@\s]+$/.test(path)) return void 0;
 +			if (/^[^@\s\\/]+@[^@\s\\/]+\.[A-Za-z]{2,}$/.test(path)) return void 0;
 +			if (/[\\/]/.test(path) || /[\\/]$/.test(path)) return path;
-+			if (/^[^\\/]+\.[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/.test(path)) return path;
++			if (/^[^\\/]+\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|md|markdown|txt|yml|yaml|toml|css|scss|less|html|htm|py|rs|go|java|kt|c|cc|cpp|h|hpp|cs|rb|php|sh|ps1|bat|cmd|xml|svg|png|jpg|jpeg|gif|webp|pdf|zip|vue|svelte|lock|map|wasm|patch|log|ini|cfg|conf|sql|proto|graphql|gql|ipynb)$/i.test(path)) return path;
 +			return void 0;
- 		}
++		}
  		/** The single produced path whose basename is exactly `value`, else undefined. */
  		function onlyPathWithBasename(paths, value) {
-@@ -956,7 +978,6 @@
+ 			const matches = paths.filter((path) => basename(path) === value);
+@@ -956,7 +978,6 @@ window.__ModuleLoader__.load({
  			ctx.provide("chatFileMentions", { forClosing(owner, sessionId) {
  				const paths = selectProducedFiles(owner);
  				const presented = presentedForClosing(owner);

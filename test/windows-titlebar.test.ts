@@ -118,11 +118,18 @@ describe('Windows titlebar menu', () => {
     expect(preload).toContain('[data-sidebar-right-panel]')
     expect(preload).toContain('var(--dsh-titlebar-safe-inset-top, 36px)')
 
+    expect(preload).toContain('function scheduleAnimationFrame')
+    expect(preload).toContain('scheduleAnimationFrame(updateDragRegionVisibility)')
+    expect(preload).toContain('scheduleAnimationFrame(sync)')
+
     // Application menu includes export-session command
     expect(desktopMenuCommands).toContain('export-session')
     expect(menuPreload).toContain("command: 'export-session'")
     expect(menuPreload).toContain("zh ? '导出 Session 日志…' : 'Export Session Log…'")
     expect(main).toContain("case 'export-session':")
+    expect(main).toContain('下载 Session 日志')
+    expect(main).toContain('Download session log')
+    expect(main).not.toContain("document.querySelector('[role=\"menuitem\"]')")
 
     // No broken CSS transform injections on display:contents slot anchors
     expect(main).not.toContain('dsh-desktop-windows-header-shift')

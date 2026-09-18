@@ -85,10 +85,14 @@ function presetTransferApi(root: string) {
   }
 }
 
+const bundledDshVersion = JSON.parse(
+  await readFile(path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), 'utf8')
+).version as string
+
 function presetPackage(
   id: string,
   layout: 'nested' | 'flat',
-  sourceDshVersion = '0.1.2-rc.1'
+  sourceDshVersion = bundledDshVersion
 ) {
   const versionMetadata = layout === 'nested'
     ? {
@@ -204,7 +208,7 @@ describe('agent preset package transfer', () => {
         format: 'dsh-preset',
         version: 1,
         id: sourceId,
-        sourceDshVersion: '0.1.2-rc.1'
+        sourceDshVersion: bundledDshVersion
       })
       expect(exportedManifest.exportedAt).toEqual(expect.any(String))
       expect(exportedManifest.dshVersion).toBeUndefined()
@@ -226,7 +230,7 @@ describe('agent preset package transfer', () => {
           agentPreset: targetId,
           sourceAgentPreset: `${layout}-source`,
           name: 'Gallery preset',
-          sourceDshVersion: '0.1.2-rc.1',
+          sourceDshVersion: bundledDshVersion,
           fileCount: 1,
           conflict: false,
           installed: false

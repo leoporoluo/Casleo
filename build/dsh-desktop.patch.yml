@@ -21,6 +21,12 @@
 - id: ui-brand-official
   disabled: true
 
+# Like/Dislike and /feedback are not part of this desktop surface. The UI
+# plugin is disabled in composition so it never injects dialog CSS; the
+# vendor patch also stops registering slots if the row is re-enabled.
+- id: ui-message-feedback
+  disabled: true
+
 - insert:
     - id: dsh-desktop-client-ui
       name: dsh-desktop-client-ui

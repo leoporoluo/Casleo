@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module'
 import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { Zip, ZipDeflate, strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
@@ -28,7 +29,13 @@ const EXPORT_PATH = '/api/agent-preset.export'
 const IMPORT_PATH = '/api/agent-preset.import'
 
 /** Harness version stamped into an exported manifest. */
-const PRESET_SOURCE_DSH_VERSION = '0.1.2-rc.1'
+function bundledDshVersion() {
+	try {
+		return createRequire(import.meta.url)('@deepseek-ai/dsh/package.json').version
+	} catch {
+		return '0.1.5-rc.2'
+	}
+}
 
 const PRESET_ARCHIVE_FORMAT = "dsh-preset";
 const PRESET_ARCHIVE_VERSION = 1;
@@ -138,7 +145,7 @@ function createPresetArchive(ctx) {
 					name: preset.name,
 					description: preset.description,
 					icon: preset.icon,
-					sourceDshVersion: PRESET_SOURCE_DSH_VERSION,
+					sourceDshVersion: bundledDshVersion(),
 					exportedAt: (/* @__PURE__ */ new Date()).toISOString()
 				};
 				files["manifest.json"] = strToU8(JSON.stringify(manifest, null, 2));

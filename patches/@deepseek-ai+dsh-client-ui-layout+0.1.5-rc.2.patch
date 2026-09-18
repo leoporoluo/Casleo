@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js
-index 282f8e7..23e3d59 100644
+index 282f8e7..1af353d 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js
 @@ -11,6 +11,7 @@ window.__ModuleLoader__.load({
@@ -19,6 +19,15 @@ index 282f8e7..23e3d59 100644
  			const available = viewport - s - 400;
  			const r = rightbar === 0 || available < 300 ? 0 : Math.min(available, clampWidth(rightbar, 300, viewport * RIGHTBAR_MAX_RATIO));
  			return {
+@@ -260,7 +261,7 @@ window.__ModuleLoader__.load({
+ 			const onRightbarDrag = (0, react.useCallback)((dx) => {
+ 				actions.setRightbar(rightbarBase.current - dx);
+ 			}, [actions]);
+-			const productTitle = "DeepSeek Harness";
++			const productTitle = "Casleo";
+ 			const sidebar = (0, react.useMemo)(() => renderSlot("sidebar", {
+ 				collapsed: sidebarCollapsed,
+ 				width: cols.sidebar
 @@ -303,13 +304,7 @@ window.__ModuleLoader__.load({
  						"data-shell-overlay": true,
  						children: overlays
