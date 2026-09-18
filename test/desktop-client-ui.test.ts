@@ -52,8 +52,6 @@ async function loadClientPlugin(windowOverrides: Record<string, unknown>): Promi
     type,
     props: { ...props, children }
   })
-  const jsx = (type: unknown, props: Record<string, unknown> | null, ...children: unknown[]) =>
-    ({ type, props: { ...props, children: children.length === 1 ? children[0] : children } })
   return definition.factory((id) => {
     if (id === 'react') {
       return {
@@ -61,10 +59,6 @@ async function loadClientPlugin(windowOverrides: Record<string, unknown>): Promi
         useEffect: (effect: () => void | (() => void)) => effect(),
         useState: (initial: unknown) => [initial, vi.fn()]
       }
-    }
-    if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx }
-    if (id === '@deepseek-ai/dsh-client-ui-primitives') {
-      return { Button: ({ children }: { children?: unknown }) => children, Switch: ({ label }: { label?: unknown }) => label }
     }
     throw new Error(`Unexpected client dependency: ${id}`)
   }) as never
@@ -92,13 +86,13 @@ function makeSlots(): { slots: unknown; registrations: Registration[] } {
 }
 
 describe('Casleo client slot occupants', () => {
-  it('registers the rail mark and the wordmark', async () => {
+  it('registers the rail mark and the wordmark, and injects nothing else', async () => {
     const plugin = await loadClientPlugin({})
     const { slots, registrations } = makeSlots()
 
     plugin.apply({ slots })
 
-    expect(plugin.inject).toEqual(['slots', 'locale', 'sessions'])
+    expect(plugin.inject).toEqual(['slots'])
     expect(registrations.map(({ config }) => config.name)).toEqual([
       'sidebar.brand.mark',
       'sidebar.brand.name'
@@ -123,48 +117,24 @@ describe('Casleo client slot occupants', () => {
     expect(String(markPath.props.d)).toContain('M500 219L750 625L500 797L250 625Z')
   })
 
-  it('offers the notifications row only where the desktop bridge exists', async () => {
-    const bridgeless = await loadClientPlugin({})
-    const { slots: bridgelessSlots, registrations: bridgelessRows } = makeSlots()
-    bridgeless.apply({ slots: bridgelessSlots })
-    expect(bridgelessRows.map(({ config }) => config.name)).not.toContain('settings.general.item')
+  it('stays out of the settings page and the desktop bridge', async () => {
+    // The General page, the locale dictionaries and the session store all
+    // belong to the shell now: the plugin owns two sidebar seats and nothing
+    // else, so a future bridge change cannot leave a stale row behind.
+    const source = await readFile(
+      path.join(projectRoot, 'packages', 'dsh-desktop-client-ui', 'client.js'),
+      'utf8'
+    )
 
-    // A bridge that predates the notification seat still gets no row: the row
-    // is gated on the API it actually calls.
-    const notificationsUnsupported = await loadClientPlugin({
-      dshDesktop: {
-        getProxyConfig: vi.fn(async () => ({ httpProxy: '' })),
-        setProxyConfig: vi.fn(async () => ({ ok: true }))
-      }
-    })
-    const { slots: unsupportedSlots, registrations: unsupportedRows } = makeSlots()
-    notificationsUnsupported.apply({ slots: unsupportedSlots })
-    expect(unsupportedRows.map(({ config }) => config.name)).not.toContain('settings.general.item')
+    expect(source).not.toContain('settings.general.item')
+    expect(source).not.toContain('dshDesktop')
+    expect(source).not.toContain('locale.register')
+    expect(source).not.toContain('sessions')
 
-    const plugin = await loadClientPlugin({
-      dshDesktop: {
-        getNotificationsEnabled: vi.fn(async () => ({ enabled: true })),
-        setNotificationsEnabled: vi.fn(async () => ({ ok: true })),
-        notifyRunEnded: vi.fn(async () => ({ shown: false }))
-      }
-    })
+    // ...and the plugin applies without any of those services present.
+    const plugin = await loadClientPlugin({})
     const { slots, registrations } = makeSlots()
-    plugin.apply({
-      slots,
-      locale: { register: vi.fn() },
-      effect: (_fn: () => void, _label: string) => undefined,
-      get: () => undefined
-    })
-
-    // The General page keeps exactly one desktop row: notifications. The
-    // network-proxy and safe-mode rows are deliberately gone (the safe-mode
-    // restart still lives in the native Harness menu).
-    expect(registrations.map(({ config }) => config.id).filter(Boolean)).toEqual([
-      'casleo-notifications'
-    ])
-    const notify = registrations.find(({ config }) => config.id === 'casleo-notifications')
-    expect(notify).toBeDefined()
-    expect(notify!.config.name).toBe('settings.general.item')
-    expect(notify!.config.order).toBe(92)
+    plugin.apply({ slots })
+    expect(registrations.map(({ config }) => config.id).filter(Boolean)).toEqual([])
   })
 })

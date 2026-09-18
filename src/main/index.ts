@@ -13,8 +13,6 @@ import {
   ipcMain,
   Menu,
   nativeTheme,
-  Notification,
-  session,
   shell,
   Tray,
   utilityProcess,
@@ -49,19 +47,6 @@ import {
   type ProfileCompatibilityIssue
 } from './state/profile-compatibility'
 import { ensureStoreDirPinned, inspectStoreConsistency } from './state/profile-store'
-import {
-  readNotificationsConfig,
-  notificationsConfigPath,
-  writeNotificationsConfig
-} from './state/desktop-notifications'
-import {
-  parseSystemProxy,
-  readProxyConfig,
-  validateProxyUrl,
-  writeProxyConfig,
-  proxyConfigPath,
-  type DesktopProxyConfig
-} from './state/desktop-proxy'
 import {
   detectPluginRecovery,
   PLUGIN_RECOVERY_EVIDENCE_TIMEOUT_MS
@@ -134,6 +119,7 @@ import {
   type WindowFocusIntent
 } from './window-raise'
 import type { RuntimeSnapshot } from '../shared/contracts'
+import { WINDOWS_TITLEBAR_HEIGHT } from '../shared/titlebar'
 import { resolveHarnessLocale } from './application-locale'
 import { installContextMenu } from './context-menu'
 import { buildPluginRecoveryViewModel } from './plugin-recovery-view'
@@ -445,11 +431,26 @@ function installMainWindowRendererRecovery(window: BrowserWindow): void {
   })
 }
 
+/**
+ * The window-controls overlay is painted transparent so the page's own top
+ * strip shows through: the app draws the surface, Windows draws only the three
+ * buttons and their glyphs. `symbolColor` is the glyph color, so it has to
+ * follow the resolved theme or the buttons vanish into the surface.
+ */
+function windowsTitleBarOverlay(isDark: boolean): Electron.TitleBarOverlayOptions {
+  return {
+    color: '#00000000',
+    symbolColor: isDark ? '#f3f4f6' : '#202124',
+    height: WINDOWS_TITLEBAR_HEIGHT
+  }
+}
+
 function applyWindowChromeTheme(window: BrowserWindow, isDark: boolean): void {
   if (window.isDestroyed()) return
   // Keep this identical to the window's creation background: a page transition
   // paints it for a frame, and a mismatched value reads as a flash.
   window.setBackgroundColor(isDark ? '#141416' : '#f8f8f6')
+  if (process.platform === 'win32') window.setTitleBarOverlay(windowsTitleBarOverlay(isDark))
 }
 
 function configureAppIdentity(): void {
@@ -460,8 +461,8 @@ function configureAppIdentity(): void {
   }
 
   app.setName('Casleo')
-  // Windows notifications require an AppUserModelID; electron-builder sets
-  // the same value for the packaged shortcut.
+  // Pin the process identity to the AppUserModelID electron-builder stamps on
+  // the packaged shortcut, so Windows groups the window with its icon.
   if (process.platform === 'win32') app.setAppUserModelId('com.casleo.desktop')
   // The lowercase directory stays pinned independently of the product name so
   // Harness data (workspaces, sessions, credentials, presets) is not re-rooted
@@ -939,7 +940,16 @@ function createWindow(): BrowserWindow {
     icon: desktopIconPath(),
     frame: process.platform !== 'darwin',
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden' as const } : {}),
-    ...(isWindows ? { autoHideMenuBar: true } : {}),
+    // Windows keeps the system's three caption buttons but not its caption
+    // band: the Harness header is the top strip, and the transparent overlay
+    // paints only the buttons over it.
+    ...(isWindows
+      ? {
+        titleBarStyle: 'hidden' as const,
+        titleBarOverlay: windowsTitleBarOverlay(nativeTheme.shouldUseDarkColors),
+        autoHideMenuBar: true
+      }
+      : {}),
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#141416' : '#f8f8f6',
     webPreferences: {
       contextIsolation: true,
@@ -965,7 +975,8 @@ function createWindow(): BrowserWindow {
     window.webContents.on('zoom-changed', () => setImmediate(alignWindowButtons))
   } else if (isWindows) {
     // autoHideMenuBar keeps the menu one Alt press away without painting a
-    // permanent menu row under the native titlebar.
+    // permanent menu row under the overlay buttons. The page owns the strip
+    // itself: see the drag region mounted by the preload.
   }
   window.on('close', (event) => {
     desktopStorageManager?.flushSync()
@@ -1519,49 +1530,6 @@ function registerHarnessHandlers(): void {
     return { ok: true }
   })
 
-  ipcMain.removeHandler('desktop-notification:get')
-  ipcMain.handle('desktop-notification:get', (event) => {
-    assertTrustedMainWindowEvent(event)
-    return readNotificationsConfig(notificationsConfigPath(app.getPath('userData')))
-  })
-
-  ipcMain.removeHandler('desktop-notification:set')
-  ipcMain.handle('desktop-notification:set', (event, enabled: unknown) => {
-    assertTrustedMainWindowEvent(event)
-    if (typeof enabled !== 'boolean') {
-      throw new Error('The desktop notification toggle must be a boolean.')
-    }
-    writeNotificationsConfig(notificationsConfigPath(app.getPath('userData')), { enabled })
-    runtime?.note(`[desktop] notifications ${enabled ? 'enabled' : 'disabled'}`)
-    return { ok: true }
-  })
-
-  ipcMain.removeHandler('desktop-notification:show')
-  ipcMain.handle('desktop-notification:show', (event, payload: unknown) => {
-    assertTrustedMainWindowEvent(event)
-    const window = mainWindow
-    if (!window || window.isDestroyed()) return { ok: true, shown: false }
-    // The point of a notification is an absent user: while the window has the
-    // foreground, the conversation itself is the reminder.
-    const hasAttention = window.isFocused() && !window.isMinimized() && window.isVisible()
-    const config = readNotificationsConfig(notificationsConfigPath(app.getPath('userData')))
-    if (!config.enabled || hasAttention) return { ok: true, shown: false }
-    const body = typeof (payload as { title?: unknown })?.title === 'string'
-      ? String((payload as { title?: string }).title).slice(0, 120)
-      : ''
-    const toast = new Notification({
-      title: 'Casleo',
-      body: body === '' ? '任务已结束' : `任务已结束：${body}`
-    })
-    toast.on('click', () => {
-      if (window.isMinimized()) window.restore()
-      window.show()
-      window.focus()
-    })
-    toast.show()
-    return { ok: true, shown: true }
-  })
-
   ipcMain.removeHandler('desktop:about-info')
   ipcMain.handle('desktop:about-info', (event) => {
     assertTrustedMainWindowEvent(event)
@@ -1574,33 +1542,17 @@ function registerHarnessHandlers(): void {
     }
   })
 
-  ipcMain.removeHandler('desktop-proxy:get')
-  ipcMain.handle('desktop-proxy:get', async (event) => {
+  ipcMain.removeHandler('desktop-titlebar:set-theme')
+  ipcMain.handle('desktop-titlebar:set-theme', (event, isDark: unknown) => {
     assertTrustedMainWindowEvent(event)
-    const config = readProxyConfig(proxyConfigPath(app.getPath('userData')))
-    // Chromium's resolver reads the very switch in Windows' proxy settings, so
-    // an untouched field can be prefilled with what the OS already configured.
-    let systemProxy = ''
-    try {
-      systemProxy = parseSystemProxy(
-        await session.defaultSession.resolveProxy('https://deepseek.ai/')
-      )
-    } catch {
-      systemProxy = ''
+    if (typeof isDark !== 'boolean') {
+      throw new Error('The Casleo titlebar theme must be a boolean.')
     }
-    return { ...config, systemProxy }
-  })
-
-  ipcMain.removeHandler('desktop-proxy:set')
-  ipcMain.handle('desktop-proxy:set', (event, value: unknown) => {
-    assertTrustedMainWindowEvent(event)
-    const error = validateProxyUrl(value)
-    if (error !== null) throw new Error(error)
-    const config: DesktopProxyConfig = {
-      httpProxy: typeof value === 'string' ? value.trim() : ''
-    }
-    writeProxyConfig(proxyConfigPath(app.getPath('userData')), config)
-    runtime?.note(`[desktop] proxy preference saved: ${config.httpProxy === '' ? '(direct)' : config.httpProxy}`)
+    const window = mainWindow
+    if (window && !window.isDestroyed()) applyWindowChromeTheme(window, isDark)
+    // Keep the shell's own native surfaces (context menus, dialogs) on the
+    // same side as the page: the resolved theme is the page's, not the OS's.
+    nativeTheme.themeSource = isDark ? 'dark' : 'light'
     return { ok: true }
   })
 }
@@ -2648,10 +2600,6 @@ async function bootstrap(): Promise<void> {
     dshHome: join(app.getPath('userData'), 'harness'),
     logPath: join(app.getPath('logs'), 'harness.log'),
     preferredPort: DEFAULT_HARNESS_PORT + (developmentBuild ? 1 : 0),
-    proxyUrl: () => {
-      const config = readProxyConfig(proxyConfigPath(app.getPath('userData')))
-      return config.httpProxy.trim() !== '' ? config.httpProxy.trim() : undefined
-    },
     launchProcess: (executablePath, args, options) =>
       process.platform === 'darwin'
         ? launchDisclaimedUtilityProcess(utilityProcess, args, options, {
