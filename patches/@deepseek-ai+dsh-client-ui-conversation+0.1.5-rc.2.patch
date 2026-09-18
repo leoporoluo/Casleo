@@ -1,16 +1,58 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1b7f134..2af08b1 100644
+index 1b7f134..3167332 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-@@ -14617,45 +14617,24 @@ window.__ModuleLoader__.load({
- 		* @returns the centered hero element tree.
- 		*/
- 		function HeroShell({ t, renderSlot, children }) {
+@@ -14575,87 +14575,16 @@ window.__ModuleLoader__.load({
+ 				]
+ 			});
+ 		}
+-		const HERO_SWIM_UP_PATH = "M22.403 0.567C22.145 0.477 22.068 0.718 21.939 0.85C21.895 0.893 21.86 0.947 21.824 0.997C21.515 1.421 21.13 1.721 20.591 1.77C19.829 1.867 19.221 2.244 18.712 2.958C18.535 2.227 18.116 1.839 17.516 1.626C17.203 1.506 16.887 1.379 16.663 1.064C16.508 0.839 16.462 0.581 16.383 0.329C16.332 0.176 16.283 0.02 16.121 -0.002C15.944 -0.029 15.875 0.133 15.805 0.269C15.52 0.822 15.408 1.43 15.42 2.046C15.449 3.432 16.031 4.532 17.202 5.274C17.337 5.356 17.374 5.445 17.335 5.582C17.261 5.862 17.169 6.134 17.086 6.413C17.032 6.59 16.952 6.63 16.764 6.558C16.118 6.301 15.562 5.909 15.074 5.433C14.248 4.633 13.5 3.751 12.568 3.06C12.349 2.898 12.13 2.748 11.903 2.605C10.952 1.682 12.028 0.923 12.277 0.833C12.537 0.739 12.367 0.416 11.526 0.42C10.684 0.424 9.914 0.706 8.933 1.081C8.789 1.138 8.638 1.179 8.484 1.213C7.593 1.044 6.668 1.006 5.702 1.115C3.883 1.318 2.43 2.178 1.362 3.646C0.079 5.41 -0.223 7.415 0.147 9.506C0.535 11.71 1.66 13.535 3.389 14.962C5.181 16.441 7.246 17.166 9.601 17.027C11.032 16.944 12.624 16.753 14.421 15.232C14.874 15.458 15.35 15.548 16.138 15.615C16.746 15.672 17.331 15.585 17.784 15.491C18.493 15.341 18.444 14.684 18.188 14.564C16.108 13.595 16.565 13.989 16.15 13.67C17.206 12.42 18.82 10.198 19.363 7.086C19.421 6.709 19.484 6.171 19.469 5.866C19.458 5.681 19.493 5.604 19.681 5.556C20.199 5.412 20.691 5.172 21.125 4.806C22.366 3.824 22.758 2.554 22.708 1.1C22.7 0.878 22.649 0.654 22.403 0.567ZM11.175 14.451C9.159 12.726 8.182 12.088 7.778 12.067C7.401 12.047 7.469 12.505 7.552 12.807C7.639 13.103 7.752 13.313 7.91 13.581C8.02 13.758 8.095 14.01 7.801 14.16C7.152 14.487 6.023 13.806 5.97 13.772C4.657 12.85 3.559 11.766 2.785 10.369C2.037 9.025 1.603 7.583 1.532 6.044C1.513 5.672 1.622 5.541 1.992 5.473C2.479 5.383 2.981 5.364 3.468 5.436C5.525 5.736 7.276 6.675 8.744 8.323C9.582 9.299 10.216 10.425 10.869 11.496C11.563 12.592 12.31 13.603 13.262 14.414C13.598 14.696 13.866 14.91 14.123 15.068C13.349 15.154 12.058 15.167 11.175 14.452L11.175 14.451ZM12.141 8.26C12.141 8.095 12.273 7.963 12.439 7.963C12.476 7.963 12.511 7.971 12.541 7.982C12.582 7.997 12.62 8.019 12.65 8.053C12.704 8.106 12.733 8.181 12.733 8.26C12.733 8.425 12.601 8.556 12.435 8.556C12.27 8.556 12.141 8.425 12.141 8.26ZM15.142 9.799C14.949 9.878 14.757 9.945 14.572 9.953C14.284 9.968 13.972 9.851 13.802 9.709C13.537 9.487 13.348 9.363 13.27 8.977C13.236 8.812 13.255 8.556 13.284 8.41C13.352 8.094 13.277 7.892 13.055 7.708C12.873 7.558 12.643 7.516 12.39 7.516C12.296 7.516 12.209 7.475 12.145 7.441C12.039 7.389 11.952 7.257 12.035 7.096C12.062 7.043 12.19 6.916 12.22 6.893C12.563 6.698 12.96 6.762 13.326 6.908C13.665 7.047 13.922 7.302 14.292 7.663C14.669 8.098 14.738 8.218 14.953 8.545C15.123 8.801 15.277 9.063 15.383 9.364C15.447 9.551 15.364 9.705 15.142 9.799Z";
+-		const HERO_SWIM_DOWN_PATH = "M23.271 2.216C23.039 2.071 22.91 2.287 22.755 2.388C22.703 2.42 22.656 2.464 22.61 2.505C22.214 2.848 21.771 3.054 21.225 2.956C20.412 2.784 19.68 2.919 19.005 3.435C18.92 2.663 18.493 2.157 17.808 1.798C17.446 1.621 17.08 1.449 16.83 1.111C16.656 0.872 16.611 0.612 16.524 0.354C16.469 0.198 16.414 0.039 16.223 0.009C16.017 -0.024 15.936 0.137 15.856 0.271C15.539 0.822 15.418 1.43 15.429 2.046C15.454 3.432 16.041 4.538 17.196 5.36C17.325 5.456 17.356 5.547 17.312 5.674C17.229 5.936 17.134 6.191 17.051 6.454C16.999 6.623 16.921 6.659 16.738 6.58C16.107 6.306 15.56 5.909 15.074 5.433C14.248 4.633 13.5 3.751 12.568 3.06C12.349 2.898 12.13 2.748 11.903 2.605C10.952 1.682 12.028 0.923 12.277 0.833C12.537 0.739 12.367 0.416 11.526 0.42C10.684 0.424 9.914 0.706 8.933 1.081C8.789 1.138 8.638 1.179 8.484 1.213C7.593 1.044 6.668 1.006 5.702 1.115C3.883 1.318 2.43 2.178 1.362 3.646C0.079 5.41 -0.223 7.415 0.147 9.506C0.535 11.71 1.66 13.535 3.389 14.962C5.181 16.441 7.246 17.166 9.601 17.027C11.032 16.944 12.624 16.753 14.421 15.232C14.874 15.458 15.35 15.548 16.138 15.615C16.746 15.672 17.331 15.585 17.784 15.491C18.493 15.341 18.444 14.684 18.188 14.564C16.108 13.595 16.565 13.989 16.15 13.67C17.206 12.42 18.82 10.198 19.278 7.246C19.318 6.948 19.375 6.534 19.371 6.293C19.371 6.145 19.411 6.092 19.597 6.098C20.113 6.109 20.619 6.051 21.096 5.891C22.503 5.375 23.169 4.232 23.448 2.804C23.49 2.586 23.491 2.356 23.271 2.216ZM11.175 14.49C9.159 13.005 8.182 12.567 7.778 12.621C7.401 12.673 7.469 13.087 7.552 13.354C7.639 13.619 7.752 13.797 7.91 14.024C8.02 14.175 8.095 14.406 7.801 14.609C7.152 15.063 6.023 14.63 5.97 14.609C4.657 13.941 3.559 12.965 2.785 11.569C2.037 10.225 1.603 8.783 1.532 7.244C1.513 6.872 1.622 6.741 1.992 6.673C2.479 6.583 2.981 6.564 3.468 6.636C5.525 6.936 7.276 7.843 8.744 9.163C9.582 9.888 10.216 10.783 10.869 11.679C11.563 12.659 12.31 13.617 13.262 14.415C13.598 14.696 13.866 14.91 14.123 15.068C13.349 15.155 12.058 15.177 11.175 14.491L11.175 14.49ZM12.141 8.26C12.141 8.095 12.273 7.963 12.439 7.963C12.476 7.963 12.511 7.971 12.541 7.982C12.582 7.997 12.62 8.019 12.65 8.053C12.704 8.106 12.733 8.181 12.733 8.26C12.733 8.425 12.601 8.556 12.435 8.556C12.27 8.556 12.141 8.425 12.141 8.26ZM15.142 9.799C14.949 9.878 14.757 9.945 14.572 9.953C14.284 9.968 13.972 9.851 13.802 9.709C13.537 9.487 13.348 9.363 13.27 8.977C13.236 8.812 13.255 8.556 13.284 8.41C13.352 8.094 13.277 7.892 13.055 7.708C12.873 7.558 12.643 7.516 12.39 7.516C12.296 7.516 12.209 7.475 12.145 7.441C12.039 7.389 11.952 7.257 12.035 7.096C12.062 7.043 12.19 6.916 12.22 6.893C12.563 6.698 12.96 6.762 13.326 6.908C13.665 7.047 13.922 7.302 14.292 7.663C14.669 8.098 14.738 8.218 14.953 8.545C15.123 8.801 15.277 9.063 15.383 9.364C15.447 9.551 15.364 9.705 15.142 9.799Z";
+-		/**
+-		* The hero fish (34px wide), static at rest. Hovering swims the whale in
+-		* place: a gentle head-up sway (CSS, on the hitbox hover) while the body
+-		* itself morphs — SMIL interpolates `d` through the tail-up and tail-down
+-		* targets on the same 1.6s period, so the tail wags and the fin flutters in
+-		* real curve deformation. Decorative — hidden from the accessibility tree;
+-		* reduced motion keeps the static filled logo on hover (sampled at
+-		* mouseenter; a mid-hover preference change takes effect on the next enter).
+-		* @param props.hovering - driven by the hitbox parent's pointer state.
+-		* @returns the fish svg element.
+-		*/
+-		function HeroFish({ hovering }) {
+-			return (0, react_jsx_runtime.jsx)("svg", {
+-				className: HeroShell_module_css_default.fish,
+-				width: 34,
+-				height: 34 * _deepseek_ai_dsh_client_ui_primitives.FISH_LOGO_VIEWBOX.height / _deepseek_ai_dsh_client_ui_primitives.FISH_LOGO_VIEWBOX.width,
+-				viewBox: `0 0 ${_deepseek_ai_dsh_client_ui_primitives.FISH_LOGO_VIEWBOX.width} ${_deepseek_ai_dsh_client_ui_primitives.FISH_LOGO_VIEWBOX.height}`,
+-				fill: "none",
+-				"aria-hidden": "true",
+-				children: (0, react_jsx_runtime.jsx)("path", {
+-					d: _deepseek_ai_dsh_client_ui_primitives.FISH_LOGO_PATH,
+-					fill: "currentColor",
+-					children: hovering && (0, react_jsx_runtime.jsx)("animate", {
+-						attributeName: "d",
+-						values: `${_deepseek_ai_dsh_client_ui_primitives.FISH_LOGO_PATH};${HERO_SWIM_UP_PATH};${_deepseek_ai_dsh_client_ui_primitives.FISH_LOGO_PATH};${HERO_SWIM_DOWN_PATH};${_deepseek_ai_dsh_client_ui_primitives.FISH_LOGO_PATH}`,
+-						keyTimes: "0;0.35;0.55;0.75;1",
+-						calcMode: "spline",
+-						keySplines: "0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1",
+-						dur: "1.6s",
+-						repeatCount: "indefinite"
+-					})
+-				})
+-			});
+-		}
+-		/**
+-		* Render the hero chrome (headline only; no composer, no workspace row).
+-		* @param props - see {@link HeroShellProps}.
+-		* @returns the centered hero element tree.
+-		*/
+-		function HeroShell({ t, renderSlot, children }) {
 -			const [hovering, setHovering] = (0, react.useState)(false);
- 			return (0, react_jsx_runtime.jsxs)("div", {
- 				className: HeroShell_module_css_default.root,
- 				children: [(0, react_jsx_runtime.jsxs)("div", {
- 					className: HeroShell_module_css_default.stack,
+-			return (0, react_jsx_runtime.jsxs)("div", {
+-				className: HeroShell_module_css_default.root,
+-				children: [(0, react_jsx_runtime.jsxs)("div", {
+-					className: HeroShell_module_css_default.stack,
 -					children: [(0, react_jsx_runtime.jsxs)("div", {
 -						className: HeroShell_module_css_default.headline,
 -						children: [(0, react_jsx_runtime.jsx)("span", {
@@ -33,10 +75,9 @@ index 1b7f134..2af08b1 100644
 -							})]
 -						})]
 -					}), (0, react_jsx_runtime.jsx)("div", { className: HeroShell_module_css_default.body })]
-+					children: [(0, react_jsx_runtime.jsx)("div", { className: HeroShell_module_css_default.body })]
- 				}), children]
- 			});
- 		}
+-				}), children]
+-			});
+-		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$4 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:var(--dsh-chat-user-width,clamp(680px, calc(var(--dsh-conversation-column-width,0px) * .64), 920px));--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex;position:relative}.wSkVaW_header{box-sizing:border-box;border-bottom:.5px solid var(--dsw-alias-border-l3);flex:none;min-height:76px;padding:10px 28px 0 20px}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:30px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumbSubagent{font-size:12px;line-height:18px}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_headerCorner{flex:none;align-items:center;margin-left:8px;margin-right:-16px;display:flex}.wSkVaW_headerCorner:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:10px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 9px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:-1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_widthHandle{z-index:8;width:min(40px, calc((100% - var(--dsh-chat-content-width)) / 2 - 24px - 24px));cursor:col-resize;position:absolute;top:0;bottom:0}.wSkVaW_widthHandle[data-side=left]{right:calc(50% + var(--dsh-chat-content-width) / 2 + 24px)}.wSkVaW_widthHandle[data-side=right]{left:calc(50% + var(--dsh-chat-content-width) / 2 + 24px)}.wSkVaW_widthHandle:after{content:\"\";background:linear-gradient(to bottom, transparent calc(var(--dsh-width-handle-pointer-y,50%) - 52px), var(--dsw-alias-scrollbar-hover-l1) calc(var(--dsh-width-handle-pointer-y,50%) - 12px), var(--dsw-alias-scrollbar-hover-l1) calc(var(--dsh-width-handle-pointer-y,50%) + 12px), transparent calc(var(--dsh-width-handle-pointer-y,50%) + 52px));opacity:0;pointer-events:none;border-radius:3px;width:3px;position:absolute;top:0;bottom:0}.wSkVaW_widthHandle[data-side=left]:after{right:16px}.wSkVaW_widthHandle[data-side=right]:after{left:16px}.wSkVaW_widthHandle:hover:after,.wSkVaW_widthHandle[data-dragging]:after{opacity:1}.wSkVaW_root:has([data-conversation-composer-overlay]) .wSkVaW_widthHandle{display:none}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;margin-right:2px;display:flex;overflow-y:auto}.wSkVaW_scrollBody::-webkit-scrollbar-track{margin:2px}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat:has([data-trigger-menu]){z-index:9}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding:0 16px 0 20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
@@ -51,7 +92,7 @@ index 1b7f134..2af08b1 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -14674,6 +14653,7 @@ window.__ModuleLoader__.load({
+@@ -14674,6 +14603,7 @@ window.__ModuleLoader__.load({
  			"headerCorner": "wSkVaW_headerCorner",
  			"headerHidden": "wSkVaW_headerHidden",
  			"headerUtilities": "wSkVaW_headerUtilities",
@@ -59,19 +100,160 @@ index 1b7f134..2af08b1 100644
  			"heroWorkspaceRow": "wSkVaW_heroWorkspaceRow",
  			"root": "wSkVaW_root",
  			"scrollBody": "wSkVaW_scrollBody",
-@@ -14700,10 +14680,7 @@ window.__ModuleLoader__.load({
- 		* missing or corrupt value resolves to "no preference".
- 		* @returns the stored width in px, or null when unset or invalid. */
- 		function readWidthPreference() {
+@@ -14687,101 +14617,6 @@ window.__ModuleLoader__.load({
+ 		};
+ 		//#endregion
+ 		//#region lib/types/client/skeleton/ConversationRoot.js
+-		/** localStorage key for the dragged transcript width preference (px). */
+-		const WIDTH_PREF_KEY = "dsh.conversation.contentWidth";
+-		/** Floor for a dragged content width; matches the layout center-column minimum. */
+-		const CONTENT_MIN = 640;
+-		/** Column budget the content must leave free: 88px per side keeps the width
+-		* handles fully placeable (24px inset + 40px strip + 24px safe zone) — a
+-		* larger dragged width would push its own handles off the column and leave no
+-		* way to drag back. */
+-		const CONTENT_EDGE_BUDGET = 176;
+-		/** Reads the persisted width preference; durable-storage boundary, so a
+-		* missing or corrupt value resolves to "no preference".
+-		* @returns the stored width in px, or null when unset or invalid. */
+-		function readWidthPreference() {
 -			const raw = localStorage.getItem(WIDTH_PREF_KEY);
 -			if (raw === null) return null;
 -			const value = Number(raw);
 -			return Number.isFinite(value) && value > 0 ? value : null;
-+			return null;
- 		}
- 		/** Resolves the content width the CSS axis would show for a column width.
- 		* @param columnWidth - the conversation column's rendered width in px.
-@@ -14898,12 +14875,17 @@ window.__ModuleLoader__.load({
+-		}
+-		/** Resolves the content width the CSS axis would show for a column width.
+-		* @param columnWidth - the conversation column's rendered width in px.
+-		* @param preference - the dragged preference, or null for the adaptive clamp.
+-		* @returns the resolved content width in px (mirrors the CSS clamp). */
+-		function resolveContentWidth(columnWidth, preference) {
+-			const max = Math.max(CONTENT_MIN, columnWidth - CONTENT_EDGE_BUDGET);
+-			if (preference !== null) return Math.min(Math.max(preference, CONTENT_MIN), max);
+-			return Math.max(680, Math.min(columnWidth * .64, 920));
+-		}
+-		/** One transcript width handle: pointer capture + rAF-throttled symmetric
+-		* resize (both sides write the one centered width, so outward travel widens
+-		* by 2× the pointer distance). pointermove publishes the pointer's Y as a CSS
+-		* variable so the glow indicator rides it. Mirrors ui-layout AppFrame's
+-		* DragHandle capture model. */
+-		function WidthHandle(props) {
+-			const [dragging, setDragging] = (0, react.useState)(false);
+-			const base = (0, react.useRef)(0);
+-			const origin = (0, react.useRef)(0);
+-			const latest = (0, react.useRef)(0);
+-			const frame = (0, react.useRef)(null);
+-			const callbacks = (0, react.useRef)(props);
+-			callbacks.current = props;
+-			const outwardWidth = () => {
+-				const dx = latest.current - origin.current;
+-				const outward = callbacks.current.side === "right" ? dx : -dx;
+-				return base.current + outward * 2;
+-			};
+-			const cancelFrame = () => {
+-				if (frame.current !== null) {
+-					cancelAnimationFrame(frame.current);
+-					frame.current = null;
+-				}
+-			};
+-			const onPointerDown = (0, react.useCallback)((e) => {
+-				e.preventDefault();
+-				e.currentTarget.setPointerCapture(e.pointerId);
+-				origin.current = e.clientX;
+-				latest.current = e.clientX;
+-				base.current = callbacks.current.onStart();
+-				setDragging(true);
+-			}, []);
+-			const onPointerMove = (0, react.useCallback)((e) => {
+-				const box = e.currentTarget.getBoundingClientRect();
+-				e.currentTarget.style.setProperty("--dsh-width-handle-pointer-y", `${e.clientY - box.top}px`);
+-				if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+-				latest.current = e.clientX;
+-				frame.current ??= requestAnimationFrame(() => {
+-					frame.current = null;
+-					callbacks.current.onDrag(outwardWidth());
+-				});
+-			}, []);
+-			const onPointerUp = (0, react.useCallback)((e) => {
+-				if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+-				e.currentTarget.releasePointerCapture(e.pointerId);
+-				cancelFrame();
+-				latest.current = e.clientX;
+-				if (latest.current !== origin.current) callbacks.current.onCommit(outwardWidth());
+-				setDragging(false);
+-				callbacks.current.onEnd();
+-			}, []);
+-			const onPointerCancel = (0, react.useCallback)(() => {
+-				cancelFrame();
+-				setDragging(false);
+-				callbacks.current.onEnd();
+-			}, []);
+-			return (0, react_jsx_runtime.jsx)("div", {
+-				className: ConversationRoot_module_css_default.widthHandle,
+-				"data-side": props.side,
+-				"data-width-handle": props.side,
+-				"data-dragging": dragging || void 0,
+-				onPointerDown,
+-				onPointerMove,
+-				onPointerUp,
+-				onPointerCancel,
+-				onLostPointerCapture: onPointerCancel
+-			});
+-		}
+ 		function ConversationRoot({ sessionId, useSession, useSessions, useSessionPendingInteraction, useWorkspaces, useConversation, useInput, useComposerBlock, renderSlot, renderSlotChain, selectWorkspace, t }) {
+ 			const session = useSession((s) => s);
+ 			const pendingInteraction = useSessionPendingInteraction((snapshot) => sessionId === void 0 ? void 0 : snapshot.get(sessionId));
+@@ -14809,19 +14644,13 @@ window.__ModuleLoader__.load({
+ 				seatObserver.current.observe(seat);
+ 				seatObserver.current.observe(scroller);
+ 			}, []);
+-			const rootEl = (0, react.useRef)(null);
+ 			const rootObserver = (0, react.useRef)(null);
+ 			const publishWidths = (0, react.useCallback)((root) => {
+-				const column = root.offsetWidth;
+-				root.style.setProperty("--dsh-conversation-column-width", `${column}px`);
+-				const preference = readWidthPreference();
+-				if (preference === null) root.style.removeProperty("--dsh-chat-user-width");
+-				else root.style.setProperty("--dsh-chat-user-width", `${resolveContentWidth(column, preference)}px`);
++				root.style.setProperty("--dsh-conversation-column-width", `${root.offsetWidth}px`);
+ 			}, []);
+ 			const rootResizeRef = (0, react.useCallback)((root) => {
+ 				rootObserver.current?.disconnect();
+ 				rootObserver.current = null;
+-				rootEl.current = root;
+ 				if (root === null) return;
+ 				rootObserver.current = new ResizeObserver(() => {
+ 					publishWidths(root);
+@@ -14829,29 +14658,6 @@ window.__ModuleLoader__.load({
+ 				rootObserver.current.observe(root);
+ 				publishWidths(root);
+ 			}, [publishWidths]);
+-			const onHandleStart = (0, react.useCallback)(() => {
+-				const root = rootEl.current;
+-				/* v8 ignore next -- handles render inside the root, so the ref is always attached. */
+-				if (root === null) return 680;
+-				return resolveContentWidth(root.offsetWidth, readWidthPreference());
+-			}, []);
+-			const onHandleDrag = (0, react.useCallback)((width) => {
+-				const root = rootEl.current;
+-				/* v8 ignore next -- handles render inside the root, so the ref is always attached. */
+-				if (root === null) return;
+-				const clamped = resolveContentWidth(root.offsetWidth, width);
+-				root.style.setProperty("--dsh-chat-user-width", `${clamped}px`);
+-			}, []);
+-			const onHandleCommit = (0, react.useCallback)((width) => {
+-				const root = rootEl.current;
+-				/* v8 ignore next -- handles render inside the root, so the ref is always attached. */
+-				if (root === null) return;
+-				localStorage.setItem(WIDTH_PREF_KEY, `${resolveContentWidth(root.offsetWidth, width)}`);
+-			}, []);
+-			const onHandleEnd = (0, react.useCallback)(() => {
+-				const root = rootEl.current;
+-				if (root !== null) publishWidths(root);
+-			}, [publishWidths]);
+ 			const sessionWorkspace = sessionId === void 0 ? void 0 : workspaces.items.find((workspace) => workspace.sessionIds.includes(sessionId));
+ 			const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);
+ 			(0, react.useEffect)(() => {
+@@ -14898,12 +14704,17 @@ window.__ModuleLoader__.load({
  							setPickerOpen(false);
  						}
  					}),
@@ -90,7 +272,7 @@ index 1b7f134..2af08b1 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -14919,10 +14901,6 @@ window.__ModuleLoader__.load({
+@@ -14919,10 +14730,6 @@ window.__ModuleLoader__.load({
  			const composerBar = (0, react_jsx_runtime.jsxs)("div", {
  				className: clsx(ConversationRoot_module_css_default.composerStack, hero && ConversationRoot_module_css_default.composerHero),
  				children: [
@@ -101,7 +283,7 @@ index 1b7f134..2af08b1 100644
  					hero && heroWorkspaceRow,
  					zone !== void 0 && renderSlot("conversation.input.dock", zone),
  					inputBar
-@@ -14954,13 +14932,7 @@ window.__ModuleLoader__.load({
+@@ -14954,13 +14761,7 @@ window.__ModuleLoader__.load({
  						className: ConversationRoot_module_css_default.scrollBody,
  						"data-conversation-scroll": "",
  						children: [sessionId === void 0 ? null : renderSlot("conversation.session", {}), composerSeat]
@@ -116,7 +298,7 @@ index 1b7f134..2af08b1 100644
  				})]
  			});
  		}
-@@ -15754,13 +15726,14 @@ window.__ModuleLoader__.load({
+@@ -15754,13 +15555,14 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css.mjs
@@ -133,7 +315,7 @@ index 1b7f134..2af08b1 100644
  			document.head.appendChild(tag);
  		}
  		var InputBar_module_css_default = {
-@@ -15779,6 +15752,7 @@ window.__ModuleLoader__.load({
+@@ -15779,6 +15581,7 @@ window.__ModuleLoader__.load({
  			"pending": "uV2eYG_pending",
  			"placeholder": "uV2eYG_placeholder",
  			"primary": "uV2eYG_primary",
@@ -141,7 +323,7 @@ index 1b7f134..2af08b1 100644
  			"retry": "uV2eYG_retry",
  			"root": "uV2eYG_root",
  			"row": "uV2eYG_row",
-@@ -15803,7 +15777,7 @@ window.__ModuleLoader__.load({
+@@ -15803,7 +15606,7 @@ window.__ModuleLoader__.load({
  		* The no-session state renders the SAME div inert as the Workspace-picker
  		* trigger instead of a parallel tree.
  		*/
@@ -150,7 +332,7 @@ index 1b7f134..2af08b1 100644
  			const input = useInput((s) => s);
  			const notice = useNotices((s) => s);
  			const busyEnter = useBusyEnter((s) => s);
-@@ -16075,10 +16049,6 @@ window.__ModuleLoader__.load({
+@@ -16075,10 +15878,6 @@ window.__ModuleLoader__.load({
  								className: InputBar_module_css_default.overlayAnchor,
  								children: renderSlot("conversation.input.overlay", {})
  							}),
@@ -161,7 +343,7 @@ index 1b7f134..2af08b1 100644
  							renderSlot("conversation.input.attachments", {
  								attachments,
  								canAcceptDrop,
-@@ -16095,13 +16065,20 @@ window.__ModuleLoader__.load({
+@@ -16095,13 +15894,20 @@ window.__ModuleLoader__.load({
  									size: imageSizeText(imageLimits.maxImageBytes)
  								}
  							}),
@@ -189,7 +371,7 @@ index 1b7f134..2af08b1 100644
  										(0, react_jsx_runtime.jsx)(ComposerContentEditable, {
  											editor: workspaceTrigger ? null : editor,
  											editable,
-@@ -16123,8 +16100,9 @@ window.__ModuleLoader__.load({
+@@ -16123,8 +15929,9 @@ window.__ModuleLoader__.load({
  											children: placeholderText
  										}),
  										(0, react_jsx_runtime.jsx)(DecoratorPortals, { editor: workspaceTrigger ? null : editor })
@@ -201,7 +383,7 @@ index 1b7f134..2af08b1 100644
  							}),
  							(0, react_jsx_runtime.jsxs)("div", {
  								className: InputBar_module_css_default.row,
-@@ -16256,7 +16234,7 @@ window.__ModuleLoader__.load({
+@@ -16256,7 +16063,7 @@ window.__ModuleLoader__.load({
  							})
  						]
  					}),
@@ -210,7 +392,7 @@ index 1b7f134..2af08b1 100644
  				]
  			});
  		});
-@@ -16641,6 +16619,10 @@ window.__ModuleLoader__.load({
+@@ -16641,6 +16448,10 @@ window.__ModuleLoader__.load({
  					"conversation.hero.agentPreset": {
  						kind: "single",
  						scope: "root"
@@ -221,7 +403,7 @@ index 1b7f134..2af08b1 100644
  					}
  				},
  				inject: (sessionId) => ({
-@@ -16721,6 +16703,10 @@ window.__ModuleLoader__.load({
+@@ -16721,6 +16532,10 @@ window.__ModuleLoader__.load({
  						kind: "single",
  						scope: "session-maybe"
  					},

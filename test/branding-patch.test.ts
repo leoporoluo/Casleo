@@ -64,9 +64,9 @@ describe('Casleo sidebar branding', () => {
     expect(patch).not.toContain('brandWordmark')
     expect(patch).toContain('[data-dsh-sidebar-root]')
     expect(patch).toContain('padding-top:32px')
-    expect(patch).toContain('navigator.userAgent.includes("Macintosh")')
-    expect(patch).toContain('padding-top:28px')
-    expect(patch).toContain('padding:32px 22px 6px')
+    // Windows-first: the renderer carries no mac UA-sniffed padding branch.
+    expect(patch).not.toContain('Macintosh')
+    expect(patch).not.toContain('padding-top:28px')
     // The wide row shows the wordmark only; the mark remains the collapsed
     // rail's toggle glyph.
     expect(patch).toContain('[data-dsh-sidebar-brand-identity]{flex:1;min-width:0}')
@@ -97,24 +97,21 @@ describe('Casleo sidebar branding', () => {
       )
     ])
 
-    expect(patch).toContain('HeroShell_module_css_default.headline')
-    const heroShell = installed.slice(
-      installed.indexOf('function HeroShell'),
-      installed.indexOf('function HeroShell') + 600
-    )
-    expect(heroShell).toContain('className: HeroShell_module_css_default.body')
-    expect(heroShell).not.toContain('HeroShell_module_css_default.headline')
-    expect(heroShell).not.toContain('hero.headline')
-    expect(heroShell).not.toContain('conversation.hero.brand.mark')
+    // The shell itself is deleted: the hero is the workspace row plus composer.
+    expect(installed).not.toContain('function HeroShell')
+    expect(installed).not.toContain('function HeroFish')
+    expect(installed).toContain('hero && heroWorkspaceRow')
+    expect(installed).not.toContain('HeroShell_module_css_default.headline')
   })
 
-  it('uses an 80px macOS rail that clears the traffic lights', async () => {
+  it('pins the collapsed rail at 56px with no platform sniffing', async () => {
     const patch = await readFile(
       patchPath('@deepseek-ai/dsh-client-ui-layout'),
       'utf8'
     )
 
-    expect(patch).toContain('navigator.userAgent.includes("Macintosh") ? 80 : 56')
+    expect(patch).toContain('const COLLAPSED_SIDEBAR_WIDTH = 56')
+    expect(patch).not.toContain('navigator.userAgent.includes("Macintosh")')
     expect(patch).toContain('sidebar === 0 ? COLLAPSED_SIDEBAR_WIDTH')
   })
 

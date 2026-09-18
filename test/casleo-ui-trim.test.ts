@@ -180,7 +180,10 @@ describe('Casleo interface trims', () => {
     expect(layout).not.toContain('const productTitle = "DeepSeek Harness"')
     // Width handles are gone; ignore any stored preference so an old drag cannot
     // trap the transcript at a width the user can no longer change.
-    expect(conversation).toContain('function readWidthPreference() {\n\t\t\treturn null;\n\t\t}')
+    // The width machinery is deleted outright: no stored preference, no handles.
+    expect(conversation).not.toContain('dsh.conversation.contentWidth')
+    expect(conversation).not.toContain('readWidthPreference')
+    expect(conversation).not.toContain('WidthHandle')
     expect(conversation).toContain(
       'variant === "composer" && extensionZone !== void 0 ? renderSlot("conversation.composer.dock", extensionZone) : null'
     )
