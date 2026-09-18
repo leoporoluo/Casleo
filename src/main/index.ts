@@ -974,6 +974,12 @@ function createWindow(): BrowserWindow {
   window.on('session-end', () => {
     desktopStorageManager?.flushSync()
   })
+  window.on('page-title-updated', (event) => {
+    event.preventDefault()
+    // The native caption band carries the product name only; conversation
+    // titles stay inside the app's own header.
+    window.setTitle('Casleo')
+  })
   window.webContents.on('console-message', (details) => {
     if (details.level !== 'error') return
     const sourceUrl = details.sourceId || window.webContents.getURL()

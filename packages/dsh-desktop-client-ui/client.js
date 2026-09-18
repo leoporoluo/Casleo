@@ -56,8 +56,8 @@ window.__ModuleLoader__.load({
       '.casleoProxyRow_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}' +
       '.casleoProxyRow_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}' +
       '.casleoProxyRow_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}' +
-      '.casleoProxyRow_control{flex-direction:column;flex:none;gap:8px;width:300px;display:flex}' +
-      '.casleoProxyRow_input{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);text-overflow:ellipsis;border:none;border-radius:18px;outline:none;box-sizing:border-box;padding:0 14px;font-size:14px;line-height:22px;width:100%}' +
+      '.casleoProxyRow_control{flex:none;align-items:center;gap:8px;width:340px;display:flex}' +
+      '.casleoProxyRow_input{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);text-overflow:ellipsis;border:none;border-radius:18px;outline:none;box-sizing:border-box;padding:0 14px;font-size:14px;line-height:22px;min-width:0;flex:1}' +
       '.casleoProxyRow_input::placeholder{color:var(--dsw-alias-label-caption)}' +
       '.casleoProxyRow_input:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary);outline-offset:-2px}' +
       '.casleoProxyRow_statusRow{align-items:center;gap:10px;min-height:24px;display:flex}' +
@@ -80,30 +80,26 @@ window.__ModuleLoader__.load({
     const PROXY_LOCALE = {
       zh: {
         'proxy.title': '网络代理',
-        'proxy.description': '模型与联网请求将使用此代理；留空则直连。保存后重启 Casleo 生效。',
         'proxy.placeholder': 'http://192.168.0.105:7890',
         'proxy.save': '保存',
         'proxy.saving': '保存中…',
-        'proxy.saved': '已保存，重启 Casleo 后生效',
-        'proxy.empty': '当前直连',
+        'proxy.saved': '已保存，重启 Casleo 生效',
         'safe.title': '安全模式',
         'safe.description': '怀疑插件冲突时，以安全模式重启：停用所有第三方插件后再排查。',
-        'safe.restart': '以安全模式重启…',
+        'safe.restart': '以安全模式重启',
         'safe.restarting': '正在重启…',
         'notify.title': '桌面通知',
         'notify.description': '任务结束（完成或失败）且窗口不在前台时，弹系统通知；点击通知回到窗口。'
       },
       en: {
         'proxy.title': 'Network proxy',
-        'proxy.description': 'Model and web requests use this proxy; leave empty for a direct connection. Restart Casleo to apply.',
         'proxy.placeholder': 'http://192.168.0.105:7890',
         'proxy.save': 'Save',
         'proxy.saving': 'Saving…',
-        'proxy.saved': 'Saved — restart Casleo to apply',
-        'proxy.empty': 'Direct connection',
+        'proxy.saved': 'Saved — restart to apply',
         'safe.title': 'Safe mode',
         'safe.description': 'When a plugin breaks startup, restart with all third-party plugins disabled.',
-        'safe.restart': 'Restart as Safe Mode…',
+        'safe.restart': 'Restart as Safe Mode',
         'safe.restarting': 'Restarting…',
         'notify.title': 'Desktop notifications',
         'notify.description': 'When a run ends (done or failed) while the window is not focused, show a system notification; clicking it returns to the window.'
@@ -148,20 +144,21 @@ window.__ModuleLoader__.load({
       }
 
       const statusKind = error !== null ? 'error' : savedAt !== 0 ? 'saved' : 'idle'
-      const statusText = error !== null
-        ? error
-        : savedAt !== 0
-          ? t('proxy.saved')
-          : value.trim() === '' ? t('proxy.empty') : ''
+      const statusText = error !== null ? error : savedAt !== 0 ? t('proxy.saved') : ''
 
       return ReactJSXRuntime.jsx('div', {
         className: 'casleoProxyRow_row',
         children: [
-          ReactJSXRuntime.jsxs('div', {
+          ReactJSXRuntime.jsx('div', {
             className: 'casleoProxyRow_rowText',
             children: [
               ReactJSXRuntime.jsx('div', { className: 'casleoProxyRow_title', children: t('proxy.title') }),
-              ReactJSXRuntime.jsx('div', { className: 'casleoProxyRow_desc', children: t('proxy.description') })
+              error === null ? null : ReactJSXRuntime.jsx('div', {
+                className: 'casleoProxyRow_desc',
+                'data-kind': statusKind,
+                role: 'alert',
+                children: statusText
+              })
             ]
           }),
           ReactJSXRuntime.jsxs('div', {
@@ -183,23 +180,12 @@ window.__ModuleLoader__.load({
                   if (event.key === 'Enter') save()
                 }
               }),
-              ReactJSXRuntime.jsxs('div', {
-                className: 'casleoProxyRow_statusRow',
-                children: [
-                  ReactJSXRuntime.jsx(primitives.Button, {
-                    variant: 'primary',
-                    size: 'sm',
-                    disabled: !loaded || saving,
-                    onClick: save,
-                    children: t(saving ? 'proxy.saving' : 'proxy.save')
-                  }),
-                  statusText === '' ? null : ReactJSXRuntime.jsx('span', {
-                    className: 'casleoProxyRow_status',
-                    'data-kind': statusKind,
-                    role: error !== null ? 'alert' : undefined,
-                    children: statusText
-                  })
-                ]
+              ReactJSXRuntime.jsx(primitives.Button, {
+                variant: savedAt !== 0 ? 'outline' : 'primary',
+                size: 'sm',
+                disabled: !loaded || saving,
+                onClick: save,
+                children: t(saving ? 'proxy.saving' : savedAt !== 0 ? 'proxy.saved' : 'proxy.save')
               })
             ]
           })

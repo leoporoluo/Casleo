@@ -521,6 +521,8 @@ export class HarnessRuntime {
       )
     }
     this.writeLog(`[desktop] endpoint ${url}`)
+    const configuredProxy = this.options.proxyUrl?.()
+    this.writeLog(`[desktop] proxy ${configuredProxy ? configuredProxy : 'direct'}`)
     this.setState('starting', 'Starting DeepSeek Harness…')
 
     const shellEnvironment = await prewarmShellEnvironment()

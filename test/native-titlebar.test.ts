@@ -21,10 +21,9 @@ describe('native Windows titlebar', () => {
     expect(main).toContain("frame: process.platform !== 'darwin'")
     expect(main).toContain('...(isWindows ? { autoHideMenuBar: true } : {})')
     expect(main).not.toContain('titleBarOverlay')
-    expect(main).not.toContain("title: ''")
     expect(main).toContain("title: 'Casleo'")
-    // document.title flows into the native caption band.
-    expect(main).not.toContain("window.setTitle('')")
+    // document.title is not allowed into the caption band: it stays "Casleo".
+    expect(main).toContain("window.setTitle('Casleo')")
     expect(main).not.toContain('setMenuBarVisibility(false)')
     expect(main).toContain('Menu.setApplicationMenu(Menu.buildFromTemplate(template))')
     expect(viteConfig).not.toContain('windows-menu')
