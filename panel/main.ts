@@ -8,6 +8,9 @@
  *
  * Everything the user fills in — provider name, base URL, API key, models,
  * context length and reasoning levels — is written as plain provider config.
+ * Saving merges with what is already on disk (see providers.ts) and edits the
+ * file in place (see jsonc.ts), so fields Casleo does not manage, comments
+ * and unrelated settings all survive.
  */
 import { connectHost, HostRequestError } from '@openchamber/sdk';
 import {
@@ -21,50 +24,35 @@ import {
   mountSpinner,
   mountTextField,
 } from '@openchamber/sdk/ui';
+import {
+  applyTopLevelEdits,
+  isObject,
+  parseConfig,
+  type JsonObject,
+  type TopLevelEdit,
+} from './jsonc';
+import {
+  PROTOCOLS,
+  buildProvider,
+  collectProviders,
+  draftFrom,
+  emptyDraft,
+  emptyModel,
+  settingsOf,
+  type ProtocolId,
+  type ProviderDraft,
+} from './providers';
 
 /* ----------------------------------------------------------------- config */
 
+// opencode.jsonc first, matching OpenCode's own precedence: it merges
+// config.json < opencode.json < opencode.jsonc, so the jsonc file wins.
 const CONFIG_PATHS = [
-  '~/.config/opencode/opencode.json',
   '~/.config/opencode/opencode.jsonc',
+  '~/.config/opencode/opencode.json',
 ] as const;
 
 const DEFAULT_CONFIG: JsonObject = { $schema: 'https://opencode.ai/config.json' };
-
-/* ------------------------------------------------------------------ types */
-
-type JsonObject = { [key: string]: Json };
-type Json = string | number | boolean | null | Json[] | JsonObject;
-
-const isObject = (value: unknown): value is JsonObject => (
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-);
-
-const PROTOCOLS = [
-  { id: 'openai-chat', label: 'OpenAI Chat Completions', package: 'aisdk:@ai-sdk/openai-compatible' },
-  { id: 'openai-responses', label: 'OpenAI Responses', package: 'aisdk:@ai-sdk/openai' },
-  { id: 'anthropic-messages', label: 'Anthropic Messages', package: 'aisdk:@ai-sdk/anthropic' },
-] as const;
-
-type ProtocolId = (typeof PROTOCOLS)[number]['id'];
-
-type ModelDraft = {
-  key: string;
-  id: string;
-  name: string;
-  context: string;
-  output: string;
-  reasoning: string;
-};
-
-type ProviderDraft = {
-  providerID: string;
-  name: string;
-  protocol: ProtocolId;
-  baseURL: string;
-  apiKey: string;
-  models: ModelDraft[];
-};
 
 type Disposable = { dispose: () => void };
 
@@ -75,6 +63,7 @@ const STRINGS = {
     title: 'Casleo',
     tagline: 'Custom providers for OpenCode',
     add: 'Add provider',
+    refresh: 'Refresh',
     loading: 'Reading opencode.json…',
     readFailed: 'Could not read opencode.json',
     retry: 'Try again',
@@ -125,12 +114,15 @@ const STRINGS = {
     errName: 'Enter a display name.',
     errURL: 'Base URL must start with http:// or https://',
     errModel: 'Add at least one model with an ID.',
+    errModelDuplicate: 'Two models have the same ID.',
+    errModelIncomplete: 'Every model needs an ID; remove the rows you do not want.',
     modelCount: '{count} models',
   },
   zh: {
     title: 'Casleo',
     tagline: 'OpenCode 自定义供应商',
     add: '新增供应商',
+    refresh: '刷新',
     loading: '正在读取 opencode.json…',
     readFailed: '无法读取 opencode.json',
     retry: '重试',
@@ -181,111 +173,13 @@ const STRINGS = {
     errName: '请填写供应商名称。',
     errURL: 'Base URL 需要以 http:// 或 https:// 开头。',
     errModel: '至少填写一个模型 ID。',
+    errModelDuplicate: '存在重复的模型 ID。',
+    errModelIncomplete: '每个模型都要填写 ID；不需要的行请删除。',
     modelCount: '{count} 个模型',
   },
 } as const;
 
 type Strings = (typeof STRINGS)[keyof typeof STRINGS];
-
-/* ------------------------------------------------------------- json + jsonc */
-
-/** Drop line and block comments that sit outside strings. */
-const stripComments = (text: string): string => {
-  let out = '';
-  let inString = false;
-  let inLine = false;
-  let inBlock = false;
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index]!;
-    const next = text[index + 1];
-    if (inLine) {
-      if (char === '\n') {
-        inLine = false;
-        out += char;
-      }
-      continue;
-    }
-    if (inBlock) {
-      if (char === '*' && next === '/') {
-        inBlock = false;
-        index += 1;
-      }
-      continue;
-    }
-    if (inString) {
-      out += char;
-      if (char === '\\') {
-        out += next ?? '';
-        index += 1;
-        continue;
-      }
-      if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') {
-      inString = true;
-      out += char;
-      continue;
-    }
-    if (char === '/' && next === '/') {
-      inLine = true;
-      index += 1;
-      continue;
-    }
-    if (char === '/' && next === '*') {
-      inBlock = true;
-      index += 1;
-      continue;
-    }
-    out += char;
-  }
-  return out;
-};
-
-/** Drop trailing commas that sit outside strings. */
-const stripTrailingCommas = (text: string): string => {
-  let out = '';
-  let inString = false;
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index]!;
-    if (inString) {
-      out += char;
-      if (char === '\\') {
-        out += text[index + 1] ?? '';
-        index += 1;
-        continue;
-      }
-      if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') {
-      inString = true;
-      out += char;
-      continue;
-    }
-    if (char === ',') {
-      let look = index + 1;
-      while (look < text.length && /\s/.test(text[look]!)) look += 1;
-      if (text[look] === '}' || text[look] === ']') continue;
-    }
-    out += char;
-  }
-  return out;
-};
-
-const parseConfig = (text: string): JsonObject => {
-  try {
-    const value: unknown = JSON.parse(text);
-    if (!isObject(value)) throw new Error('The config root must be a JSON object.');
-    return value;
-  } catch (error) {
-    const relaxed = stripTrailingCommas(stripComments(text));
-    const value: unknown = JSON.parse(relaxed);
-    if (!isObject(value)) throw new Error('The config root must be a JSON object.');
-    void error;
-    return value;
-  }
-};
 
 const errorText = (error: unknown): string => (
   error instanceof HostRequestError
@@ -294,145 +188,6 @@ const errorText = (error: unknown): string => (
       ? error.message
       : String(error)
 );
-
-/* --------------------------------------------------------------- providers */
-
-const protocolFromPackage = (pkg: string): ProtocolId => {
-  if (pkg.includes('anthropic')) return 'anthropic-messages';
-  if (pkg.includes('openai-compatible') || pkg.includes('/chat')) return 'openai-chat';
-  if (pkg.includes('openai')) return 'openai-responses';
-  return 'openai-chat';
-};
-
-let modelKeySeq = 0;
-const emptyModel = (): ModelDraft => ({
-  key: `m${modelKeySeq += 1}`,
-  id: '',
-  name: '',
-  context: '',
-  output: '',
-  reasoning: '',
-});
-
-const emptyDraft = (): ProviderDraft => ({
-  providerID: '',
-  name: '',
-  protocol: 'openai-chat',
-  baseURL: '',
-  apiKey: '',
-  models: [emptyModel()],
-});
-
-const settingsOf = (provider: JsonObject): JsonObject => (
-  isObject(provider.settings) ? provider.settings : isObject(provider.options) ? provider.options : {}
-);
-
-const packageOf = (provider: JsonObject): string => {
-  if (typeof provider.package === 'string') return provider.package;
-  if (isObject(provider.api) && typeof provider.api.npm === 'string') return `aisdk:${provider.api.npm}`;
-  return '';
-};
-
-const readModels = (provider: JsonObject): ModelDraft[] => {
-  const models = provider.models;
-  const pairs: Array<[string, Json]> = Array.isArray(models)
-    ? models.map((item, index) => {
-        const entry = isObject(item) ? item : {};
-        const id = typeof entry.modelID === 'string' ? entry.modelID : typeof entry.id === 'string' ? entry.id : String(index);
-        return [id, item] as [string, Json];
-      })
-    : isObject(models)
-      ? Object.entries(models)
-      : [];
-
-  const drafts = pairs.map(([key, value]) => {
-    const entry = isObject(value) ? value : {};
-    const id = typeof entry.modelID === 'string' && entry.modelID ? entry.modelID : key;
-    const limit = isObject(entry.limit) ? entry.limit : {};
-    const variants = Array.isArray(entry.variants)
-      ? entry.variants
-          .map((variant) => (isObject(variant) && typeof variant.id === 'string' ? variant.id : ''))
-          .filter((id) => id.length > 0)
-      : [];
-    return {
-      key: `m${modelKeySeq += 1}`,
-      id,
-      name: typeof entry.name === 'string' && entry.name ? entry.name : id,
-      context: typeof limit.context === 'number' ? String(limit.context) : '',
-      output: typeof limit.output === 'number' ? String(limit.output) : '',
-      reasoning: variants.join(', '),
-    };
-  });
-
-  return drafts.length > 0 ? drafts : [emptyModel()];
-};
-
-const draftFrom = (id: string, provider: JsonObject): ProviderDraft => {
-  const settings = settingsOf(provider);
-  return {
-    providerID: id,
-    name: typeof provider.name === 'string' && provider.name ? provider.name : id,
-    protocol: protocolFromPackage(packageOf(provider)),
-    baseURL: typeof settings.baseURL === 'string' ? settings.baseURL : '',
-    apiKey: typeof settings.apiKey === 'string' ? settings.apiKey : '',
-    models: readModels(provider),
-  };
-};
-
-const variantOverlay = (protocol: ProtocolId, effort: string): JsonObject => {
-  if (protocol === 'anthropic-messages') {
-    return { thinking: { type: 'adaptive', display: 'summarized' }, effort };
-  }
-  if (protocol === 'openai-responses') {
-    return { reasoningEffort: effort, reasoningSummary: 'auto', include: ['reasoning.encrypted_content'] };
-  }
-  return { reasoningEffort: effort };
-};
-
-const buildProvider = (draft: ProviderDraft): JsonObject => {
-  const models: JsonObject = {};
-  for (const model of draft.models) {
-    const id = model.id.trim();
-    if (!id) continue;
-    const entry: JsonObject = { modelID: id, name: model.name.trim() || id };
-    const context = Number.parseInt(model.context, 10);
-    const output = Number.parseInt(model.output, 10);
-    const limit: JsonObject = {};
-    if (Number.isFinite(context) && context > 0) limit.context = context;
-    if (Number.isFinite(output) && output > 0) limit.output = output;
-    if (Object.keys(limit).length > 0) entry.limit = limit;
-    const levels = model.reasoning.split(/[,\s]+/).map((level) => level.trim()).filter(Boolean);
-    if (levels.length > 0) {
-      entry.variants = levels.map((level) => ({ id: level, settings: variantOverlay(draft.protocol, level) }));
-    }
-    models[id] = entry;
-  }
-
-  const settings: JsonObject = { baseURL: draft.baseURL.trim() };
-  const apiKey = draft.apiKey.trim();
-  if (apiKey) settings.apiKey = apiKey;
-
-  return {
-    name: draft.name.trim() || draft.providerID.trim(),
-    package: PROTOCOLS.find((protocol) => protocol.id === draft.protocol)!.package,
-    settings,
-    models,
-  };
-};
-
-const collectProviders = (config: JsonObject): Array<{ id: string; config: JsonObject }> => {
-  const found = new Map<string, JsonObject>();
-  for (const key of ['provider', 'providers'] as const) {
-    const block = config[key];
-    if (!isObject(block)) continue;
-    for (const [id, value] of Object.entries(block)) {
-      if (isObject(value)) found.set(id, value);
-    }
-  }
-  return [...found.entries()]
-    .map(([id, value]) => ({ id, config: value }))
-    .sort((left, right) => left.id.localeCompare(right.id));
-};
 
 /* ------------------------------------------------------------------- state */
 
@@ -508,22 +263,33 @@ const flexColumn = (parent: Element, basis = '120px'): HTMLElement => {
 
 /* --------------------------------------------------------------- file i/o */
 
-const readConfig = async (): Promise<{ config: JsonObject; path: string }> => {
+const readConfig = async (): Promise<{ config: JsonObject; path: string; text: string | null }> => {
   for (const path of CONFIG_PATHS) {
     const stat = await host.stat(path);
     if (stat.kind === 'file') {
       const { content } = await host.readFile(path);
-      return { config: parseConfig(content), path };
+      return { config: parseConfig(content), path, text: content };
     }
     if (stat.kind !== 'missing') {
       throw new Error(`${path} is a ${stat.kind}, not a file.`);
     }
   }
-  return { config: { ...DEFAULT_CONFIG }, path: CONFIG_PATHS[0] };
+  return { config: { ...DEFAULT_CONFIG }, path: CONFIG_PATHS[0], text: null };
 };
 
-const writeConfig = async (path: string, config: JsonObject): Promise<void> => {
-  await host.writeFile(path, `${JSON.stringify(config, null, 2)}\n`);
+/**
+ * Patches the top-level keys named by `edits` in place when the file text is
+ * available — keeping comments, trailing commas and unrelated settings — and
+ * falls back to rewriting the whole file when it is not.
+ */
+const writeConfig = async (
+  path: string,
+  text: string | null,
+  edits: TopLevelEdit[],
+  config: JsonObject,
+): Promise<void> => {
+  const patched = text === null ? null : applyTopLevelEdits(text, edits);
+  await host.writeFile(path, patched ?? `${JSON.stringify(config, null, 2)}\n`);
 };
 
 const load = async (): Promise<void> => {
@@ -554,7 +320,17 @@ const validate = (current: ProviderDraft): Record<string, string | undefined> =>
   }
   if (!current.name.trim()) errors.name = t.errName;
   if (!/^https?:\/\//.test(current.baseURL.trim())) errors.baseURL = t.errURL;
-  if (!current.models.some((model) => model.id.trim().length > 0)) errors.models = t.errModel;
+  const ids = current.models.map((model) => model.id.trim()).filter(Boolean);
+  if (ids.length === 0) {
+    errors.models = t.errModel;
+  } else if (new Set(ids).size !== ids.length) {
+    errors.models = t.errModelDuplicate;
+  } else if (current.models.some(
+    (model) => !model.id.trim()
+      && (model.name.trim() || model.context.trim() || model.output.trim() || model.reasoning.trim()),
+  )) {
+    errors.models = t.errModelIncomplete;
+  }
   return errors;
 };
 
@@ -569,17 +345,24 @@ const saveDraft = async (): Promise<void> => {
   busy = true;
   render();
   try {
-    const { config, path } = await readConfig();
+    const { config, path, text } = await readConfig();
     const id = current.providerID.trim();
     const providers = isObject(config.providers) ? { ...config.providers } : {};
-    providers[id] = buildProvider(current);
+    const legacy = isObject(config.provider) ? { ...config.provider } : null;
+    const existing = isObject(providers[id])
+      ? providers[id]
+      : legacy !== null && isObject(legacy[id])
+        ? legacy[id]
+        : undefined;
+    providers[id] = buildProvider(current, existing);
     config.providers = providers;
-    if (isObject(config.provider)) {
-      const legacy = { ...config.provider };
+    const edits: TopLevelEdit[] = [{ key: 'providers', value: providers }];
+    if (legacy !== null && id in legacy) {
       delete legacy[id];
       config.provider = legacy;
+      edits.push({ key: 'provider', value: legacy });
     }
-    await writeConfig(path, config);
+    await writeConfig(path, text, edits, config);
     await host.toast({ kind: 'success', message: t.saved.replace('{name}', current.name.trim() || id) });
     busy = false;
     view = 'list';
@@ -601,17 +384,29 @@ const deleteProvider = async (): Promise<void> => {
   busy = true;
   render();
   try {
-    const { config, path } = await readConfig();
+    const { config, path, text } = await readConfig();
+    const edits: TopLevelEdit[] = [];
     let removed = false;
-    for (const key of ['provider', 'providers'] as const) {
-      const block = config[key];
-      if (!isObject(block) || !(id in block)) continue;
-      const next = { ...block };
-      delete next[id];
-      config[key] = next;
+    if (isObject(config.providers) && id in config.providers) {
+      const providers = { ...config.providers };
+      delete providers[id];
+      if (Object.keys(providers).length > 0) {
+        config.providers = providers;
+        edits.push({ key: 'providers', value: providers });
+      } else {
+        delete config.providers;
+        edits.push({ key: 'providers', value: undefined });
+      }
       removed = true;
     }
-    if (removed) await writeConfig(path, config);
+    if (isObject(config.provider) && id in config.provider) {
+      const legacy = { ...config.provider };
+      delete legacy[id];
+      config.provider = legacy;
+      edits.push({ key: 'provider', value: legacy });
+      removed = true;
+    }
+    if (removed) await writeConfig(path, text, edits, config);
     await host.toast({ kind: 'success', message: t.deleted.replace('{name}', id) });
     busy = false;
     view = 'list';
@@ -646,7 +441,15 @@ const renderList = (body: HTMLElement): void => {
   heading(titles, t.title, '15px');
   muted(titles, t.tagline);
 
-  mounted.push(mountButton(header, { label: t.add, size: 'sm', onClick: openCreate }));
+  const actions = row(header, '6px');
+  mounted.push(mountButton(actions, { label: t.add, size: 'sm', onClick: openCreate }));
+  mounted.push(mountButton(actions, {
+    label: t.refresh,
+    variant: 'ghost',
+    size: 'sm',
+    disabled: loading,
+    onClick: () => void load(),
+  }));
 
   if (loading) {
     mounted.push(mountSpinner(body, { label: t.loading }));
@@ -727,7 +530,7 @@ const renderForm = (body: HTMLElement): void => {
     mounted.push(mountBanner(body, { tone: 'error', title: t.readFailed, body: fatal }));
   }
 
-  mounted.push(mountTextField(body, {
+  const idField = mountTextField(body, {
     label: t.fieldID,
     value: current.providerID,
     mono: true,
@@ -735,31 +538,52 @@ const renderForm = (body: HTMLElement): void => {
     error: fieldErrors.providerID,
     helper: t.fieldIDHelp,
     placeholder: t.placeholderID,
-    onChange: (value) => { current.providerID = value; },
-  }));
-  mounted.push(mountTextField(body, {
+    onChange: (value) => {
+      current.providerID = value;
+      if (fieldErrors.providerID !== undefined) {
+        fieldErrors.providerID = undefined;
+        idField.update({ error: undefined });
+      }
+    },
+  });
+  mounted.push(idField);
+  const nameField = mountTextField(body, {
     label: t.fieldName,
     value: current.name,
     error: fieldErrors.name,
     helper: t.fieldNameHelp,
     placeholder: t.placeholderName,
-    onChange: (value) => { current.name = value; },
-  }));
+    onChange: (value) => {
+      current.name = value;
+      if (fieldErrors.name !== undefined) {
+        fieldErrors.name = undefined;
+        nameField.update({ error: undefined });
+      }
+    },
+  });
+  mounted.push(nameField);
   mounted.push(mountSelect(body, {
     label: t.fieldProtocol,
     value: current.protocol,
     options: PROTOCOLS.map((protocol) => ({ id: protocol.id, label: protocol.label })),
     onChange: (id) => { current.protocol = id as ProtocolId; },
   }));
-  mounted.push(mountTextField(body, {
+  const urlField = mountTextField(body, {
     label: t.fieldBaseURL,
     value: current.baseURL,
     mono: true,
     error: fieldErrors.baseURL,
     helper: t.fieldBaseURLHelp,
     placeholder: t.placeholderBaseURL,
-    onChange: (value) => { current.baseURL = value; },
-  }));
+    onChange: (value) => {
+      current.baseURL = value;
+      if (fieldErrors.baseURL !== undefined) {
+        fieldErrors.baseURL = undefined;
+        urlField.update({ error: undefined });
+      }
+    },
+  });
+  mounted.push(urlField);
   mounted.push(mountTextField(body, {
     label: t.fieldAPIKey,
     value: current.apiKey,

@@ -3,16 +3,20 @@
 An [OpenChamber](https://openchamber.dev) extension that manages custom
 OpenAI-compatible providers for OpenCode from a panel on the right-hand rail.
 
-Casleo writes the `providers` block of `~/.config/opencode/opencode.json`
-(or `opencode.jsonc`) directly, so OpenCode reloads it on its own and the
+Casleo writes the `providers` block of `~/.config/opencode/opencode.jsonc`
+(or `opencode.json`) directly, so OpenCode reloads it on its own and the
 provider shows up in **Settings → Providers** — including its models, context
-length and reasoning levels.
+length and reasoning levels. It edits only that block: comments, formatting and
+every unrelated setting in the file stay exactly as they were.
 
 ## Features
 
 - Add, edit and delete custom providers (第三方中转站 / gateways / local runtimes)
 - Provider name, provider ID, protocol, base URL and API key
 - Models with display name, context length, max output and reasoning levels
+- Refresh button re-reads the config without reopening the panel
+- Saving merges with the block already on disk, so provider headers, `env`
+  entries and per-model fields Casleo does not edit are preserved
 - Writes plain provider config — no OAuth, no background service, no network calls
 - Panel follows the OpenChamber theme and can also open full-screen
 
@@ -45,8 +49,13 @@ and paste the absolute path of the cloned folder into the same field.
 5. Choose **Save**. The provider is written to `opencode.json` and appears under
    **Settings → Providers** in OpenChamber.
 
-Editing and deleting work the same way; deleting removes the block from
-`opencode.json` and disconnects the provider.
+Editing and deleting work the same way; deleting removes the block from the
+config file and disconnects the provider. **Refresh** re-reads the file when
+something changed outside the panel.
+
+The API key is written to `settings.apiKey` as plain text. To keep the secret
+out of the file, set the key in an environment variable and enter
+`{env:VAR_NAME}` instead.
 
 ## Development
 
@@ -65,11 +74,13 @@ OpenChamber never builds an extension on install, so commit the built
 ## Layout
 
 ```
-package.json     extension manifest (openchamber block) + build scripts
-icon.svg         rail icon, masked in the current text color
-panel/index.html panel page
-panel/main.ts    panel source
-panel/main.js    built panel (committed)
+package.json       extension manifest (openchamber block) + build scripts
+icon.svg           rail icon, masked in the current text color
+panel/index.html   panel page
+panel/main.ts      panel UI, host wiring and file i/o
+panel/jsonc.ts     JSONC parse + comment-preserving top-level edits
+panel/providers.ts provider drafts <-> opencode.json blocks (pure, testable)
+panel/main.js      built panel (committed)
 ```
 
 ## License
