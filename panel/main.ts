@@ -842,11 +842,7 @@ const renderForm = (body: HTMLElement): void => {
   mounted.push(mountSeparator(body));
 
   const actions = row(body);
-  mounted.push(mountButton(actions, {
-    label: busy ? t.saving : t.save,
-    loading: busy,
-    onClick: () => void saveDraft(),
-  }));
+  actions.style.justifyContent = 'flex-end';
   mounted.push(mountButton(actions, {
     label: t.cancel,
     variant: 'ghost',
@@ -859,6 +855,11 @@ const renderForm = (body: HTMLElement): void => {
       fatal = null;
       render();
     },
+  }));
+  mounted.push(mountButton(actions, {
+    label: busy ? t.saving : t.save,
+    loading: busy,
+    onClick: () => void saveDraft(),
   }));
 
   if (!isNew) {
