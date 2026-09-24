@@ -1,6 +1,6 @@
 {
   "name": "casleo",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Casleo — manage custom OpenAI-compatible providers for OpenCode from an OpenChamber panel.",
   "openchamber": {
@@ -23,8 +23,8 @@
     }
   },
   "scripts": {
-    "build": "esbuild panel/main.ts --bundle --format=iife --platform=browser --target=es2020 --minify --outfile=panel/main.js",
-    "build:dev": "esbuild panel/main.ts --bundle --format=iife --platform=browser --target=es2020 --outfile=panel/main.js",
+    "build": "esbuild panel/main.ts --bundle --format=iife --platform=browser --target=es2020 --charset=utf8 --minify --outfile=panel/main.js",
+    "build:dev": "esbuild panel/main.ts --bundle --format=iife --platform=browser --target=es2020 --charset=utf8 --outfile=panel/main.js",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
