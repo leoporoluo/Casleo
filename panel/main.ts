@@ -99,9 +99,7 @@ const STRINGS = {
     modelReasoningHelp: 'Optional. Comma-separated effort levels the endpoint accepts, e.g. low, medium, high. Each one becomes a variant you can pick in the model selector.',
     placeholderReasoning: 'low, medium, high',
     modelImage: 'Image input',
-    modelImageHelp: 'Lets the model receive images from the chat and the read tool.',
     modelTools: 'Tool calling',
-    modelToolsHelp: 'Lets the model call tools such as read, edit and shell.',
     addModel: 'Add model',
     removeModel: 'Remove model',
     save: 'Save',
@@ -162,9 +160,7 @@ const STRINGS = {
     modelReasoningHelp: '可选。以逗号分隔填写端点支持的推理强度，例如 low, medium, high。每个等级都会成为模型选择器里可选的变体。',
     placeholderReasoning: 'low, medium, high',
     modelImage: '图片输入',
-    modelImageHelp: '允许模型接收来自聊天和 read 工具的图片。',
     modelTools: '工具调用',
-    modelToolsHelp: '允许模型调用 read、edit、shell 等工具。',
     addModel: '添加模型',
     removeModel: '移除模型',
     save: '保存',
@@ -667,16 +663,15 @@ const renderForm = (body: HTMLElement): void => {
       onChange: (value) => { model.reasoning = value; },
     }));
 
-    mounted.push(mountSwitch(block, {
+    const capabilities = row(block, '16px');
+    mounted.push(mountSwitch(flexColumn(capabilities, '120px'), {
       label: t.modelImage,
       checked: model.image,
-      description: t.modelImageHelp,
       onChange: (checked) => { model.image = checked; },
     }));
-    mounted.push(mountSwitch(block, {
+    mounted.push(mountSwitch(flexColumn(capabilities, '120px'), {
       label: t.modelTools,
       checked: model.tools,
-      description: t.modelToolsHelp,
       onChange: (checked) => { model.tools = checked; },
     }));
   });
