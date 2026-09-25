@@ -14,6 +14,7 @@ every unrelated setting in the file stay exactly as they were.
 - Add, edit and delete custom providers (第三方中转站 / gateways / local runtimes)
 - Provider name, provider ID, protocol, base URL and API key
 - Models with display name, context length, max output and reasoning levels
+- Per-model capabilities: image input (vision) and tool calling, written to `capabilities`
 - Refresh button re-reads the config without reopening the panel
 - Saving merges with the block already on disk, so provider headers, `env`
   entries and per-model fields Casleo does not edit are preserved
@@ -44,8 +45,9 @@ and paste the absolute path of the cloned folder into the same field.
 1. Open the Casleo panel on the rail (or **Extension pages → Casleo** for full screen).
 2. Choose **Add provider**.
 3. Fill in the provider ID (e.g. `zero`), display name, protocol, base URL and API key.
-4. Add at least one model: ID, display name, context length, max output, and
-   reasoning levels such as `low, medium, high`.
+4. Add at least one model: ID, display name, context length, max output,
+   reasoning levels such as `low, medium, high`, and whether it accepts images
+   and calls tools.
 5. Choose **Save**. The provider is written to `opencode.json` and appears under
    **Settings → Providers** in OpenChamber.
 

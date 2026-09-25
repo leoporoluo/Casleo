@@ -26,6 +26,10 @@ export type ModelDraft = {
   context: string;
   output: string;
   reasoning: string;
+  /** Whether the model accepts image input (``capabilities.input``). */
+  image: boolean;
+  /** Whether the model can call tools (``capabilities.tools``). */
+  tools: boolean;
 };
 
 export type ProviderDraft = {
@@ -60,6 +64,28 @@ export const protocolFromPackage = (pkg: string): ProtocolId => {
   return 'openai-chat';
 };
 
+/**
+ * Image input support. Reads the v2 `capabilities.input` list and falls back
+ * to the v1 `attachment` flag, then to OpenCode's own default (enabled).
+ */
+const imageInputOf = (model: JsonObject): boolean => {
+  const capabilities = isObject(model.capabilities) ? model.capabilities : null;
+  if (capabilities && Array.isArray(capabilities.input)) {
+    return capabilities.input.includes('image');
+  }
+  return typeof model.attachment === 'boolean' ? model.attachment : true;
+};
+
+/**
+ * Tool support. Reads the v2 `capabilities.tools` flag and falls back to the
+ * v1 `tool_call` flag, then to OpenCode's own default (enabled).
+ */
+const toolCallOf = (model: JsonObject): boolean => {
+  const capabilities = isObject(model.capabilities) ? model.capabilities : null;
+  if (capabilities && typeof capabilities.tools === 'boolean') return capabilities.tools;
+  return typeof model.tool_call === 'boolean' ? model.tool_call : true;
+};
+
 let modelKeySeq = 0;
 
 export const emptyModel = (): ModelDraft => ({
@@ -69,6 +95,8 @@ export const emptyModel = (): ModelDraft => ({
   context: '',
   output: '',
   reasoning: '',
+  image: true,
+  tools: true,
 });
 
 export const emptyDraft = (): ProviderDraft => ({
@@ -122,6 +150,8 @@ export const readModels = (provider: JsonObject): ModelDraft[] => {
       context: typeof limit.context === 'number' ? String(limit.context) : '',
       output: typeof limit.output === 'number' ? String(limit.output) : '',
       reasoning: variantLevels(entry.variants).join(', '),
+      image: imageInputOf(entry),
+      tools: toolCallOf(entry),
     };
   });
 
@@ -193,6 +223,29 @@ export const buildProvider = (draft: ProviderDraft, existing?: JsonObject): Json
     } else {
       delete entry.variants;
     }
+
+    // Declare capabilities explicitly so clients do not have to rely on
+    // OpenCode's custom-model fallbacks. Extra input modalities (video, pdf,
+    // audio) set outside Casleo are preserved; the v1 `attachment` and
+    // `tool_call` flags are folded into the v2 `capabilities` block.
+    const previousCapabilities = isObject(previousModel.capabilities) ? previousModel.capabilities : {};
+    const extraInput = Array.isArray(previousCapabilities.input)
+      ? previousCapabilities.input.filter(
+        (media): media is string => typeof media === 'string' && media !== 'text' && media !== 'image',
+      )
+      : [];
+    const previousOutput = Array.isArray(previousCapabilities.output)
+      ? previousCapabilities.output.filter((media): media is string => typeof media === 'string')
+      : [];
+    entry.capabilities = {
+      ...previousCapabilities,
+      tools: model.tools,
+      input: ['text', ...(model.image ? ['image'] : []), ...extraInput],
+      output: previousOutput.length > 0 ? previousOutput : ['text'],
+    };
+    delete entry.attachment;
+    delete entry.tool_call;
+
     models[id] = entry;
   }
 

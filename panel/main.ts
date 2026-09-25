@@ -22,6 +22,7 @@ import {
   mountSelect,
   mountSeparator,
   mountSpinner,
+  mountSwitch,
   mountTextField,
 } from '@openchamber/sdk/ui';
 import {
@@ -97,6 +98,10 @@ const STRINGS = {
     modelReasoning: 'Reasoning levels',
     modelReasoningHelp: 'Optional. Comma-separated effort levels the endpoint accepts, e.g. low, medium, high. Each one becomes a variant you can pick in the model selector.',
     placeholderReasoning: 'low, medium, high',
+    modelImage: 'Image input',
+    modelImageHelp: 'Lets the model receive images from the chat and the read tool.',
+    modelTools: 'Tool calling',
+    modelToolsHelp: 'Lets the model call tools such as read, edit and shell.',
     addModel: 'Add model',
     removeModel: 'Remove model',
     save: 'Save',
@@ -156,6 +161,10 @@ const STRINGS = {
     modelReasoning: '推理等级',
     modelReasoningHelp: '可选。以逗号分隔填写端点支持的推理强度，例如 low, medium, high。每个等级都会成为模型选择器里可选的变体。',
     placeholderReasoning: 'low, medium, high',
+    modelImage: '图片输入',
+    modelImageHelp: '允许模型接收来自聊天和 read 工具的图片。',
+    modelTools: '工具调用',
+    modelToolsHelp: '允许模型调用 read、edit、shell 等工具。',
     addModel: '添加模型',
     removeModel: '移除模型',
     save: '保存',
@@ -562,12 +571,18 @@ const renderForm = (body: HTMLElement): void => {
     },
   });
   mounted.push(nameField);
-  mounted.push(mountSelect(body, {
+  const protocolField = mountSelect(body, {
     label: t.fieldProtocol,
     value: current.protocol,
     options: PROTOCOLS.map((protocol) => ({ id: protocol.id, label: protocol.label })),
-    onChange: (id) => { current.protocol = id as ProtocolId; },
-  }));
+    onChange: (id) => {
+      current.protocol = id as ProtocolId;
+      // mountSelect keeps its own copy of `value`; without this the trigger
+      // keeps showing the protocol the form opened with.
+      protocolField.update({ value: id });
+    },
+  });
+  mounted.push(protocolField);
   const urlField = mountTextField(body, {
     label: t.fieldBaseURL,
     value: current.baseURL,
@@ -650,6 +665,19 @@ const renderForm = (body: HTMLElement): void => {
       helper: t.modelReasoningHelp,
       placeholder: t.placeholderReasoning,
       onChange: (value) => { model.reasoning = value; },
+    }));
+
+    mounted.push(mountSwitch(block, {
+      label: t.modelImage,
+      checked: model.image,
+      description: t.modelImageHelp,
+      onChange: (checked) => { model.image = checked; },
+    }));
+    mounted.push(mountSwitch(block, {
+      label: t.modelTools,
+      checked: model.tools,
+      description: t.modelToolsHelp,
+      onChange: (checked) => { model.tools = checked; },
     }));
   });
 
