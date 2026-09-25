@@ -1,5 +1,11 @@
 # Casleo
 
+> A focused provider manager for OpenCode, built as an OpenChamber extension.
+
+[![OpenChamber](https://img.shields.io/badge/OpenChamber-extension-66800b)](https://openchamber.dev)
+[![OpenCode](https://img.shields.io/badge/OpenCode-provider%20manager-555)](https://opencode.ai)
+[![License](https://img.shields.io/github/license/leoporoluo/Casleo)](LICENSE)
+
 An [OpenChamber](https://openchamber.dev) extension that manages custom
 OpenAI-compatible providers for OpenCode from a panel on the right-hand rail.
 
@@ -8,6 +14,13 @@ Casleo writes the `providers` block of `~/.config/opencode/opencode.jsonc`
 provider shows up in **Settings → Providers** — including its models, context
 length and reasoning levels. It edits only that block: comments, formatting and
 every unrelated setting in the file stay exactly as they were.
+
+## Why Casleo?
+
+OpenCode supports many providers, gateways and local runtimes, but maintaining
+custom provider definitions by hand can be error-prone. Casleo provides a small,
+focused UI for managing those definitions without taking over the rest of your
+OpenCode configuration.
 
 ## Features
 
@@ -58,6 +71,33 @@ something changed outside the panel.
 The API key is written to `settings.apiKey` as plain text. To keep the secret
 out of the file, set the key in an environment variable and enter
 `{env:VAR_NAME}` instead.
+
+## Security and permissions
+
+Casleo does not make network requests, start a background service, or send
+prompts to an agent. It only reads and updates the OpenCode configuration files
+listed in its OpenChamber permission request. Unrelated configuration,
+comments and formatting are preserved.
+
+For credentials, prefer an environment reference such as
+`{env:OPENAI_API_KEY}` instead of storing an API key directly in the config.
+
+## Compatibility
+
+- OpenChamber 2.0.0 or newer
+- OpenCode 2.x configuration format
+- Web and Desktop OpenChamber clients
+
+## For OpenChamber users
+
+Casleo can be installed directly from:
+
+```text
+https://github.com/leoporoluo/Casleo.git
+```
+
+The extension is also available for consideration in the
+[OpenChamber Extensions directory](https://openchamber.dev/extensions/).
 
 ## Development
 
