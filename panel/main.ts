@@ -32,8 +32,11 @@ import {
   type JsonObject,
   type TopLevelEdit,
 } from './jsonc';
+import { mountLevelField } from './levels';
 import {
+  DEFAULT_REASONING_LEVELS,
   PROTOCOLS,
+  REASONING_LEVELS,
   buildProvider,
   collectProviders,
   draftFrom,
@@ -96,8 +99,13 @@ const STRINGS = {
     modelOutput: 'Max output',
     placeholderOutput: '32000',
     modelReasoning: 'Reasoning levels',
-    modelReasoningHelp: 'Comma-separated, e.g. low, medium, high',
-    placeholderReasoning: 'low, medium, high',
+    modelReasoningHelp: 'Click a level to enable it; click again to turn it off.',
+    modelReasoningHintLow: 'Fastest, least reasoning',
+    modelReasoningHintMedium: 'Balanced speed and reasoning',
+    modelReasoningHintHigh: 'Deeper reasoning for harder work',
+    modelReasoningHintXHigh: 'Very high reasoning depth',
+    modelReasoningHintMax: 'Maximum reasoning depth',
+    modelReasoningEmpty: 'No level on: this model declares no reasoning levels.',
     modelImage: 'Image input',
     modelTools: 'Tool calling',
     addModel: 'Add model',
@@ -157,8 +165,13 @@ const STRINGS = {
     modelOutput: '最大输出',
     placeholderOutput: '32000',
     modelReasoning: '推理等级',
-    modelReasoningHelp: '逗号分隔，例如 low, medium, high',
-    placeholderReasoning: 'low, medium, high',
+    modelReasoningHelp: '点击开启该等级，再点一次关闭。',
+    modelReasoningHintLow: '最快，推理最少',
+    modelReasoningHintMedium: '速度与推理均衡',
+    modelReasoningHintHigh: '推理更充分，适合较难任务',
+    modelReasoningHintXHigh: '推理强度很高',
+    modelReasoningHintMax: '推理强度拉满',
+    modelReasoningEmpty: '全部关闭：该模型不声明推理等级。',
     modelImage: '图片输入',
     modelTools: '工具调用',
     addModel: '添加模型',
@@ -326,13 +339,17 @@ const validate = (current: ProviderDraft): Record<string, string | undefined> =>
   if (!current.name.trim()) errors.name = t.errName;
   if (!/^https?:\/\//.test(current.baseURL.trim())) errors.baseURL = t.errURL;
   const ids = current.models.map((model) => model.id.trim()).filter(Boolean);
+  const levelsTouched = (levels: string[]): boolean => (
+    levels.length !== DEFAULT_REASONING_LEVELS.length
+    || levels.some((level, index) => level !== DEFAULT_REASONING_LEVELS[index])
+  );
   if (ids.length === 0) {
     errors.models = t.errModel;
   } else if (new Set(ids).size !== ids.length) {
     errors.models = t.errModelDuplicate;
   } else if (current.models.some(
     (model) => !model.id.trim()
-      && (model.name.trim() || model.context.trim() || model.output.trim() || model.reasoning.trim()),
+      && (model.name.trim() || model.context.trim() || model.output.trim() || levelsTouched(model.levels)),
   )) {
     errors.models = t.errModelIncomplete;
   }
@@ -641,6 +658,26 @@ const renderForm = (body: HTMLElement): void => {
       onChange: (value) => { model.name = value; },
     }));
 
+    const levelHints: Record<string, string | undefined> = {
+      low: t.modelReasoningHintLow,
+      medium: t.modelReasoningHintMedium,
+      high: t.modelReasoningHintHigh,
+      xhigh: t.modelReasoningHintXHigh,
+      max: t.modelReasoningHintMax,
+    };
+    // Levels the config already declares that are not part of the standard
+    // set (a gateway's own names) stay clickable instead of being dropped.
+    const extras = model.levels.filter((level) => !REASONING_LEVELS.some((known) => known === level));
+    mounted.push(mountLevelField(block, {
+      label: t.modelReasoning,
+      help: t.modelReasoningHelp,
+      emptyHint: t.modelReasoningEmpty,
+      levels: [...REASONING_LEVELS, ...extras],
+      selected: model.levels,
+      hints: levelHints,
+      onChange: (levels) => { model.levels = levels; },
+    }));
+
     const sizes = row(block);
     mounted.push(mountTextField(flexColumn(sizes), {
       label: t.modelContext,
@@ -653,14 +690,6 @@ const renderForm = (body: HTMLElement): void => {
       value: model.output,
       placeholder: t.placeholderOutput,
       onChange: (value) => { model.output = value; },
-    }));
-
-    mounted.push(mountTextField(block, {
-      label: t.modelReasoning,
-      value: model.reasoning,
-      helper: t.modelReasoningHelp,
-      placeholder: t.placeholderReasoning,
-      onChange: (value) => { model.reasoning = value; },
     }));
 
     const capabilities = row(block, '16px');

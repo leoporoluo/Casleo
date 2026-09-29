@@ -19,13 +19,20 @@ export const PROTOCOLS = [
 
 export type ProtocolId = (typeof PROTOCOLS)[number]['id'];
 
+/** Reasoning levels offered as cards, in the order they are shown. */
+export const REASONING_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+
+/** Levels a model declares when nobody has chosen yet. */
+export const DEFAULT_REASONING_LEVELS: string[] = ['low', 'medium', 'high'];
+
 export type ModelDraft = {
   key: string;
   id: string;
   name: string;
   context: string;
   output: string;
-  reasoning: string;
+  /** Variant ids the model declares, in the order they are written. */
+  levels: string[];
   /** Whether the model accepts image input (``capabilities.input``). */
   image: boolean;
   /** Whether the model can call tools (``capabilities.tools``). */
@@ -94,7 +101,7 @@ export const emptyModel = (): ModelDraft => ({
   name: '',
   context: '',
   output: '',
-  reasoning: '',
+  levels: [...DEFAULT_REASONING_LEVELS],
   image: true,
   tools: true,
 });
@@ -149,7 +156,7 @@ export const readModels = (provider: JsonObject): ModelDraft[] => {
       name: typeof entry.name === 'string' && entry.name ? entry.name : id,
       context: typeof limit.context === 'number' ? String(limit.context) : '',
       output: typeof limit.output === 'number' ? String(limit.output) : '',
-      reasoning: variantLevels(entry.variants).join(', '),
+      levels: variantLevels(entry.variants),
       image: imageInputOf(entry),
       tools: toolCallOf(entry),
     };
@@ -214,7 +221,7 @@ export const buildProvider = (draft: ProviderDraft, existing?: JsonObject): Json
     else delete entry.limit;
 
     const levels: string[] = [];
-    for (const level of model.reasoning.split(/[,\s]+/)) {
+    for (const level of model.levels) {
       const trimmed = level.trim();
       if (trimmed && !levels.includes(trimmed)) levels.push(trimmed);
     }

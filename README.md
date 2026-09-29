@@ -27,6 +27,9 @@ OpenCode configuration.
 - Add, edit and delete custom providers (第三方中转站 / gateways / local runtimes)
 - Provider name, provider ID, protocol, base URL and API key
 - Models with display name, context length, max output and reasoning levels
+- Reasoning levels as clickable cards — `low`, `medium`, `high`, `xhigh`, `max`,
+  all off for a model that does not reason; new models start with
+  `low, medium, high` on
 - Per-model capabilities: image input (vision) and tool calling, written to `capabilities`
 - Refresh button re-reads the config without reopening the panel
 - Saving merges with the block already on disk, so provider headers, `env`
@@ -59,8 +62,10 @@ and paste the absolute path of the cloned folder into the same field.
 2. Choose **Add provider**.
 3. Fill in the provider ID (e.g. `zero`), display name, protocol, base URL and API key.
 4. Add at least one model: ID, display name, context length, max output,
-   reasoning levels such as `low, medium, high`, and whether it accepts images
-   and calls tools.
+   reasoning levels and whether it accepts images and calls tools.
+   Reasoning levels are cards — click to switch a level on, click again to
+   switch it off. A new model starts with **low, medium, high** on; leaving
+   every card off means the model declares no reasoning levels.
 5. Choose **Save**. The provider is written to `opencode.json` and appears under
    **Settings → Providers** in OpenChamber.
 
@@ -118,10 +123,11 @@ OpenChamber never builds an extension on install, so commit the built
 ```
 package.json       extension manifest (openchamber block) + build scripts
 icon.svg           rail icon, masked in the current text color
-panel/index.html   panel page
+panel/index.html   panel page + reasoning-card styles
 panel/main.ts      panel UI, host wiring and file i/o
 panel/jsonc.ts     JSONC parse + comment-preserving top-level edits
 panel/providers.ts provider drafts <-> opencode.json blocks (pure, testable)
+panel/levels.ts    reasoning-level cards (click to enable, click to disable)
 panel/main.js      built panel (committed)
 ```
 
