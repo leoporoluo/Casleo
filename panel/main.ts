@@ -35,6 +35,7 @@ import {
 import { mountLevelField } from './levels';
 import {
   DEFAULT_REASONING_LEVELS,
+  positiveInt,
   PROTOCOLS,
   REASONING_LEVELS,
   buildProvider,
@@ -123,7 +124,8 @@ const STRINGS = {
     errID: 'Use lowercase letters, digits, - and _ only.',
     errIDExists: 'A provider with this ID already exists.',
     errName: 'Enter a display name.',
-    errURL: 'Base URL must start with http:// or https://',
+    errURL: 'Enter a valid http:// or https:// URL.',
+    errLimits: 'Context length and max output must be positive whole numbers.',
     errModel: 'Add at least one model with an ID.',
     errModelDuplicate: 'Two models have the same ID.',
     errModelIncomplete: 'Every model needs an ID; remove the rows you do not want.',
@@ -189,7 +191,8 @@ const STRINGS = {
     errID: '只能使用小写字母、数字、- 和 _。',
     errIDExists: '该 ID 已存在。',
     errName: '请填写供应商名称。',
-    errURL: 'Base URL 需要以 http:// 或 https:// 开头。',
+    errURL: '请输入有效的 http:// 或 https:// 地址。',
+    errLimits: '上下文长度和最大输出必须是正整数。',
     errModel: '至少填写一个模型 ID。',
     errModelDuplicate: '存在重复的模型 ID。',
     errModelIncomplete: '每个模型都要填写 ID；不需要的行请删除。',
@@ -337,7 +340,16 @@ const validate = (current: ProviderDraft): Record<string, string | undefined> =>
     errors.providerID = t.errIDExists;
   }
   if (!current.name.trim()) errors.name = t.errName;
-  if (!/^https?:\/\//.test(current.baseURL.trim())) errors.baseURL = t.errURL;
+  try {
+    const url = new URL(current.baseURL.trim());
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('unsupported protocol');
+  } catch {
+    errors.baseURL = t.errURL;
+  }
+  if (current.models.some((model) => (
+    (model.context.trim() !== '' && positiveInt(model.context) === undefined)
+      || (model.output.trim() !== '' && positiveInt(model.output) === undefined)
+  ))) errors.models = t.errLimits;
   const ids = current.models.map((model) => model.id.trim()).filter(Boolean);
   const levelsTouched = (levels: string[]): boolean => (
     levels.length !== DEFAULT_REASONING_LEVELS.length

@@ -28,6 +28,7 @@ export const DEFAULT_REASONING_LEVELS: string[] = ['low', 'medium', 'high'];
 export type ModelDraft = {
   key: string;
   id: string;
+  sourceID?: string;
   name: string;
   context: string;
   output: string;
@@ -153,6 +154,7 @@ export const readModels = (provider: JsonObject): ModelDraft[] => {
     return {
       key: `m${modelKeySeq += 1}`,
       id,
+      sourceID: id,
       name: typeof entry.name === 'string' && entry.name ? entry.name : id,
       context: typeof limit.context === 'number' ? String(limit.context) : '',
       output: typeof limit.output === 'number' ? String(limit.output) : '',
@@ -189,9 +191,26 @@ const variantOverlay = (protocol: ProtocolId, effort: string): JsonObject => {
   return { reasoningEffort: effort };
 };
 
-const positiveInt = (text: string): number | undefined => {
-  const value = Number.parseInt(text, 10);
-  return Number.isFinite(value) && value > 0 ? value : undefined;
+export const positiveInt = (text: string): number | undefined => {
+  const normalized = text.trim();
+  const value = Number(normalized);
+  return /^[0-9]+$/.test(normalized) && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+};
+
+const variantsOf = (model: JsonObject): JsonObject[] => {
+  if (Array.isArray(model.variants)) return model.variants.filter(isObject);
+  if (isObject(model.variants)) {
+    return Object.entries(model.variants)
+      .filter(([, value]) => isObject(value))
+      .map(([id, value]) => ({ id, settings: value }));
+  }
+  return [];
+};
+
+const variantFor = (model: JsonObject, level: string, protocol: ProtocolId): JsonObject => {
+  const previous = variantsOf(model).find((variant) => variant.id === level) ?? {};
+  const settings = isObject(previous.settings) ? previous.settings : {};
+  return { ...previous, id: level, settings: { ...settings, ...variantOverlay(protocol, level) } };
 };
 
 export const buildProvider = (draft: ProviderDraft, existing?: JsonObject): JsonObject => {
@@ -202,7 +221,8 @@ export const buildProvider = (draft: ProviderDraft, existing?: JsonObject): Json
   for (const model of draft.models) {
     const id = model.id.trim();
     if (!id) continue;
-    const previousModel = isObject(previousModels[id]) ? previousModels[id] : {};
+    const sourceID = model.sourceID && isObject(previousModels[model.sourceID]) ? model.sourceID : id;
+    const previousModel = isObject(previousModels[sourceID]) ? previousModels[sourceID] : {};
     // `id` and `provider` are the v1 model spellings of what we write below.
     const carried: JsonObject = { ...previousModel };
     delete carried.id;
@@ -226,7 +246,7 @@ export const buildProvider = (draft: ProviderDraft, existing?: JsonObject): Json
       if (trimmed && !levels.includes(trimmed)) levels.push(trimmed);
     }
     if (levels.length > 0) {
-      entry.variants = levels.map((level) => ({ id: level, settings: variantOverlay(draft.protocol, level) }));
+      entry.variants = levels.map((level) => variantFor(previousModel, level, draft.protocol));
     } else {
       delete entry.variants;
     }
