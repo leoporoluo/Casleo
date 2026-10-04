@@ -81,7 +81,7 @@ const STRINGS = {
     fieldIDHelp: 'Lowercase letters, numbers, hyphens, and underscores. Used as the OpenCode provider id.',
     placeholderID: 'my-provider',
     fieldName: 'Display name',
-    fieldNameHelp: 'Editable display name shown in the provider and model pickers.',
+    fieldNameHelp: 'Shown in the provider and model pickers.',
     placeholderName: 'My Provider',
     fieldProtocol: 'API protocol',
     fieldBaseURL: 'Base URL',
@@ -149,7 +149,7 @@ const STRINGS = {
     fieldIDHelp: '小写字母、数字、连字符和下划线。用作 OpenCode 提供商 ID。',
     placeholderID: 'my-provider',
     fieldName: '显示名称',
-    fieldNameHelp: '可编辑，显示在提供商和模型选择器中。',
+    fieldNameHelp: '显示在提供商和模型选择器中。',
     placeholderName: '我的提供商',
     fieldProtocol: 'API 协议',
     fieldBaseURL: '基础 URL',
@@ -338,7 +338,7 @@ const validate = (current: ProviderDraft): Record<string, string | undefined> =>
   const id = current.providerID.trim();
   if (!/^[a-z0-9][a-z0-9-_]*$/.test(id)) {
     errors.providerID = t.errID;
-  } else if (editingId === null && entries.some((entry) => entry.id === id)) {
+  } else if (entries.some((entry) => entry.id === id && entry.id !== editingId)) {
     errors.providerID = t.errIDExists;
   }
   if (!current.name.trim()) errors.name = t.errName;
@@ -385,15 +385,23 @@ const saveDraft = async (): Promise<void> => {
     const id = current.providerID.trim();
     const providers = isObject(config.providers) ? { ...config.providers } : {};
     const legacy = isObject(config.provider) ? { ...config.provider } : null;
-    const existing = isObject(providers[id])
-      ? providers[id]
-      : legacy !== null && isObject(legacy[id])
-        ? legacy[id]
-        : undefined;
+    const sourceID = editingId ?? id;
+    const existing = isObject(providers[sourceID])
+      ? providers[sourceID]
+      : legacy !== null && isObject(legacy[sourceID])
+        ? legacy[sourceID]
+        : isObject(providers[id])
+          ? providers[id]
+          : undefined;
+    if (editingId && editingId !== id) delete providers[editingId];
     providers[id] = buildProvider(current, existing);
     config.providers = providers;
     const edits: TopLevelEdit[] = [{ key: 'providers', value: providers }];
-    if (legacy !== null && id in legacy) {
+    if (legacy !== null && editingId && editingId in legacy) {
+      delete legacy[editingId];
+      config.provider = legacy;
+      edits.push({ key: 'provider', value: legacy });
+    } else if (legacy !== null && id in legacy) {
       delete legacy[id];
       config.provider = legacy;
       edits.push({ key: 'provider', value: legacy });
