@@ -81,7 +81,7 @@ const STRINGS = {
     fieldIDHelp: 'Lowercase letters, numbers, hyphens, and underscores. Used as the OpenCode provider id.',
     placeholderID: 'my-provider',
     fieldName: 'Display name',
-    fieldNameHelp: 'Shown in the provider and model pickers.',
+    fieldNameHelp: 'Editable display name shown in the provider and model pickers.',
     placeholderName: 'My Provider',
     fieldProtocol: 'API protocol',
     fieldBaseURL: 'Base URL',
@@ -99,6 +99,7 @@ const STRINGS = {
     placeholderContext: '128000',
     modelOutput: 'Max output',
     placeholderOutput: '32000',
+    advancedOptions: 'Advanced options',
     modelReasoning: 'Reasoning levels',
     modelReasoningHelp: 'Click a level to enable it; click again to turn it off.',
     modelReasoningHintLow: 'Fastest, least reasoning',
@@ -148,7 +149,7 @@ const STRINGS = {
     fieldIDHelp: '小写字母、数字、连字符和下划线。用作 OpenCode 提供商 ID。',
     placeholderID: 'my-provider',
     fieldName: '显示名称',
-    fieldNameHelp: '显示在提供商和模型选择器中。',
+    fieldNameHelp: '可编辑，显示在提供商和模型选择器中。',
     placeholderName: '我的提供商',
     fieldProtocol: 'API 协议',
     fieldBaseURL: '基础 URL',
@@ -166,6 +167,7 @@ const STRINGS = {
     placeholderContext: '128000',
     modelOutput: '最大输出',
     placeholderOutput: '32000',
+    advancedOptions: '高级选项',
     modelReasoning: '推理等级',
     modelReasoningHelp: '点击开启该等级，再点一次关闭。',
     modelReasoningHintLow: '最快，推理最少',
@@ -670,6 +672,13 @@ const renderForm = (body: HTMLElement): void => {
       onChange: (value) => { model.name = value; },
     }));
 
+    const advanced = document.createElement('details');
+    advanced.className = 'casleo-advanced';
+    const advancedSummary = document.createElement('summary');
+    advancedSummary.textContent = t.advancedOptions;
+    advanced.append(advancedSummary);
+    block.append(advanced);
+
     const levelHints: Record<string, string | undefined> = {
       low: t.modelReasoningHintLow,
       medium: t.modelReasoningHintMedium,
@@ -680,7 +689,7 @@ const renderForm = (body: HTMLElement): void => {
     // Levels the config already declares that are not part of the standard
     // set (a gateway's own names) stay clickable instead of being dropped.
     const extras = model.levels.filter((level) => !REASONING_LEVELS.some((known) => known === level));
-    mounted.push(mountLevelField(block, {
+    mounted.push(mountLevelField(advanced, {
       label: t.modelReasoning,
       help: t.modelReasoningHelp,
       emptyHint: t.modelReasoningEmpty,
@@ -690,7 +699,7 @@ const renderForm = (body: HTMLElement): void => {
       onChange: (levels) => { model.levels = levels; },
     }));
 
-    const sizes = row(block);
+    const sizes = row(advanced);
     mounted.push(mountTextField(flexColumn(sizes), {
       label: t.modelContext,
       value: model.context,
@@ -704,7 +713,7 @@ const renderForm = (body: HTMLElement): void => {
       onChange: (value) => { model.output = value; },
     }));
 
-    const capabilities = row(block, '16px');
+    const capabilities = row(advanced, '16px');
     mounted.push(mountSwitch(flexColumn(capabilities, '120px'), {
       label: t.modelImage,
       checked: model.image,

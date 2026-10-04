@@ -29,6 +29,22 @@
       }
       /* Reasoning-level cards (panel/levels.ts). Colours come from the host
          theme variables the SDK paints on the root. */
+      .casleo-advanced {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 0;
+      }
+      .casleo-advanced > summary {
+        width: fit-content;
+        color: var(--surface-muted-foreground, var(--oc-muted, inherit));
+        font-size: 0.8125rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      .casleo-advanced[open] > summary {
+        color: var(--surface-foreground, var(--oc-foreground, inherit));
+      }
       .casleo-field {
         display: flex;
         flex-direction: column;
