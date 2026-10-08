@@ -96,18 +96,20 @@ const toolCallOf = (model: JsonObject): boolean => {
 
 let modelKeySeq = 0;
 
-/** Context length a new model starts with, in tokens. */
+/**
+ * Fallbacks for a blank context length / max output field, in tokens. These
+ * are shown as input placeholders and written to the config when the field is
+ * left empty, so the form starts blank but still produces working limits.
+ */
 export const DEFAULT_CONTEXT = '272000';
-
-/** Max output a new model starts with, in tokens. */
 export const DEFAULT_OUTPUT = '128000';
 
 export const emptyModel = (): ModelDraft => ({
   key: `m${modelKeySeq += 1}`,
   id: '',
   name: '',
-  context: DEFAULT_CONTEXT,
-  output: DEFAULT_OUTPUT,
+  context: '',
+  output: '',
   levels: [...DEFAULT_REASONING_LEVELS],
   image: true,
   tools: true,
@@ -237,8 +239,10 @@ export const buildProvider = (draft: ProviderDraft, existing?: JsonObject): Json
 
     const previousLimit = isObject(previousModel.limit) ? previousModel.limit : {};
     const limit: JsonObject = { ...previousLimit };
-    const context = positiveInt(model.context);
-    const output = positiveInt(model.output);
+    // A blank field falls back to the default so the form can stay empty while
+    // the saved config still carries usable limits.
+    const context = positiveInt(model.context) ?? positiveInt(DEFAULT_CONTEXT);
+    const output = positiveInt(model.output) ?? positiveInt(DEFAULT_OUTPUT);
     if (context !== undefined) limit.context = context;
     else delete limit.context;
     if (output !== undefined) limit.output = output;

@@ -32,8 +32,50 @@ test('positiveInt accepts only positive safe whole-number strings', () => {
   }
 });
 
-const draft: ProviderDraft = {
-  providerID: 'provider', name: 'Provider', protocol: 'openai-chat',
-  baseURL: 'https://example.com', apiKey: '', models: [],
-};
-void draft;
+test('blank context and output fall back to the default limits', () => {
+  const blank: ProviderDraft = {
+    providerID: 'provider',
+    name: 'Provider',
+    protocol: 'openai-chat',
+    baseURL: 'https://example.com',
+    apiKey: '',
+    models: [{
+      key: 'm1',
+      id: 'model',
+      name: 'Model',
+      context: '',
+      output: '',
+      levels: [],
+      image: true,
+      tools: true,
+    }],
+  };
+  const result = buildProvider(blank);
+  const model = (result.models as Record<string, { limit: { context: number; output: number } }>).model!;
+  assert.equal(model.limit.context, 272000);
+  assert.equal(model.limit.output, 128000);
+});
+
+test('a filled context and output override the defaults', () => {
+  const filled: ProviderDraft = {
+    providerID: 'provider',
+    name: 'Provider',
+    protocol: 'openai-chat',
+    baseURL: 'https://example.com',
+    apiKey: '',
+    models: [{
+      key: 'm1',
+      id: 'model',
+      name: 'Model',
+      context: '1000',
+      output: '500',
+      levels: [],
+      image: true,
+      tools: true,
+    }],
+  };
+  const result = buildProvider(filled);
+  const model = (result.models as Record<string, { limit: { context: number; output: number } }>).model!;
+  assert.equal(model.limit.context, 1000);
+  assert.equal(model.limit.output, 500);
+});

@@ -63,6 +63,8 @@ and paste the absolute path of the cloned folder into the same field.
 3. Fill in the provider ID (e.g. `zero`), display name, protocol, base URL and API key.
 4. Add at least one model: ID, display name, context length, max output,
    reasoning levels and whether it accepts images and calls tools.
+   Context length and max output can be left blank: the placeholder shows the
+   default (`272000` / `128000`) and that value is written to the config.
    Reasoning levels are cards — click to switch a level on, click again to
    switch it off. A new model starts with **low, medium, high** on; leaving
    every card off means the model declares no reasoning levels.
