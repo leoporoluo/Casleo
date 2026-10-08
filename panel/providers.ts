@@ -96,12 +96,18 @@ const toolCallOf = (model: JsonObject): boolean => {
 
 let modelKeySeq = 0;
 
+/** Context length a new model starts with, in tokens. */
+export const DEFAULT_CONTEXT = '272000';
+
+/** Max output a new model starts with, in tokens. */
+export const DEFAULT_OUTPUT = '128000';
+
 export const emptyModel = (): ModelDraft => ({
   key: `m${modelKeySeq += 1}`,
   id: '',
   name: '',
-  context: '',
-  output: '',
+  context: DEFAULT_CONTEXT,
+  output: DEFAULT_OUTPUT,
   levels: [...DEFAULT_REASONING_LEVELS],
   image: true,
   tools: true,

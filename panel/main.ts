@@ -34,6 +34,8 @@ import {
 } from './jsonc';
 import { mountLevelField } from './levels';
 import {
+  DEFAULT_CONTEXT,
+  DEFAULT_OUTPUT,
   DEFAULT_REASONING_LEVELS,
   positiveInt,
   PROTOCOLS,
@@ -96,9 +98,9 @@ const STRINGS = {
     modelName: 'Model name',
     placeholderModelName: 'GPT-4o',
     modelContext: 'Context length',
-    placeholderContext: '128000',
+    placeholderContext: DEFAULT_CONTEXT,
     modelOutput: 'Max output',
-    placeholderOutput: '32000',
+    placeholderOutput: DEFAULT_OUTPUT,
     advancedOptions: 'Advanced options',
     modelReasoning: 'Reasoning levels',
     modelReasoningHelp: 'Click a level to enable it; click again to turn it off.',
@@ -164,9 +166,9 @@ const STRINGS = {
     modelName: '模型名称',
     placeholderModelName: 'GPT-4o',
     modelContext: '上下文长度',
-    placeholderContext: '128000',
+    placeholderContext: DEFAULT_CONTEXT,
     modelOutput: '最大输出',
-    placeholderOutput: '32000',
+    placeholderOutput: DEFAULT_OUTPUT,
     advancedOptions: '高级选项',
     modelReasoning: '推理等级',
     modelReasoningHelp: '点击开启该等级，再点一次关闭。',
